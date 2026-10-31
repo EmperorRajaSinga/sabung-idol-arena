@@ -67,7 +67,7 @@ const divisionMatchCount = (s.divisionSystem?.divisions || []).reduce(
   0
 );
 check('J total matches simulated includes all completed D1/D2 fixtures', s.totalMatchesSimulated === 2966 + divisionMatchCount, `${s.totalMatchesSimulated} (base 2966 + divisions ${divisionMatchCount})`);
-check('J all 12 D1/D2 divisions are simulated', (s.divisionSystem?.divisions || []).length === 12 && (s.divisionSystem?.divisions || []).every((division: any) => division.matches.length === 380 && division.matches.every((match: any) => match.completed)), String((s.divisionSystem?.divisions || []).length));
+check('J all 12 D1/D2 divisions are simulated', (s.divisionSystem?.divisions || []).length === 12 && (s.divisionSystem?.divisions || []).every((division: any) => division.matches.length === division.memberIds.length * (division.memberIds.length - 1) && division.matches.every((match: any) => match.completed)), (s.divisionSystem?.divisions || []).map((division: any) => division.matches.length).join('/'));
 check('J match IDs unique', new Set(allMatchIds).size === allMatchIds.length, `${new Set(allMatchIds).size}/${allMatchIds.length}`);
 const usedAll = new Set<string>([...usedIdolIds, ...sw.participants.map((p: any) => p.idolId), ...ti.memberIds, ...q]);
 check('J no inactive idol anywhere', [...usedAll].every(id => activeIds.has(id)), String([...usedAll].filter(id => !activeIds.has(id)).length));
