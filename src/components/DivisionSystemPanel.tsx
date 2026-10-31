@@ -7,6 +7,7 @@ import {
   generateDivisionFixtures,
   updateDivisionStandings,
   validateDivisionSystem,
+  applyPromotionRelegation,
   DIVISION_TWO_CAPACITY,
 } from '../utils/divisionSystem';
 
@@ -106,6 +107,7 @@ export const DivisionSystemPanel: React.FC<Props> = ({ appState, onUpdateAppStat
     update(updateDivisionStandings({ ...system, divisions }, appState.idols), 'Pertandingan division ini selesai disimulasikan.');
   };
 
+  const canRollover = system.divisions.length === 12 && system.divisions.every((division) => division.matches.length > 0 && division.matches.every((match) => match.completed) && division.standings.length >= 3);
   const allMatches = system.divisions.reduce((sum, division) => sum + division.matches.length, 0);
   const playedMatches = system.divisions.reduce((sum, division) => sum + division.matches.filter((match) => match.completed).length, 0);
 
@@ -199,6 +201,10 @@ export const DivisionSystemPanel: React.FC<Props> = ({ appState, onUpdateAppStat
       <section className="rounded-xl bg-[#1b1510] p-4 md:p-6">
         <h3 className="font-bold text-lg">Promotion and relegation</h3>
         <p className="text-sm text-slate-400 mt-1">The season rollover engine moves the bottom 3 from each D1 to the same league's D2, and the top 3 from that D2 to its D1. It does not move idols across league identities.</p>
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          <button disabled={!canRollover} onClick={() => update(applyPromotionRelegation(system, system.seasonNumber + 1), 'Season rollover complete. Promotion and relegation applied.')} className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-black disabled:opacity-40">Apply 3-up / 3-down and advance season</button>
+          {!canRollover && <span className="text-xs text-slate-500">Complete all 12 division schedules and generate standings before advancing.</span>}
+        </div>
         {system.lastMovement && <p className="mt-3 text-sm text-emerald-300">Last movement processed after Season {system.lastMovement.seasonNumber}: {system.lastMovement.promoted.reduce((n, x) => n + x.idolIds.length, 0)} promoted, {system.lastMovement.relegated.reduce((n, x) => n + x.idolIds.length, 0)} relegated.</p>}
       </section>
     </div>
