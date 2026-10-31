@@ -567,7 +567,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const handleRemoveIdolFromLeague = (leagueId: number, idolId: string) => {
     if (selectedRosterTier === 2) {
       if (!onUpdateAppState) return;
-      onUpdateAppState((prev) => ({ ...prev, divisionSystem: { ...(prev.divisionSystem || initializeDivisionSystem(prev.leagueState?.leagues || [], prev.idols, prev.config.seasonNumber || 1)), divisions: (prev.divisionSystem?.divisions || initializeDivisionSystem(prev.leagueState?.leagues || [], prev.idols, prev.config.seasonNumber || 1).divisions).map((d) => d.leagueId === leagueId && d.tier === 2 ? { ...d, memberIds: d.memberIds.filter((id) => id !== idolId), matches: [], standings: [] } : d) } }));
+      const currentSystem = appState.divisionSystem?.initialized ? appState.divisionSystem : initializeDivisionSystem(activeLeagueState.leagues, appState.idols, appState.config.seasonNumber || 1);
+      const targetDivision = currentSystem.divisions.find((d) => d.leagueId === leagueId && d.tier === 2);
+      if (targetDivision?.matches.some((match) => match.completed)) {
+        alert('Roster tidak dapat diubah karena division ini sudah memiliki hasil pertandingan. Reset musim terlebih dahulu.');
+        return;
+      }
+      onUpdateAppState((prev) => ({ ...prev, divisionSystem: { ...currentSystem, divisions: currentSystem.divisions.map((d) => d.leagueId === leagueId && d.tier === 2 ? { ...d, memberIds: d.memberIds.filter((id) => id !== idolId), matches: [], standings: [] } : d) } }));
       showSuccessMsg('Idol removed from Division 2.');
       return;
     }
@@ -730,7 +736,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const handleClearLeagueRoster = (leagueId: number) => {
     if (selectedRosterTier === 2) {
       if (!onUpdateAppState) return;
-      onUpdateAppState((prev) => ({ ...prev, divisionSystem: { ...(prev.divisionSystem || initializeDivisionSystem(prev.leagueState?.leagues || [], prev.idols, prev.config.seasonNumber || 1)), divisions: (prev.divisionSystem?.divisions || initializeDivisionSystem(prev.leagueState?.leagues || [], prev.idols, prev.config.seasonNumber || 1).divisions).map((d) => d.leagueId === leagueId && d.tier === 2 ? { ...d, memberIds: [], matches: [], standings: [] } : d) } }));
+      const currentSystem = appState.divisionSystem?.initialized ? appState.divisionSystem : initializeDivisionSystem(activeLeagueState.leagues, appState.idols, appState.config.seasonNumber || 1);
+      const targetDivision = currentSystem.divisions.find((d) => d.leagueId === leagueId && d.tier === 2);
+      if (targetDivision?.matches.some((match) => match.completed)) {
+        alert('Roster tidak dapat diubah karena division ini sudah memiliki hasil pertandingan. Reset musim terlebih dahulu.');
+        return;
+      }
+      onUpdateAppState((prev) => ({ ...prev, divisionSystem: { ...currentSystem, divisions: currentSystem.divisions.map((d) => d.leagueId === leagueId && d.tier === 2 ? { ...d, memberIds: [], matches: [], standings: [] } : d) } }));
       showSuccessMsg(`Cleared Division 2 roster for League ${leagueId}.`);
       return;
     }
