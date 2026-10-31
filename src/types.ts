@@ -857,6 +857,7 @@ export interface AppState {
   customLeagueBranding?: any[];
   theIdolsState?: TheIdolsSeasonState | null;
   theIdolsArchives?: TheIdolsSeasonArchive[];
+  divisionSystem?: import('./utils/divisionSystem').DivisionSystemState;
 }
 
 export interface LeagueCareerStat {
