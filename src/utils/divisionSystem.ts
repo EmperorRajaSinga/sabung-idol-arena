@@ -51,7 +51,7 @@ export function initializeDivisionSystem(
     const savedD2 = existing?.divisions.find((division) => division.leagueId === league.id && division.tier === 2);
     const d2Ids = savedD2
       ? savedD2.memberIds.filter((id) => activeIds.has(id) && !assigned.has(id))
-      : available.splice(0, DIVISION_TWO_INITIAL_SIZE).map((idol) => idol.id);
+      : available.filter((idol) => !assigned.has(idol.id)).slice(0, DIVISION_TWO_INITIAL_SIZE).map((idol) => idol.id);
 
     d2Ids.forEach((id) => assigned.add(id));
     divisions.push({
