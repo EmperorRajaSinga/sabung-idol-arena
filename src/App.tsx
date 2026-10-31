@@ -102,6 +102,7 @@ import {
 import { recoverMissingSeasonArchives } from './utils/archiveRecoveryEngine';
 import { Menu, Trophy } from 'lucide-react';
 import { DivisionSystemPanel } from './components/DivisionSystemPanel';
+import { applyPromotionRelegation } from './utils/divisionSystem';
 
 export function App() {
   const [appState, setAppState] = useState<AppState>(() => loadAppState());
@@ -1686,6 +1687,9 @@ export function App() {
         ...prev,
         archives: [...pFiltered, archiveRecord],
         matchDatabase: updatedMatchDb,
+        divisionSystem: prev.divisionSystem?.initialized
+          ? applyPromotionRelegation(prev.divisionSystem, nextSeasonId)
+          : prev.divisionSystem,
         groups: [],
         knockoutMatches: [],
         selectedParticipantIds: [],
