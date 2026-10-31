@@ -123,10 +123,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
           badge: isTournamentActive ? 'Live' : undefined,
         },
         {
-          id: 'league_system' as ActiveTab,
-          label: 'League System',
+          id: 'division_system' as ActiveTab,
+          label: 'Division System',
           icon: Trophy,
-          badge: 'New',
+          badge: 'D1 / D2',
+        },
+        {
+          id: 'league_system' as ActiveTab,
+          label: 'Legacy League System',
+          icon: Trophy,
+          badge: 'Legacy',
         },
         {
           id: 'the_idols' as ActiveTab,
