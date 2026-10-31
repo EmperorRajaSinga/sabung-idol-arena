@@ -55,6 +55,11 @@ import {
   simulateSeriesMatches,
 } from './ratingHelper';
 import { getEffectiveIdolRating } from './formHelper';
+import {
+  DivisionSystemState,
+  initializeDivisionSystem,
+  generateDivisionFixtures,
+} from './divisionSystem';
 
 export interface SeasonSimulationSummary {
   seasonNumber: number;
@@ -135,6 +140,8 @@ export interface SeasonSimulationSummary {
     standings: TheIdolsStanding[];
     playoffMatches: TheIdolsPlayoffMatch[];
   };
+
+  divisionSystem: DivisionSystemState;
 
   // Official Archive Records
   tournamentArchive: TournamentArchive;
@@ -288,6 +295,70 @@ export function simulateEntireSeason(
   leagueSeason.postseasonFormat = resolvedPostseasonFormat;
 
   // -------------------------------------------------------------
+  // PHASE 1B: SIMULATE ALL INDEPENDENT D1 AND D2 DIVISIONS
+  let divisionSystem = currentAppState.divisionSystem?.initialized
+    ? currentAppState.divisionSystem
+    : initializeDivisionSystem(leagueSeason.leagues, idols, seasonNumber);
+
+  if (!divisionSystem.divisions.some((division) => division.matches.length > 0)) {
+    divisionSystem = generateDivisionFixtures(divisionSystem);
+  }
+
+  divisionSystem = {
+    ...divisionSystem,
+    divisions: divisionSystem.divisions.map((division) => {
+      const rollingForm = new Map<string, Array<'W' | 'D' | 'L'>>();
+      const matches = [...division.matches];
+      const matchdays = Array.from(new Set(matches.map((match) => match.matchday))).sort((a, b) => a - b);
+      matchdays.forEach((matchday) => {
+        matches.filter((match) => match.matchday === matchday).forEach((match) => {
+          if (match.completed) return;
+          const idolA = idolsMap.get(match.idolAId);
+          const idolB = idolsMap.get(match.idolBId);
+          if (!idolA || !idolB) return;
+          const sim = simulateLeagueMatch(
+            idolA,
+            idolB,
+            rollingForm.get(idolA.id) || [],
+            rollingForm.get(idolB.id) || []
+          );
+          const index = matches.findIndex((item) => item.id === match.id);
+          if (index >= 0) {
+            matches[index] = {
+              ...match,
+              scoreA: sim.scoreA,
+              scoreB: sim.scoreB,
+              winnerId: sim.scoreA === sim.scoreB ? null : sim.winnerId,
+              completed: true,
+              updatedAt: new Date().toISOString(),
+            };
+            totalSimulatedMatchesCount += 1;
+          }
+          const formA = rollingForm.get(idolA.id) || [];
+          const formB = rollingForm.get(idolB.id) || [];
+          formA.push(sim.scoreA > sim.scoreB ? 'W' : sim.scoreA < sim.scoreB ? 'L' : 'D');
+          formB.push(sim.scoreB > sim.scoreA ? 'W' : sim.scoreB < sim.scoreA ? 'L' : 'D');
+          rollingForm.set(idolA.id, formA.slice(-5));
+          rollingForm.set(idolB.id, formB.slice(-5));
+        });
+      });
+      const standings = calculateLeagueStandings(
+        division.leagueId * 10 + division.tier,
+        division.memberIds,
+        matches,
+        idols
+      );
+      return {
+        ...division,
+        matches,
+        standings,
+        championId: matches.length > 0 && matches.every((match) => match.completed)
+          ? standings[0]?.idolId
+          : division.championId,
+      };
+    }),
+  };
+
   // PHASE 2 & 3: PLAY-IN STAGE & QUALIFIERS ADVANCEMENT
   // -------------------------------------------------------------
   let qualifiers: LeagueQualifierEntry[] = [];
@@ -763,6 +834,7 @@ export function simulateEntireSeason(
     matchDatabase: finalMatchDatabase,
     leagueState: leagueSeason,
     theIdolsState: theIdolsSeason,
+    divisionSystem,
   };
 
   // Build Leagues Summary with accurate data
@@ -906,6 +978,7 @@ export function simulateEntireSeason(
     updatedAppState,
     updatedLeagueState: leagueSeason,
     updatedTheIdolsState: theIdolsSeason,
+    divisionSystem,
     syncedMatchDatabase: finalMatchDatabase,
   };
 }
