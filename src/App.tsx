@@ -1651,6 +1651,7 @@ export function App() {
     const nextSeasonId = Math.max(currentSeasonId + 1, maxSeason + 1);
 
     // Archive and advance League Season matches & standings
+    let nextLeagueStateForRollover: LeagueSeasonState | null = null;
     if (leagueState && leagueState.leagues && leagueState.leagues.length > 0) {
       const leagueArchiveRec = archiveLeagueSeason(leagueState, appState.idols);
       const updatedLeagueArchives = [
@@ -1660,14 +1661,14 @@ export function App() {
       setLeagueArchives(updatedLeagueArchives);
       saveLeagueArchives(updatedLeagueArchives);
 
-      const nextLeagueState = advanceLeagueSeason(
+      nextLeagueStateForRollover = advanceLeagueSeason(
         leagueState,
         appState.idols,
         appState.girlGroups,
         nextSeasonId
       );
-      setLeagueState(nextLeagueState);
-      saveLeagueSeasonState(nextLeagueState);
+      setLeagueState(nextLeagueStateForRollover);
+      saveLeagueSeasonState(nextLeagueStateForRollover);
     }
 
     // Archive and advance The Idols Superleague & Masters Playoff
@@ -1690,6 +1691,31 @@ export function App() {
       saveTheIdolsState(nextTheIdolsState);
     }
 
+    // Promotion/relegation drives next-season D1 and D2 rosters.
+    let nextDivisionSystem = appState.divisionSystem?.initialized
+      ? applyPromotionRelegation(appState.divisionSystem, nextSeasonId)
+      : appState.divisionSystem;
+    if (nextLeagueStateForRollover && nextDivisionSystem?.initialized) {
+      const syncedLeagues = nextLeagueStateForRollover.leagues.map((league) => {
+        const divisionOne = nextDivisionSystem!.divisions.find((division) => division.leagueId === league.id && division.tier === 1);
+        if (!divisionOne) return league;
+        const memberIds = [...divisionOne.memberIds];
+        const matches = generateRoundRobinMatches(league.id, memberIds);
+        return { ...league, memberIds, matches, standings: calculateLeagueStandings(league.id, memberIds, matches, appState.idols) };
+      });
+      nextLeagueStateForRollover = { ...nextLeagueStateForRollover, leagues: syncedLeagues };
+      nextDivisionSystem = {
+        ...nextDivisionSystem,
+        divisions: nextDivisionSystem.divisions.map((division) => {
+          if (division.tier !== 1) return division;
+          const league = syncedLeagues.find((item) => item.id === division.leagueId);
+          return league ? { ...division, memberIds: [...league.memberIds], matches: [...league.matches], standings: [...league.standings] } : division;
+        }),
+      };
+      setLeagueState(nextLeagueStateForRollover);
+      saveLeagueSeasonState(nextLeagueStateForRollover);
+    }
+
     const filteredArchives = effectiveTournamentArchives.filter(
       (a) => Number(a.seasonId) !== currentSeasonId
     );
@@ -1704,9 +1730,8 @@ export function App() {
         ...prev,
         archives: [...pFiltered, archiveRecord],
         matchDatabase: updatedMatchDb,
-        divisionSystem: prev.divisionSystem?.initialized
-          ? applyPromotionRelegation(prev.divisionSystem, nextSeasonId)
-          : prev.divisionSystem,
+        divisionSystem: nextDivisionSystem,
+        leagueState: nextLeagueStateForRollover || prev.leagueState,
         groups: [],
         knockoutMatches: [],
         selectedParticipantIds: [],

@@ -92,6 +92,11 @@ export const DivisionSystemPanel: React.FC<Props> = ({ appState, onUpdateAppStat
   };
 
   const createFixtures = () => {
+    const hasPlayedMatches = system.divisions.some((division) => division.matches.some((match) => match.completed));
+    if (hasPlayedMatches) {
+      alert('Jadwal tidak dapat dibuat ulang karena sudah ada pertandingan yang selesai. Reset musim terlebih dahulu agar hasil tidak hilang.');
+      return;
+    }
     const next = generateDivisionFixtures(system);
     update(next, 'Jadwal liga dibuat untuk seluruh division yang memiliki roster.');
   };

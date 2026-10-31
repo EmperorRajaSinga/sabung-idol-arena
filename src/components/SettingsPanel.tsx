@@ -566,7 +566,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
   const handleRemoveIdolFromLeague = (leagueId: number, idolId: string) => {
     if (selectedRosterTier === 2) {
-      if (!onUpdateAppState || !appState.divisionSystem?.initialized) return;
+      if (!onUpdateAppState) return;
       onUpdateAppState((prev) => ({ ...prev, divisionSystem: { ...(prev.divisionSystem || initializeDivisionSystem(prev.leagueState?.leagues || [], prev.idols, prev.config.seasonNumber || 1)), divisions: (prev.divisionSystem?.divisions || initializeDivisionSystem(prev.leagueState?.leagues || [], prev.idols, prev.config.seasonNumber || 1).divisions).map((d) => d.leagueId === leagueId && d.tier === 2 ? { ...d, memberIds: d.memberIds.filter((id) => id !== idolId), matches: [], standings: [] } : d) } }));
       showSuccessMsg('Idol removed from Division 2.');
       return;
@@ -661,7 +661,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     const allCombinedIdols = [...appState.idols, ...createdIdols];
 
     if (selectedRosterTier === 2) {
-      if (!onUpdateAppState || !appState.divisionSystem?.initialized) return;
+      if (!onUpdateAppState) return;
       const existingD1Ids = new Set(activeLeagueState.leagues.flatMap((league) => league.memberIds));
       const otherD2Ids = new Set(appState.divisionSystem.divisions.filter((d) => !(d.leagueId === leagueId && d.tier === 2)).flatMap((d) => d.memberIds));
       const safeIds = newMemberIds.filter((id) => !existingD1Ids.has(id) && !otherD2Ids.has(id)).slice(0, 20);
@@ -729,7 +729,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
   const handleClearLeagueRoster = (leagueId: number) => {
     if (selectedRosterTier === 2) {
-      if (!onUpdateAppState || !appState.divisionSystem?.initialized) return;
+      if (!onUpdateAppState) return;
       onUpdateAppState((prev) => ({ ...prev, divisionSystem: { ...(prev.divisionSystem || initializeDivisionSystem(prev.leagueState?.leagues || [], prev.idols, prev.config.seasonNumber || 1)), divisions: (prev.divisionSystem?.divisions || initializeDivisionSystem(prev.leagueState?.leagues || [], prev.idols, prev.config.seasonNumber || 1).divisions).map((d) => d.leagueId === leagueId && d.tier === 2 ? { ...d, memberIds: [], matches: [], standings: [] } : d) } }));
       showSuccessMsg(`Cleared Division 2 roster for League ${leagueId}.`);
       return;

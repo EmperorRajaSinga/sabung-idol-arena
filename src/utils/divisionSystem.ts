@@ -98,6 +98,7 @@ export function updateDivisionStandings(state: DivisionSystemState, idols: Idol[
 
 /** Generates fixtures independently for every division using its own roster. */
 export function generateDivisionFixtures(state: DivisionSystemState): DivisionSystemState {
+  if (state.divisions.some((division) => division.matches.some((match) => match.completed))) return state;
   return {
     ...state,
     divisions: state.divisions.map((division) => ({
