@@ -101,6 +101,7 @@ import {
 } from './utils/theIdolsLogic';
 import { recoverMissingSeasonArchives } from './utils/archiveRecoveryEngine';
 import { Menu, Trophy } from 'lucide-react';
+import { DivisionSystemPanel } from './components/DivisionSystemPanel';
 
 export function App() {
   const [appState, setAppState] = useState<AppState>(() => loadAppState());
@@ -2376,6 +2377,13 @@ export function App() {
               onUpdateTheIdolsArchives={handleUpdateTheIdolsArchives}
               setActiveTab={setActiveTab}
               onCrownChampionAndArchive={handleCrownChampionAndArchive}
+            />
+          )}
+
+          {activeTab === 'division_system' && (
+            <DivisionSystemPanel
+              appState={appState}
+              onUpdateAppState={(updater) => setAppState(updater)}
             />
           )}
 
