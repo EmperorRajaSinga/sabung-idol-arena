@@ -102,6 +102,7 @@ import {
 import { recoverMissingSeasonArchives } from './utils/archiveRecoveryEngine';
 import { Menu, Trophy } from 'lucide-react';
 import { DivisionSystemPanel } from './components/DivisionSystemPanel';
+import { CupCompetitionsPanel } from './components/CupCompetitionsPanel';
 import { applyPromotionRelegation } from './utils/divisionSystem';
 
 export function App() {
@@ -2382,6 +2383,13 @@ export function App() {
               onUpdateTheIdolsArchives={handleUpdateTheIdolsArchives}
               setActiveTab={setActiveTab}
               onCrownChampionAndArchive={handleCrownChampionAndArchive}
+            />
+          )}
+
+          {activeTab === 'cup_competitions' && (
+            <CupCompetitionsPanel
+              appState={appState}
+              onUpdateAppState={(updater) => setAppState(updater)}
             />
           )}
 

@@ -197,6 +197,7 @@ export type ActiveTab =
   | 'knockout'
   | 'league_system'
   | 'division_system'
+  | 'cup_competitions'
   | 'the_idols'
   | 'public_results'
   | 'match_db'

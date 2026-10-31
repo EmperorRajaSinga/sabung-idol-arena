@@ -59,6 +59,7 @@ export interface AppState {
   theIdolsState?: TheIdolsSeasonState | null;
   theIdolsArchives?: TheIdolsSeasonArchive[];
   divisionSystem?: import('./divisionSystem').DivisionSystemState;
+  cupSystem?: import('./cupSystem').CupSystemState;
 }
 
 export const DEFAULT_CONFIG: TournamentConfig = {
