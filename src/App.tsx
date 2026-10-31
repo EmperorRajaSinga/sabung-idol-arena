@@ -1712,6 +1712,7 @@ export function App() {
       knockoutMatches: appState.knockoutMatches,
       leagueState,
       theIdolsState,
+      divisionSystem: appState.divisionSystem,
     });
     if (unfinished.length > 0) {
       alert('This season cannot be archived yet. Unfinished competitions:\n\n- ' + unfinished.join('\n- '));
