@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   TournamentConfig,
   LeagueSeasonState,
@@ -35,6 +35,7 @@ import {
   saveCustomLeagueBranding,
 } from '../utils/leagueLogic';
 import { saveTheIdolsState, saveTheIdolsArchives } from '../utils/theIdolsLogic';
+import { initializeDivisionSystem } from '../utils/divisionSystem';
 import { isIdolActive } from '../utils/tournamentLogic';
 import { getCountryFlag } from '../utils/nationalityHelper';
 import { compressImage } from '../utils/imageHelper';
@@ -158,6 +159,17 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   );
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!appState.divisionSystem?.initialized && appState.leagueState?.leagues?.length === 6 && onUpdateAppState) {
+      const divisionSystem = initializeDivisionSystem(
+        appState.leagueState.leagues,
+        appState.idols,
+        appState.config.seasonNumber || 1
+      );
+      onUpdateAppState((prev) => ({ ...prev, divisionSystem }));
+    }
+  }, [appState.divisionSystem, appState.leagueState, appState.idols, appState.config.seasonNumber, onUpdateAppState]);
 
   // League State Reference
   const activeLeagueState: LeagueSeasonState = useMemo(() => {
@@ -503,10 +515,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
   const handleAddIdolToActiveLeague = (idolId: string) => {
     if (selectedRosterTier === 2) {
-      if (!onUpdateAppState || !appState.divisionSystem?.initialized) return;
-      const d2 = appState.divisionSystem.divisions.find((d) => d.leagueId === selectedLeagueTab && d.tier === 2);
-      if (!d2 || d2.memberIds.length >= 20 || appState.divisionSystem.divisions.some((d) => d.memberIds.includes(idolId))) return;
-      onUpdateAppState((prev) => ({ ...prev, divisionSystem: { ...prev.divisionSystem!, divisions: prev.divisionSystem!.divisions.map((d) => d.leagueId === selectedLeagueTab && d.tier === 2 ? { ...d, memberIds: [...d.memberIds, idolId], matches: [], standings: [] } : d) } }));
+      if (!onUpdateAppState) return;
+      const d2 = (appState.divisionSystem?.divisions || []).find((d) => d.leagueId === selectedLeagueTab && d.tier === 2);
+      if (!d2 || d2.memberIds.length >= 20 || (appState.divisionSystem?.divisions || []).some((d) => d.memberIds.includes(idolId))) return;
+      onUpdateAppState((prev) => ({ ...prev, divisionSystem: { ...(prev.divisionSystem || initializeDivisionSystem(prev.leagueState?.leagues || [], prev.idols, prev.config.seasonNumber || 1)), divisions: (prev.divisionSystem?.divisions || initializeDivisionSystem(prev.leagueState?.leagues || [], prev.idols, prev.config.seasonNumber || 1).divisions).map((d) => d.leagueId === selectedLeagueTab && d.tier === 2 ? { ...d, memberIds: [...d.memberIds, idolId], matches: [], standings: [] } : d) } }));
       showSuccessMsg('Idol added to Division 2.');
       return;
     }
@@ -555,7 +567,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const handleRemoveIdolFromLeague = (leagueId: number, idolId: string) => {
     if (selectedRosterTier === 2) {
       if (!onUpdateAppState || !appState.divisionSystem?.initialized) return;
-      onUpdateAppState((prev) => ({ ...prev, divisionSystem: { ...prev.divisionSystem!, divisions: prev.divisionSystem!.divisions.map((d) => d.leagueId === leagueId && d.tier === 2 ? { ...d, memberIds: d.memberIds.filter((id) => id !== idolId), matches: [], standings: [] } : d) } }));
+      onUpdateAppState((prev) => ({ ...prev, divisionSystem: { ...(prev.divisionSystem || initializeDivisionSystem(prev.leagueState?.leagues || [], prev.idols, prev.config.seasonNumber || 1)), divisions: prev.divisionSystem!.divisions.map((d) => d.leagueId === leagueId && d.tier === 2 ? { ...d, memberIds: d.memberIds.filter((id) => id !== idolId), matches: [], standings: [] } : d) } }));
       showSuccessMsg('Idol removed from Division 2.');
       return;
     }
