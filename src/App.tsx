@@ -1797,6 +1797,7 @@ export function App() {
       }
 
       // Archive & advance League Season
+      let nextLeagueStateForNewTournament: LeagueSeasonState | null = null;
       if (leagueState && leagueState.leagues && leagueState.leagues.length > 0) {
         const leagueArchiveRec = archiveLeagueSeason(leagueState, prev.idols);
         const updatedLeagueArchives = [
@@ -1806,14 +1807,14 @@ export function App() {
         setLeagueArchives(updatedLeagueArchives);
         saveLeagueArchives(updatedLeagueArchives);
 
-        const nextLeagueState = advanceLeagueSeason(
+        nextLeagueStateForNewTournament = advanceLeagueSeason(
           leagueState,
           prev.idols,
           prev.girlGroups,
           nextSeasonId
         );
-        setLeagueState(nextLeagueState);
-        saveLeagueSeasonState(nextLeagueState);
+        setLeagueState(nextLeagueStateForNewTournament);
+        saveLeagueSeasonState(nextLeagueStateForNewTournament);
       }
 
       // Archive & advance The Idols Season
@@ -1836,10 +1837,36 @@ export function App() {
         saveTheIdolsState(nextTheIdolsState);
       }
 
+      let nextDivisionSystemForNewTournament = prev.divisionSystem?.initialized
+        ? applyPromotionRelegation(prev.divisionSystem, nextSeasonId)
+        : prev.divisionSystem;
+      if (nextLeagueStateForNewTournament && nextDivisionSystemForNewTournament?.initialized) {
+        const syncedLeagues = nextLeagueStateForNewTournament.leagues.map((league) => {
+          const divisionOne = nextDivisionSystemForNewTournament!.divisions.find((division) => division.leagueId === league.id && division.tier === 1);
+          if (!divisionOne) return league;
+          const memberIds = [...divisionOne.memberIds];
+          const matches = generateRoundRobinMatches(league.id, memberIds);
+          return { ...league, memberIds, matches, standings: calculateLeagueStandings(league.id, memberIds, matches, prev.idols) };
+        });
+        nextLeagueStateForNewTournament = { ...nextLeagueStateForNewTournament, leagues: syncedLeagues };
+        nextDivisionSystemForNewTournament = {
+          ...nextDivisionSystemForNewTournament,
+          divisions: nextDivisionSystemForNewTournament.divisions.map((division) => {
+            if (division.tier !== 1) return division;
+            const league = syncedLeagues.find((item) => item.id === division.leagueId);
+            return league ? { ...division, memberIds: [...league.memberIds], matches: [...league.matches], standings: [...league.standings] } : division;
+          }),
+        };
+        setLeagueState(nextLeagueStateForNewTournament);
+        saveLeagueSeasonState(nextLeagueStateForNewTournament);
+      }
+
       return {
         ...prev,
         archives: updatedArchives,
         matchDatabase: updatedMatchDb,
+        divisionSystem: nextDivisionSystemForNewTournament,
+        leagueState: nextLeagueStateForNewTournament || prev.leagueState,
         groups: [],
         knockoutMatches: [],
         selectedParticipantIds: [],
