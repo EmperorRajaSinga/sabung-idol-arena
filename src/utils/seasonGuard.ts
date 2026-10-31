@@ -15,6 +15,7 @@ export function getUnfinishedCompetitions(args: {
   knockoutMatches?: any[] | null;
   leagueState?: any | null;
   theIdolsState?: any | null;
+  divisionSystem?: any | null;
 }): string[] {
   const out: string[] = [];
   const line = (name: string, matches: any[]) => {
@@ -38,7 +39,7 @@ export function getUnfinishedCompetitions(args: {
     line('The Idols (Playoff)', ti.playoffMatches || []);
   }
 
-  const groupMatches = (args.groups || []).flatMap((g: any) => g.matches || []);
+  (args.divisionSystem?.divisions || []).forEach((division: any) => {\n    if ((division.memberIds || []).length > 0) {\n      line(`${division.leagueName || `League ${division.leagueId}`} Division ${division.tier}`, division.matches || []);\n    }\n  });\n\n  const groupMatches = (args.groups || []).flatMap((g: any) => g.matches || []);
   line('Unzure Cup Group Stage', groupMatches);
   line('Unzure Cup Knockout', args.knockoutMatches || []);
   return out;
