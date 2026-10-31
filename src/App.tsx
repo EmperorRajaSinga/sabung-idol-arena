@@ -148,6 +148,22 @@ export function App() {
     setAppState((prev) => ({
       ...prev,
       leagueState: newState,
+      divisionSystem: prev.divisionSystem?.initialized
+        ? {
+            ...prev.divisionSystem,
+            divisions: prev.divisionSystem.divisions.map((division) => {
+              const league = newState.leagues.find((item) => item.id === division.leagueId);
+              if (!league || division.tier !== 1) return division;
+              return {
+                ...division,
+                leagueName: league.name,
+                memberIds: [...league.memberIds],
+                matches: [...league.matches],
+                standings: [...league.standings],
+              };
+            }),
+          }
+        : prev.divisionSystem,
     }));
   };
 

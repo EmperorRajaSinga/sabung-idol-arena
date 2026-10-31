@@ -130,13 +130,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         },
         {
           id: 'division_system' as ActiveTab,
-          label: 'Division System',
+          label: 'League Structure',
           icon: Trophy,
           badge: 'D1 / D2',
         },
         {
           id: 'league_system' as ActiveTab,
-          label: 'Legacy League System',
+          label: 'League System',
           icon: Trophy,
           badge: 'Legacy',
         },

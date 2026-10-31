@@ -45,7 +45,15 @@ export const DivisionSystemPanel: React.FC<Props> = ({ appState, onUpdateAppStat
   const [selectedTier, setSelectedTier] = useState<1 | 2>(1);
   const [notice, setNotice] = useState('');
   const system = useMemo(() => {
-    if (appState.divisionSystem?.initialized) return appState.divisionSystem;
+    if (appState.divisionSystem?.initialized) {
+      const branding = appState.leagueState?.leagues || [];
+      return { ...appState.divisionSystem, divisions: appState.divisionSystem.divisions.map((division) => {
+        const league = branding.find((item) => item.id === division.leagueId);
+        if (!league) return division;
+        if (division.tier === 1) return { ...division, leagueName: league.name, memberIds: [...league.memberIds], matches: [...league.matches], standings: [...league.standings] };
+        return { ...division, leagueName: league.name };
+      }) };
+    }
     return initializeDivisionSystem(
       appState.leagueState?.leagues || [],
       appState.idols,
@@ -116,8 +124,8 @@ export const DivisionSystemPanel: React.FC<Props> = ({ appState, onUpdateAppStat
       <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-500">Competition structure</p>
-          <h2 className="text-3xl md:text-4xl font-black text-white">Division System</h2>
-          <p className="mt-2 text-sm text-slate-400">Six independent leagues. Each league has its own Division 1 and Division 2.</p>
+          <h2 className="text-3xl md:text-4xl font-black text-white">League Structure</h2>
+          <p className="mt-2 text-sm text-slate-400">Six existing leagues, each with a connected Division 1 and Division 2.</p>
         </div>
         <div className="flex gap-2 flex-wrap text-xs">
           <span className="rounded-lg bg-[#241b15] px-3 py-2">12 divisions</span>
@@ -163,7 +171,7 @@ export const DivisionSystemPanel: React.FC<Props> = ({ appState, onUpdateAppStat
               <h4 className="text-sm font-bold uppercase tracking-wider text-amber-400">Roster management</h4>
               <div className="flex gap-2">
                 <select id="division-add-idol" defaultValue="" className="min-w-0 flex-1 rounded-lg bg-[#0f0c09] border border-[#51402e] px-3 py-2 text-sm">
-                  <option value="">Select unassigned idol</option>
+                  <option value="">Select idol for this division</option>
                   {available.map((idol) => <option key={idol.id} value={idol.id}>{idol.name} · {idol.girlGroup}</option>)}
                 </select>
                 <button onClick={() => {

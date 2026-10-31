@@ -32,8 +32,8 @@ export const PROMOTION_SLOTS = 3;
 export const RELEGATION_SLOTS = 3;
 
 /** Creates an independent D1 and D2 for each of the six existing leagues.
- * Existing D1 rosters remain untouched. D2 initially receives up to ten active,
- * unassigned idols per league, and never exceeds twenty places.
+ * Existing D1 rosters remain untouched. D2 starts empty and is populated through
+ * the league roster workflow. No unassigned idols are silently allocated.
  */
 export function initializeDivisionSystem(
   leagues: LeagueInfo[],
@@ -44,14 +44,13 @@ export function initializeDivisionSystem(
   const existing = previous?.schemaVersion === 1 ? previous : null;
   const activeIds = new Set(idols.filter((idol) => !idol.inactive).map((idol) => idol.id));
   const assigned = new Set((leagues || []).flatMap((league) => league.memberIds || []));
-  const available = idols.filter((idol) => activeIds.has(idol.id) && !assigned.has(idol.id));
   const divisions: DivisionTable[] = [];
 
   (leagues || []).forEach((league) => {
     const savedD2 = existing?.divisions.find((division) => division.leagueId === league.id && division.tier === 2);
     const d2Ids = savedD2
       ? savedD2.memberIds.filter((id) => activeIds.has(id) && !assigned.has(id))
-      : available.filter((idol) => !assigned.has(idol.id)).slice(0, DIVISION_TWO_INITIAL_SIZE).map((idol) => idol.id);
+      : [];
 
     d2Ids.forEach((id) => assigned.add(id));
     divisions.push({
@@ -60,8 +59,8 @@ export function initializeDivisionSystem(
       tier: 1,
       capacity: 20,
       memberIds: [...(league.memberIds || [])].filter((id) => activeIds.has(id)),
-      matches: [],
-      standings: [],
+      matches: league.matches || [],
+      standings: league.standings || [],
     });
     divisions.push({
       leagueId: league.id,
