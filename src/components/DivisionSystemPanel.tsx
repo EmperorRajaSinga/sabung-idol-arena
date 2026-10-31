@@ -63,7 +63,7 @@ export const DivisionSystemPanel: React.FC<Props> = ({ appState, onUpdateAppStat
   const errors = validateDivisionSystem(system, appState.idols);
   const assigned = new Set(system.divisions.flatMap((d) => d.memberIds));
   const available = appState.idols.filter((idol) => !idol.inactive && !assigned.has(idol.id));
-  const idolMap = new Map(appState.idols.map((idol) => [idol.id, idol]));
+  const idolMap = new Map<string, Idol>(appState.idols.map((idol) => [idol.id, idol]));
   const update = (next: DivisionSystemState, message: string) => {
     onUpdateAppState((prev) => ({ ...prev, divisionSystem: next }));
     setNotice(message);
