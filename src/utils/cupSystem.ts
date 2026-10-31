@@ -1,109 +1,41 @@
-export interface CupMatch {
-  id: string;
-  competition: 'champs_cup' | 'grand_cup' | 'mini_cup';
-  leagueId?: number;
-  round: string;
-  bestOf: 5 | 7;
-  idolAId: string | null;
-  idolBId: string | null;
-  scoreA: number | null;
-  scoreB: number | null;
-  winnerId: string | null;
-  loserId: string | null;
-  completed: boolean;
+import { Idol } from '../types';
+import { DivisionSystemState } from './divisionSystem';
+export type CupMatch={id:string;round:string;idolAId:string;idolBId:string;scoreA:number;scoreB:number;winnerId:string;completed:true};
+export type CupCompetition={id:string;name:string;format:string;entrants:string[];matches:CupMatch[];championId?:string;runnerUpId?:string};
+export type CupSystemState={seasonNumber:number;generatedAt:string;champsCup?:CupCompetition;grandCup?:CupCompetition;miniCups:CupCompetition[];superCups:CupCompetition[]};
+const rating=(id:string,idols:Idol[])=>Math.max(1,Math.min(100,idols.find(x=>x.id===id)?.rating??60));
+const series=(a:string,b:string,idols:Idol[],bestOf:number,key:string,round:string):CupMatch=>{
+ let wa=0,wb=0;const target=Math.ceil(bestOf/2);
+ while(wa<target&&wb<target){const sa=rating(a,idols)+Math.random()*18-9;const sb=rating(b,idols)+Math.random()*18-9;if(sa>=sb)wa++;else wb++;}
+ return{id:key,round,idolAId:a,idolBId:b,scoreA:wa,scoreB:wb,winnerId:wa>wb?a:b,completed:true};
+};
+const shuffled=<T,>(values:T[])=>{const out=[...values];for(let i=out.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[out[i],out[j]]=[out[j],out[i]];}return out;};
+function knockout(name:string,id:string,entrants:string[],idols:Idol[],bestOf=5):CupCompetition{
+ let players=shuffled([...new Set(entrants)]);const matches:CupMatch[]=[];let round=1;
+ while(players.length>1){const next:string[]=[];if(players.length%2)next.push(players.pop()!);for(let i=0;i<players.length;i+=2){const m=series(players[i],players[i+1],idols,bestOf,id+'-'+round+'-'+i,'Round '+round);matches.push(m);next.push(m.winnerId);}players=next;round++;}
+ const final=matches[matches.length-1];return{id,name,format:'Single elimination',entrants,matches,championId:players[0],runnerUpId:final?(final.winnerId===final.idolAId?final.idolBId:final.idolAId):undefined};
 }
-export interface CupCompetition {
-  id: string;
-  name: string;
-  type: CupMatch['competition'];
-  leagueId?: number;
-  seasonNumber: number;
-  participantIds: string[];
-  matches: CupMatch[];
-  championId?: string;
-  status: 'setup' | 'in_progress' | 'completed';
+function doubleEliminationSix(entrants:string[],idols:Idol[]):CupCompetition{
+ const p=shuffled([...entrants]);const matches:CupMatch[]=[];let n=0;
+ const play=(a:string,b:string,round:string,bestOf=5)=>{const m=series(a,b,idols,bestOf,'champs-'+(++n),round);matches.push(m);return{win:m.winnerId,lose:m.winnerId===a?b:a};};
+ const u1=play(p[2],p[5],'Upper Round 1'),u2=play(p[3],p[4],'Upper Round 1');
+ const u3=play(p[0],u2.win,'Upper Semi Final'),u4=play(p[1],u1.win,'Upper Semi Final');
+ const l1=play(u1.lose,u2.lose,'Lower Round 1');
+ const l2=play(l1.win,u3.lose,'Lower Round 2');
+ const l3=play(l2.win,u4.lose,'Lower Round 2');
+ const uf=play(u3.win,u4.win,'Upper Final');
+ const lf=play(l3.win,uf.lose,'Lower Final',7);
+ let gf=play(uf.win,lf.win,'Grand Final',7);if(gf.win===lf.win)gf=play(uf.win,lf.win,'Grand Final Reset',7);
+ return{id:'champs-cup',name:'Champs Cup',format:'Six-team double elimination · BO5 / BO7 finals',entrants,matches,championId:gf.win,runnerUpId:gf.win===uf.win?lf.win:uf.win};
 }
-export interface CupSystemState {
-  schemaVersion: 1;
-  seasonNumber: number;
-  competitions: CupCompetition[];
-}
-export const createCupSystem = (seasonNumber: number): CupSystemState => ({
-  schemaVersion: 1,
-  seasonNumber,
-  competitions: [],
-});
-export function createCup(
-  type: CupMatch['competition'],
-  name: string,
-  participantIds: string[],
-  seasonNumber: number,
-  leagueId?: number
-): CupCompetition {
-  const shuffled = [...new Set(participantIds)].sort(() => Math.random() - 0.5);
-  return {
-    id: `${type}_s${seasonNumber}_${leagueId ?? 'all'}`,
-    name, type, leagueId, seasonNumber,
-    participantIds: shuffled,
-    matches: [],
-    status: 'setup',
-  };
-}
-export function createSingleElimination(cup: CupCompetition, bestOf: 5 | 7 = 5): CupCompetition {
-  const entrants = [...cup.participantIds];
-  const size = 2 ** Math.ceil(Math.log2(Math.max(2, entrants.length)));
-  const slots = Array.from({ length: size }, (_, i) => entrants[i] || null);
-  const matches: CupMatch[] = [];
-  let round = 1;
-  let current = slots.map((id, i) => ({ id, source: i }));
-  while (current.length > 1) {
-    const next: typeof current = [];
-    for (let i = 0; i < current.length; i += 2) {
-      const a = current[i]?.id ?? null;
-      const b = current[i + 1]?.id ?? null;
-      const match: CupMatch = {
-        id: `${cup.id}_r${round}_m${i / 2 + 1}`,
-        competition: cup.type,
-        leagueId: cup.leagueId,
-        round: round === 1 ? `Round of ${size}` : `Round ${round}`,
-        bestOf, idolAId: a, idolBId: b,
-        scoreA: null, scoreB: null, winnerId: null, loserId: null,
-        completed: false,
-      };
-      if (a && !b) { match.completed = true; match.winnerId = a; }
-      if (b && !a) { match.completed = true; match.winnerId = b; }
-      matches.push(match);
-      next.push({ id: null, source: matches.length - 1 });
-    }
-    current = next;
-    round += 1;
-  }
-  return { ...cup, matches, status: 'in_progress' };
-}
-export function simulateCup(cup: CupCompetition, ratings: Record<string, number>): CupCompetition {
-  const matches = cup.matches.map((m) => {
-    if (m.completed || !m.idolAId || !m.idolBId) return m;
-    const a = ratings[m.idolAId] ?? 60;
-    const b = ratings[m.idolBId] ?? 60;
-    const scoreA = Math.max(0, Math.min(Math.ceil(m.bestOf / 2), Math.round((m.bestOf - 1) / 2 + (a - b) / 22 + Math.random() * 1.6)));
-    const scoreB = Math.max(0, Math.min(Math.ceil(m.bestOf / 2), Math.round((m.bestOf - 1) / 2 + (b - a) / 22 + Math.random() * 1.6)));
-    const target = Math.ceil(m.bestOf / 2);
-    const winnerId = scoreA === scoreB ? (Math.random() < 0.5 ? m.idolAId : m.idolBId) : scoreA > scoreB ? m.idolAId : m.idolBId;
-    return { ...m, scoreA: winnerId === m.idolAId ? target : Math.min(target - 1, scoreA), scoreB: winnerId === m.idolBId ? target : Math.min(target - 1, scoreB), winnerId, loserId: winnerId === m.idolAId ? m.idolBId : m.idolAId, completed: true };
-  });
-  const byRound = [...new Set(matches.map(m => m.round))];
-  byRound.forEach((round, index) => {
-    if (index === byRound.length - 1) return;
-    const current = matches.filter(m => m.round === round);
-    const next = matches.filter(m => m.round === byRound[index + 1]);
-    current.forEach((m, i) => {
-      if (!m.winnerId || !next[Math.floor(i / 2)]) return;
-      const target = next[Math.floor(i / 2)];
-      if (i % 2 === 0) target.idolAId = m.winnerId;
-      else target.idolBId = m.winnerId;
-    });
-  });
-  const final = matches[matches.length - 1];
-  const championId = final?.completed ? final.winnerId || undefined : undefined;
-  return { ...cup, matches, championId, status: championId ? 'completed' : 'in_progress' };
+export function simulateCupSeason(idols:Idol[],divisions:DivisionSystemState,seasonNumber:number,theIdolsChampionId?:string):CupSystemState{
+ const active=idols.filter(x=>!x.inactive);
+ const champs=divisions.divisions.filter(x=>x.tier===1).sort((a,b)=>a.leagueId-b.leagueId).map(x=>x.championId||x.standings[0]?.idolId).filter((x):x is string=>Boolean(x));
+ const champsCup=champs.length===6?doubleEliminationSix(champs,active):undefined;
+ const grandCup=knockout('Grand Cup','grand-cup',active.map(x=>x.id),active,5);
+ const miniCups=Array.from({length:6},(_,i)=>{const roster=divisions.divisions.filter(x=>x.leagueId===i+1).flatMap(x=>x.memberIds);const selected=roster.map(id=>active.find(x=>x.id===id)).filter((x):x is Idol=>Boolean(x)).sort((a,b)=>rating(b.id,active)-rating(a.id,active)).slice(0,16).map(x=>x.id);return knockout('League '+(i+1)+' Mini Cup','mini-cup-'+(i+1),selected,active,5);});
+ const superCups:CupCompetition[]=[];
+ if(theIdolsChampionId&&grandCup.championId&&theIdolsChampionId!==grandCup.championId){const m=series(theIdolsChampionId,grandCup.championId,active,7,'super-cup-idols-grand','Grand Super Cup');superCups.push({id:m.id,name:'The Idols Super Cup',format:'Single match · BO7',entrants:[theIdolsChampionId,grandCup.championId],matches:[m],championId:m.winnerId,runnerUpId:m.winnerId===theIdolsChampionId?grandCup.championId:theIdolsChampionId});}
+ miniCups.forEach((mini,i)=>{const champ=divisions.divisions.find(x=>x.leagueId===i+1&&x.tier===1)?.championId;if(!champ||!mini.championId||champ===mini.championId)return;const m=series(champ,mini.championId,active,7,'super-cup-league-'+(i+1),'League Super Cup');superCups.push({id:m.id,name:'League '+(i+1)+' Super Cup',format:'Single match · BO7',entrants:[champ,mini.championId],matches:[m],championId:m.winnerId,runnerUpId:m.winnerId===champ?mini.championId:champ});});
+ return{seasonNumber,generatedAt:new Date().toISOString(),champsCup,grandCup,miniCups,superCups};
 }
