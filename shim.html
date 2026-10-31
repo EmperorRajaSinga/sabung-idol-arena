@@ -1,0 +1,25 @@
+<style>:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}</style>
+<script>
+(function(){try{
+var blobs=new Map();
+var oc=URL.createObjectURL.bind(URL),orv=URL.revokeObjectURL.bind(URL);
+URL.createObjectURL=function(o){var u=oc(o);try{blobs.set(u,o)}catch(e){}return u};
+URL.revokeObjectURL=function(u){setTimeout(function(){blobs.delete(u)},1000);return orv(u)};
+function toast(msg,ms){var d=document.createElement('div');d.textContent=msg;d.setAttribute('role','status');d.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));max-width:min(92vw,560px);background:#20120a;color:#fde68a;border:2px solid #000;box-shadow:4px 4px 0 #000;border-radius:12px;padding:10px 14px;font:600 14px/1.35 system-ui,sans-serif;z-index:2147483647;white-space:pre-wrap';document.body.appendChild(d);setTimeout(function(){d.remove()},ms||6000)}
+function dataBlob(u){var i=u.indexOf(','),meta=u.slice(5,i),body=u.slice(i+1),b64=/;base64$/.test(meta),type=meta.replace(/;base64$/,'')||'application/octet-stream';if(!b64)return new Blob([decodeURIComponent(body)],{type:type});var bin=atob(body),arr=new Uint8Array(bin.length);for(var k=0;k<bin.length;k++)arr[k]=bin.charCodeAt(k);return new Blob([arr],{type:type})}
+function offer(a){var name=a.getAttribute('download')||'download.txt',href=a.href,data=blobs.get(href);
+if(!data&&href.indexOf('data:')===0){try{data=dataBlob(href)}catch(e){}}
+if(!data){toast('This file could not be prepared for download.');return}
+if(!window.claude||!window.claude.use){toast('Downloads are not available in this view.');return}
+window.claude.use('downloads').then(function(dl){if(!dl){toast('Downloads are not available in this view.');return}
+return dl.save({filename:name,data:data}).then(function(){toast('Saved: '+name,3000)},function(e){if(!e||e.code!=='declined')toast('Download failed: '+((e&&e.message)||'unknown error'))})})}
+var oclick=HTMLAnchorElement.prototype.click;
+HTMLAnchorElement.prototype.click=function(){if(this.hasAttribute('download')&&/^(blob:|data:)/.test(this.href)){offer(this);return}return oclick.apply(this,arguments)};
+document.addEventListener('click',function(e){var a=e.target&&e.target.closest&&e.target.closest('a[download]');if(a&&/^(blob:|data:)/.test(a.href)){e.preventDefault();offer(a)}},true);
+var blocked=false,nA=window.alert.bind(window),nC=window.confirm.bind(window),armed={};
+window.alert=function(m){if(blocked){toast(String(m));return}var t=performance.now();nA(m);if(performance.now()-t<15){blocked=true;toast(String(m))}};
+window.confirm=function(m){m=String(m);if(!blocked){var t=performance.now(),r=nC(m);if(r||performance.now()-t>=15)return r;blocked=true}
+var n=Date.now();if(armed[m]&&n-armed[m]<20000){delete armed[m];return true}
+armed[m]=n;toast('Confirmation needed:\n'+m+'\n\nPress the same button again within 20 seconds to confirm.',9000);return false};
+}catch(e){}})();
+</script>

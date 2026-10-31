@@ -1,0 +1,22 @@
+SABUNG IDOL ARENA - DEPLOYMENT
+
+1. Extract this entire ZIP file.
+2. Install GitHub Desktop (or Git for Windows) if you do not already have Git:
+   https://desktop.github.com/
+3. Sign in to GitHub when prompted.
+4. Double-click PUBLISH-TO-GITHUB-WINDOWS.bat.
+   It copies this project into your existing repository:
+   https://github.com/EmperorRajaSinga/sabung-idol-arena
+5. When the script finishes, Netlify will open. Sign in with GitHub.
+6. Choose Add new project > Import an existing project > GitHub.
+7. Select EmperorRajaSinga/sabung-idol-arena.
+8. Confirm build command: npm ci && npm run build
+   Publish directory: dist
+9. Click Deploy.
+
+The Netlify build runs on Netlify's servers. You do not need to install npm packages
+or run a development server on your own computer.
+
+NOTE: This publishes source code to the GitHub repository. Do not put private
+API keys or real secrets in the repository. The included .env.example is safe
+as a template; configure actual environment values in Netlify if needed.

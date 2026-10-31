@@ -1,0 +1,13 @@
+import { buildSeason } from './helpers';
+import { getUnfinishedCompetitions } from '../src/utils/seasonGuard';
+const r = await buildSeason(process.argv[2]); const s = r.summary;
+const args = { groups: s.championsTournament.groups, knockoutMatches: s.championsTournament.knockoutMatches, leagueState: s.updatedLeagueState, theIdolsState: s.updatedTheIdolsState };
+const full = getUnfinishedCompetitions(args);
+const c = JSON.parse(JSON.stringify(args));
+c.leagueState.leagues[2].matches.slice(0, 7).forEach((m: any) => { m.completed = false; m.winnerId = null; });
+c.knockoutMatches[c.knockoutMatches.length - 1].completed = false; c.knockoutMatches[c.knockoutMatches.length - 1].winnerId = null;
+const part = getUnfinishedCompetitions(c);
+const none = getUnfinishedCompetitions({});
+const ok = full.length === 0 && part.length === 2 && none.length === 0;
+console.log(ok ? 'PASS' : 'FAIL', JSON.stringify({ full, part, none }));
+process.exit(ok ? 0 : 1);

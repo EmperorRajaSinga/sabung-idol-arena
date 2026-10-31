@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix Remix prototype uzr Sabung Idol finaldraft maybe",
+  "description": "Comprehensive tournament management, group stage round-robin, knockout brackets, career stats, and historical database for idol competitions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
