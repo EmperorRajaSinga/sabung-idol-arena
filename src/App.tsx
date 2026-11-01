@@ -397,7 +397,7 @@ export function App() {
         (state.leagueCup?.rounds || []).flat().forEach((m) => add('All-League Knockout Cup', m));
         Object.entries(state.miniCups || {}).forEach(([id, matches]) => matches.forEach((m) => add(`Top 16 Mini Cup League ${id}`, m)));
         if (state.superA) add('Super Cup A', state.superA);
-        (state.superB || []).forEach((m) => add('Super Cup B', m));
+        (state.superB || []).forEach((m, index) => add(`Super Cup B ${index + 1}`, m));
       };
       snapshot(prev.v5State || loadV5State());
       snapshot(next);
