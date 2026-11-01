@@ -1,4 +1,4 @@
-import { loadV5State } from './utils/v5/store';
+import { loadV5State, saveV5State, V5State } from './utils/v5/store';
 import { loadNames } from './utils/v5/names';
 import { V5CupsPanel } from './components/V5CupsPanel';
 import { getUnfinishedCompetitions } from './utils/seasonGuard';
@@ -107,6 +107,11 @@ import { Menu, Trophy } from 'lucide-react';
 
 export function App() {
   const [appState, setAppState] = useState<AppState>(() => loadAppState());
+  const v5State = appState.v5State || loadV5State();
+  const handleUpdateV5State = (next: V5State) => {
+    saveV5State(next);
+    setAppState((prev) => ({ ...prev, v5State: next }));
+  };
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [selectedIdolId, setSelectedIdolId] = useState<string>('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
@@ -561,12 +566,40 @@ export function App() {
       appState.idols,
       theIdolsArchives
     );
+    const v5Matches: ArchivedMatch[] = [];
+    const seasonId = Number(leagueState?.seasonNumber || appState.config.seasonNumber || 1);
+    const seasonName = leagueState?.seasonName || appState.config.seasonName || `Season ${seasonId}`;
+    const addV5Match = (competition: string, match: any) => {
+      if (!match?.completed || !match.idolAId || !match.idolBId || !Number.isFinite(Number(match.scoreA)) || !Number.isFinite(Number(match.scoreB))) return;
+      const a = appState.idols.find((idol) => idol.id === match.idolAId);
+      const b = appState.idols.find((idol) => idol.id === match.idolBId);
+      if (!a || !b) return;
+      const winnerId = match.winnerId || (Number(match.scoreA) > Number(match.scoreB) ? a.id : b.id);
+      const winner = winnerId === a.id ? a : b;
+      const loser = winnerId === a.id ? b : a;
+      v5Matches.push({
+        matchId: `v5_${competition.replace(/[^a-z0-9]+/gi, '_')}_${match.id}`,
+        seasonId, seasonName, stage: `Cups & Divisions: ${competition} / ${match.roundName || 'Match'}`,
+        idolAId: a.id, idolAName: a.name, idolAGroup: a.girlGroup, idolAPhoto: a.photoUrl,
+        idolBId: b.id, idolBName: b.name, idolBGroup: b.girlGroup, idolBPhoto: b.photoUrl,
+        scoreA: Number(match.scoreA), scoreB: Number(match.scoreB), winnerId,
+        winnerName: winner.name, loserId: loser.id, loserName: loser.name,
+        date: match.updatedAt || new Date().toISOString(),
+      });
+    };
+    (v5State.d2 || []).forEach((league) => (league.matches || []).forEach((match: any) => addV5Match(`Division 2 ${league.name}`, { ...match, roundName: `Matchday ${match.matchday}` })));
+    (v5State.champsCup?.matches || []).forEach((match) => addV5Match('League Champions Cup', match));
+    (v5State.leagueCup?.rounds || []).flat().forEach((match) => addV5Match('All-League Knockout Cup', match));
+    Object.entries(v5State.miniCups || {}).forEach(([leagueId, matches]) => matches.forEach((match) => addV5Match(`Top 16 Mini Cup League ${leagueId}`, match)));
+    if (v5State.superA) addV5Match('Super Cup A', v5State.superA);
+    (v5State.superB || []).forEach((match) => addV5Match('Super Cup B', match));
     const map = new Map<string, ArchivedMatch>();
     appState.matchDatabase.forEach((m) => map.set(m.matchId, m));
     leagueMatches.forEach((m) => map.set(m.matchId, m));
     theIdolsAllMatches.forEach((m) => map.set(m.matchId, m));
+    v5Matches.forEach((m) => map.set(m.matchId, m));
     return Array.from(map.values());
-  }, [appState.matchDatabase, leagueState, leagueArchives, theIdolsState, theIdolsArchives, appState.idols]);
+  }, [appState.matchDatabase, leagueState, leagueArchives, theIdolsState, theIdolsArchives, appState.idols, appState.config.seasonNumber, appState.config.seasonName, v5State]);
 
   // Dynamic season stats derived from database truth (how many seasons have actually been played, archived, and stored)
   const derivedSeasonStats = useMemo(() => {
@@ -2415,6 +2448,8 @@ export function App() {
               idols={appState.idols}
               girlGroups={appState.girlGroups}
               leagueState={leagueState}
+              v5State={v5State}
+              onUpdateV5State={handleUpdateV5State}
               onUpdateLeagueState={handleUpdateLeagueState}
               theIdolsChampionId={theIdolsState?.championId || null}
               knockoutMatches={appState.knockoutMatches || []}

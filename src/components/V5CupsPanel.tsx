@@ -7,6 +7,7 @@ import { rankStandings } from '../utils/swissLogic';
 
 interface Props {
   idols: Idol[]; girlGroups: GirlGroup[]; leagueState: LeagueSeasonState | null;
+  v5State: V5State; onUpdateV5State: (s: V5State) => void;
   onUpdateLeagueState: (s: LeagueSeasonState) => void; theIdolsChampionId: string | null; knockoutMatches: KnockoutMatch[];
 }
 const NAME_LABELS: Record<keyof CompetitionNames, string> = { division2: 'Division 2', champsCup: 'League champions cup (double elimination)', leagueCup: 'All-league knockout cup', miniCup: 'Top 16 mini cup', superCupA: 'Super Cup A (The Idols vs Unzure Cup)', superCupB: 'Super Cup B (league vs mini cup)' };
@@ -51,14 +52,14 @@ const Bracket: React.FC<{ ms: E.BNode[]; nm: (id: string | null) => string; sim:
   </div>
 );
 
-export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, onUpdateLeagueState, theIdolsChampionId, knockoutMatches }) => {
-  const [v5, setV5] = useState<V5State>(() => loadV5State());
+export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, v5State, onUpdateV5State, onUpdateLeagueState, theIdolsChampionId, knockoutMatches }) => {
+  const v5 = v5State;
   const [names, setNames] = useState<CompetitionNames>(() => loadNames());
   const [msg, setMsg] = useState('');
   const by = useMemo(() => new Map(idols.map((i) => [i.id, i])), [idols]);
   const nm = (id: string | null) => (id ? by.get(id)?.name || id : 'TBD');
   const d1 = leagueState?.leagues || [];
-  const commit = (patch: Partial<V5State>) => { const n = { ...v5, ...patch }; setV5(n); if (!saveV5State(n)) setMsg('Storage is full: this change is not saved. Export a backup and clear old data.'); };
+  const commit = (patch: Partial<V5State>) => { const n = { ...v5, ...patch }; onUpdateV5State(n); if (!saveV5State(n)) setMsg('Storage is full: this change is not saved. Export a backup and clear old data.'); };
   const done = (ls: { matches: any[] }[]) => ls.length > 0 && ls.every((l) => l.matches.length > 0 && l.matches.every((m: any) => m.completed));
   const d1Done = done(d1 as any), d2Done = done(v5.d2 as any);
   const d1Fresh = d1.every((l) => l.matches.every((m: any) => !m.completed));
