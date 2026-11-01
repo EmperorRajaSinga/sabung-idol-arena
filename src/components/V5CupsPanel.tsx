@@ -6,6 +6,7 @@ import * as E from '../utils/v5/engine';
 import { rankStandings } from '../utils/swissLogic';
 import { getIdolRating } from '../utils/ratingHelper';
 import { TournamentBracketTree } from './TournamentBracketTree';
+import { MatchModal } from './MatchModal';
 
 interface Props {
   idols: Idol[]; girlGroups: GirlGroup[]; leagueState: LeagueSeasonState | null; section?: 'all' | 'crown' | 'super' | 'open' | 'spotlight';
@@ -55,7 +56,7 @@ const Row: React.FC<{ m: E.BNode; idols: Map<string, Idol>; nm: (id: string | nu
   );
 
   return (
-    <div className={`relative w-[320px] shrink-0 rounded-2xl border-2 p-4 shadow-xl transition-all sm:w-[340px] ${
+    <div onClick={() => ready && setScoreModalOpen(true)} role={ready ? 'button' : undefined} tabIndex={ready ? 0 : undefined} onKeyDown={(e) => { if (ready && (e.key === 'Enter' || e.key === ' ')) setScoreModalOpen(true); }} className={`relative w-[320px] shrink-0 rounded-2xl border-2 p-4 shadow-xl transition-all sm:w-[340px] ${
       m.completed
         ? 'border-emerald-900/80 bg-[#19140f]'
         : ready
@@ -91,10 +92,12 @@ const Row: React.FC<{ m: E.BNode; idols: Map<string, Idol>; nm: (id: string | nu
       ) : (
         <div className="mt-3 rounded-xl border border-black/70 bg-black/25 px-3 py-2 text-[11px] font-bold italic text-amber-100/40">Waiting for previous round</div>
       )}
+      {ready && <MatchModal isOpen={scoreModalOpen} onClose={() => setScoreModalOpen(false)} idolA={idolA} idolB={idolB} currentScoreA={m.scoreA} currentScoreB={m.scoreB} matchTitle={m.roundName} stageName="Cups & Divisions" isKnockout isCompleted={m.completed} onFinish={(scoreA, scoreB) => { const result = onSave(scoreA, scoreB); if (result) setErr(result); else setScoreModalOpen(false); }} onReset={m.completed ? () => { setErr('Use the competition reset control to clear this result.'); } : undefined} />}
     </div>
   );
 };
 const Bracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (id: string | null) => string; sim: (ms: E.BNode[], id: string) => void; save: (ms: E.BNode[], id: string, a: number, b: number) => string | null; onChange: (ms: E.BNode[]) => void }> = ({ ms, idols, nm, sim, save, onChange }) => {
+  const [selectedMatch, setSelectedMatch] = useState<E.BNode | null>(null);
   const roundNames = Array.from(new Set(ms.map((m) => m.roundName)));
   const roundIndex = new Map(roundNames.map((name, index) => [name, index]));
   const feedsTo = (sourceId: string, slot: E.Slot) => ('win' in slot && slot.win === sourceId) || ('lose' in slot && slot.lose === sourceId);
@@ -107,14 +110,7 @@ const Bracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (id: stri
   });
   const handleSelect = (match: KnockoutMatch) => {
     const current = ms.find((m) => m.id === match.id);
-    if (!current || !current.idolAId || !current.idolBId) return;
-    const target = current.bestOf === 7 ? 4 : 3;
-    const result = window.prompt(`Enter score for ${nm(current.idolAId)} vs ${nm(current.idolBId)} (example: ${target}-1)`, current.completed ? `${current.scoreA}-${current.scoreB}` : '');
-    if (result === null) return;
-    const parsed = result.trim().match(/^(\\d+)\\s*[-:]\\s*(\\d+)$/);
-    if (!parsed) { window.alert('Invalid score. Use a format such as 3-1.'); return; }
-    const next = clone(ms); const error = save(next, current.id, Number(parsed[1]), Number(parsed[2]));
-    if (error) { window.alert(error); return; } onChange(next);
+    if (current?.idolAId && current?.idolBId) setSelectedMatch(current);
   };
   return <div className="w-full min-w-0 rounded-2xl border-2 border-black/80 bg-[#100b08] p-3 shadow-inner sm:p-4">
     <p className="mb-3 text-[11px] text-amber-100/50">Click a match card to enter or edit its score. Connector lines show the path from each round to the next.</p>
@@ -123,6 +119,7 @@ const Bracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (id: stri
       <span className="mr-1 text-[10px] font-black uppercase tracking-wider text-amber-300/70">Quick simulate</span>
       {ms.filter((m) => !m.completed && m.idolAId && m.idolBId).map((m) => <Btn key={m.id} onClick={() => { const next = clone(ms); sim(next, m.id); onChange(next); }}>{m.roundName} #{m.id.slice(-2)}</Btn>)}
     </div>
+    {selectedMatch && <MatchModal isOpen onClose={() => setSelectedMatch(null)} idolA={selectedMatch.idolAId ? idols.get(selectedMatch.idolAId) || null : null} idolB={selectedMatch.idolBId ? idols.get(selectedMatch.idolBId) || null : null} currentScoreA={selectedMatch.scoreA} currentScoreB={selectedMatch.scoreB} matchTitle={selectedMatch.roundName} stageName="Cups & Divisions" isKnockout isCompleted={selectedMatch.completed} onFinish={(a, b) => { const next = clone(ms); const error = save(next, selectedMatch.id, a, b); if (error) { window.alert(error); return; } onChange(next); setSelectedMatch(null); }} />}
   </div>;
 };
 
