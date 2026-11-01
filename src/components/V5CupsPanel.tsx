@@ -31,6 +31,31 @@ const createEmptyLeagueCup = (d1Count: number, d2Count: number): E.LeagueCupStat
   if (state.plan.rounds > 0) E.stepLeagueCup(state);
   return state;
 };
+const createEmptyMiniCup = (leagueId: number): E.BNode[] => E.buildMiniCup(leagueId, Array.from({ length: 16 }, () => ''));
+const toMiniKnockoutMatches = (matches: E.BNode[]): KnockoutMatch[] => {
+  const roundNames = [...new Set(matches.map((match) => match.roundName))];
+  const feedsTo = (sourceId: string, slot: E.Slot) =>
+    ('win' in slot && slot.win === sourceId) || ('lose' in slot && slot.lose === sourceId);
+  return matches.map((match, index) => {
+    const targetA = matches.find((target) => feedsTo(match.id, target.a));
+    const targetB = matches.find((target) => feedsTo(match.id, target.b));
+    return {
+      id: match.id,
+      roundIndex: roundNames.indexOf(match.roundName),
+      roundName: match.roundName,
+      matchNumber: index + 1,
+      idolAId: match.idolAId || null,
+      idolBId: match.idolBId || null,
+      scoreA: match.scoreA,
+      scoreB: match.scoreB,
+      winnerId: match.winnerId,
+      completed: match.completed,
+      feedsIntoMatchId: targetA?.id || targetB?.id,
+      feedsIntoSlot: targetA ? 'A' : targetB ? 'B' : undefined,
+      bestOf: match.bestOf,
+    };
+  });
+};
 const toOpenArenaKnockoutMatches = (rounds: E.BNode[][]): KnockoutMatch[] => {
   const matches = rounds.flat();
   return matches.map((match, index) => {
@@ -755,28 +780,148 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
             {lcRoundOf16Index >= 0 ? <>
               <OpenArenaMatchList matches={lcView.rounds.slice(0, lcRoundOf16Index).flat()} idols={by} nm={nm} onSave={saveOpenArenaResult} />
               <div className="rounded-2xl border border-indigo-500/25 bg-gradient-to-br from-indigo-950/30 via-slate-950 to-slate-950 p-3 sm:p-5">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><p className="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-300">Round of 16 · Single Elimination</p><h4 className="mt-1 text-lg font-black text-white">Knockout Championship Bracket</h4></div><span className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-indigo-200">{lcKnockoutStage.reduce((sum, round) => sum + round.length, 0)} matches</span></div>
-                <TournamentBracketTree knockoutMatches={lcKnockoutTreeMatches} idolsMap={by} onSelectMatch={(match) => { const selected = lcKnockoutStage.flat().find((item) => item.id === match.id); if (selected?.idolAId && selected?.idolBId) setSelectedOpenMatch(selected); }} showTitleHeader={false} initialLayoutMode="split" />
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><p className="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-300">Round of 16 · Single Elimination</p><h4 className="mt-1 text-lg font-black text-white">Knockout Championship Bracket</h4></div><span className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-indigo-200">{lcKnockoutStage.reduce((sum, round) => sum + round.len      {section === 'spotlight' && (() => {
+        const selectedLeague = d1.find((league) => league.id === (selectedSpotlightLeague || d1[0]?.id)) || d1[0] || null;
+        const leagueId = selectedLeague?.id ?? (selectedSpotlightLeague || 0);
+        const storedMatches = v5.miniCups[leagueId];
+        const spotlightMatches = storedMatches || createEmptyMiniCup(leagueId);
+        const spotlightKnockoutMatches = toMiniKnockoutMatches(spotlightMatches);
+        const champion = champOf(spotlightMatches, `mc${leagueId}_final`);
+        const completedCount = spotlightMatches.filter((match) => match.completed).length;
+        const playableCount = spotlightMatches.filter((match) => !match.completed && !!match.idolAId && !!match.idolBId).length;
+        const entrants = spotlightMatches.filter((match) => match.roundName === 'Round of 16')
+          .flatMap((match) => [match.idolAId, match.idolBId]).filter((id): id is string => !!id);
+        const qualified = selectedLeague ? rankStandings(selectedLeague.standings).slice(0, 16).map((standing) => standing.idolId) : [];
+        const canBuild = !!selectedLeague && selectedLeague.matches.length > 0
+          && selectedLeague.matches.every((match) => match.completed)
+          && qualified.length === 16 && qualified.every(Boolean);
+        const saveManualSpotlight = (updatedMatches: KnockoutMatch[]) => {
+          const next = clone(spotlightMatches);
+          let changed = false;
+          updatedMatches.forEach((edited) => {
+            const roundIndex = [...new Set(next.map((match) => match.roundName))].indexOf(edited.roundName);
+            if (roundIndex < 0 || roundIndex > 1) return;
+            const target = next.find((match) => match.id === edited.id);
+            if (!target) return;
+            const nextA = edited.idolAId || '';
+            const nextB = edited.idolBId || '';
+            if ((target.idolAId || '') === nextA && (target.idolBId || '') === nextB) return;
+            target.a = { id: nextA };
+            target.b = { id: nextB };
+            target.idolAId = nextA || null;
+            target.idolBId = nextB || null;
+            target.scoreA = null;
+            target.scoreB = null;
+            target.winnerId = null;
+            target.loserId = null;
+            target.completed = false;
+            E.invalidateDownstream(next, target.id);
+            changed = true;
+          });
+          if (!changed) { setMsg('No Spotlight Cup bracket changes to save.'); return; }
+          E.advanceBracket(next);
+          commit({ miniCups: { ...v5.miniCups, [leagueId]: next } });
+          setMsg(`${selectedLeague?.name || 'Spotlight Cup'} manual bracket changes saved. Downstream rounds have been reset where required.`);
+        };
+        const commitSpotlightSimulcast = (updatedMatches: KnockoutMatch[]) => {
+          const next = clone(spotlightMatches);
+          updatedMatches.forEach((result) => {
+            const target = next.find((match) => match.id === result.id);
+            if (!target || target.completed || !result.completed || result.scoreA === null || result.scoreB === null || !result.winnerId) return;
+            if (result.winnerId !== target.idolAId && result.winnerId !== target.idolBId) return;
+            target.scoreA = result.scoreA;
+            target.scoreB = result.scoreB;
+            target.winnerId = result.winnerId;
+            target.loserId = result.winnerId === target.idolAId ? target.idolBId : target.idolAId;
+            target.completed = true;
+            E.invalidateDownstream(next, target.id);
+          });
+          E.advanceBracket(next);
+          commit({ miniCups: { ...v5.miniCups, [leagueId]: next } });
+        };
+        const simulateSpotlightAll = () => {
+          const next = clone(spotlightMatches);
+          E.simulateBracket(next, by);
+          commit({ miniCups: { ...v5.miniCups, [leagueId]: next } });
+          setMsg(`${selectedLeague?.name || 'Spotlight Cup'}: all currently playable matches have been simulated.`);
+        };
+        const resetSpotlight = () => {
+          if (!storedMatches || !window.confirm(`Reset ${selectedLeague?.name || 'Spotlight Cup'} bracket and clear every match result? Historical records remain unchanged.`)) return;
+          const next = { ...v5.miniCups };
+          delete next[leagueId];
+          commit({ miniCups: next });
+          setMsg(`${selectedLeague?.name || 'Spotlight Cup'} bracket and match results reset. Historical records remain unchanged.`);
+        };
+        const rebuildSpotlight = () => {
+          const currentEntrants = spotlightMatches.filter((match) => match.roundName === 'Round of 16')
+            .flatMap((match) => [match.idolAId || '', match.idolBId || '']);
+          const validEntrants = currentEntrants.length === 16 && currentEntrants.every((id) => !!id);
+          const nextEntrants = validEntrants ? currentEntrants : qualified;
+          if (nextEntrants.length !== 16 || nextEntrants.some((id) => !id)) {
+            setMsg('Automatic rebuild requires 16 valid qualified idols. Assign all opening-round slots manually first.');
+            return;
+          }
+          commit({ miniCups: { ...v5.miniCups, [leagueId]: E.buildMiniCup(leagueId, nextEntrants) } });
+          setMsg(`${selectedLeague?.name || 'Spotlight Cup'} bracket regenerated. All match results were cleared.`);
+        };
+        return (
+          <div className="space-y-5 animate-in fade-in duration-200">
+            <section className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/80 shadow-xl">
+              <div className="border-b border-slate-800 bg-gradient-to-r from-indigo-950/60 via-slate-950 to-amber-950/30 px-5 py-6 sm:px-7">
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-indigo-300">Tournament Workspace</p>
+                <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <h2 className="text-2xl font-black tracking-tight text-white">{names.miniCup}</h2>
+                    <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-400">Top 16 idols from the selected Division 1 league. Seeded single-elimination bracket, Best of 5, Grand Final Best of 7. The full bracket stays visible before participants are assigned.</p>
+                  </div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{leagueState?.seasonName || `Season ${leagueState?.seasonNumber || 1}`}</p>
+                </div>
               </div>
-            </> : <OpenArenaMatchList matches={lcViewMatches} idols={by} nm={nm} onSave={saveOpenArenaResult} />}
-          </section>}
-          {isOpenManualOpen && <ManualBracketModal key={lcViewMatches.map((match) => match.id).join('|')} isOpen onClose={() => setIsOpenManualOpen(false)} knockoutMatches={lcKnockoutMatches} idolsMap={by} onSaveKnockoutMatches={saveOpenManualBracket} onRegenerateAutoBracket={buildLC} />}
-          {isOpenSimulcastOpen && lc && <KnockoutLiveSimulatorModal isOpen onClose={() => setIsOpenSimulcastOpen(false)} knockoutMatches={toOpenArenaKnockoutMatches([lc.rounds[lc.rounds.length - 1] || []])} idolsMap={by} config={crownSimConfig} onCommitMatches={commitOpenSimulcast} />}
-        </div>
-      )}
-
-      {section === 'spotlight' && (<Card title={names.miniCup} note="Top 16 of each Division 1 final table, seeded 1 vs 16. Single elimination. Best of 5, final Best of 7.">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-          {d1.map((l) => { const ms = v5.miniCups[l.id]; const played = ms?.filter((m) => m.completed).length || 0; const total = ms?.length || l.memberIds.length * 15; const selected = (selectedSpotlightLeague || d1[0]?.id) === l.id; const complete = !!ms?.some((m) => m.id.endsWith('_final') && m.completed); return (
-            <button key={l.id} type="button" onClick={() => setSelectedSpotlightLeague(l.id)} className={`relative flex min-h-[82px] flex-col justify-between overflow-hidden rounded-2xl border-2 p-3 text-left transition-all ${selected ? 'border-amber-400 bg-[#22160d] shadow-lg ring-2 ring-amber-400/30' : 'border-black bg-[#16100b] text-slate-400 hover:bg-[#1c140e]'}`}>
-              <div className="mb-1.5 flex items-center justify-between"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: l.color || '#d97706' }} /><span className="font-mono text-[10px] font-bold text-amber-400/80">{played}/{total}</span></div>
-              <div><div className={`truncate text-xs font-black uppercase tracking-wide ${selected ? 'text-white' : 'text-slate-300'}`}>{l.name}</div><div className="truncate text-[10px] font-bold text-amber-400/60">Division 1 · Top 16</div></div>
-              {complete && <span className="absolute right-1 top-1 text-[10px] font-black text-emerald-400">CHAMP</span>}
-            </button>); })}
-        </div>
-        {d1.filter((l) => l.id === (selectedSpotlightLeague || d1[0]?.id)).map((l) => { const ms = v5.miniCups[l.id]; const champ = champOf(ms, `mc${l.id}_final`); return (
-          <div key={l.id} className="mt-4 rounded-2xl border-2 border-black bg-[#160f0a] p-4">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-black text-amber-200">{l.name}</h3><p className="text-[11px] text-amber-100/50">Spotlight Cup · Top 16 · Single elimination · Best of 5, final Best of 7</p></div>{champ && <span className="text-xs font-black text-emerald-400">Champion: {nm(champ)}</span>}</div>
+              {d1.length > 0 && <div className="grid grid-cols-2 gap-2 border-b border-slate-800 bg-black/20 p-3 sm:grid-cols-3 lg:grid-cols-6">
+                {d1.map((league) => {
+                  const matches = v5.miniCups[league.id];
+                  const doneCount = matches?.filter((match) => match.completed).length || 0;
+                  const total = matches?.length || 15;
+                  const isSelected = league.id === leagueId;
+                  const isComplete = !!matches?.some((match) => match.id === `mc${league.id}_final` && match.completed);
+                  return <button key={league.id} type="button" onClick={() => setSelectedSpotlightLeague(String(league.id))}
+                    className={`relative flex min-h-[76px] flex-col justify-between rounded-xl border p-3 text-left transition-all ${isSelected ? 'border-indigo-400 bg-indigo-500/15 ring-1 ring-indigo-400/30' : 'border-slate-800 bg-slate-900/70 hover:border-slate-600'}`}>
+                    <div className="flex items-center justify-between gap-2"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: league.color || '#6366f1' }} /><span className="font-mono text-[10px] font-bold text-slate-400">{doneCount}/{total}</span></div>
+                    <span className="mt-2 truncate text-xs font-black uppercase tracking-wide text-white">{league.name}</span>
+                    {isComplete && <span className="absolute right-2 top-2 text-[9px] font-black text-emerald-300">CHAMP</span>}
+                  </button>;
+                })}
+              </div>}
+              <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 bg-black/20 px-4 py-4 sm:px-7">
+                <Btn onClick={() => selectedLeague && buildMini(leagueId)} disabled={!canBuild || !!storedMatches} className="border-slate-700 bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-500">Build Bracket</Btn>
+                <Btn onClick={simulateSpotlightAll} disabled={playableCount === 0} className="border-slate-700 bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-500">Simulate All Matches</Btn>
+                <Btn onClick={() => setIsOpenManualOpen(true)} className="border-slate-700 bg-slate-800 px-4 py-2 text-white hover:bg-slate-700">Edit Bracket Manually</Btn>
+                <Btn onClick={() => setIsOpenSimulcastOpen(true)} disabled={playableCount === 0 || !!champion} className="border-slate-700 bg-fuchsia-700 px-4 py-2 text-white hover:bg-fuchsia-600">Live Simulcast</Btn>
+                <Btn onClick={resetSpotlight} disabled={!storedMatches} className="border-slate-700 bg-rose-700 px-4 py-2 text-white hover:bg-rose-600">Reset Bracket / Matches</Btn>
+              </div>
+              <div className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-4 sm:px-7">
+                <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3"><div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Qualified Idols</div><div className="mt-1 font-mono text-xl font-black text-white">{entrants.length}/16</div></div>
+                <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3"><div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Matches</div><div className="mt-1 font-mono text-xl font-black text-white">{spotlightMatches.length}</div></div>
+                <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3"><div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Completed</div><div className="mt-1 font-mono text-xl font-black text-emerald-300">{completedCount}</div></div>
+                <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3"><div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Ready to Play</div><div className="mt-1 font-mono text-xl font-black text-indigo-300">{playableCount}</div></div>
+              </div>
+            </section>
+            {!storedMatches && <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4 text-xs leading-relaxed text-slate-300">
+              This is a non-persistent bracket preview. You can assign the Round of 16 participants through manual editing. The bracket becomes an official saved competition when you save those assignments or build it from completed league standings.
+            </div>}
+            <section className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 sm:p-5">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <div><p className="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-300">Competition Bracket</p><h3 className="mt-1 text-lg font-black text-white">{selectedLeague?.name || 'Division 1'} · Championship Progression</h3></div>
+                {champion && <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-black text-emerald-300">Champion: {nm(champion)}</span>}
+              </div>
+              <Bracket nm={nm} idols={by} sim={simOne} save={manual} ms={spotlightMatches} onChange={(next) => commit({ miniCups: { ...v5.miniCups, [leagueId]: next } })} />
+            </section>
+            {isOpenManualOpen && <ManualBracketModal key={`spotlight-${leagueId}-${spotlightMatches.map((match) => match.idolAId || '').join(',')}-${spotlightMatches.map((match) => match.idolBId || '').join(',')}`} isOpen onClose={() => setIsOpenManualOpen(false)} knockoutMatches={spotlightKnockoutMatches} idolsMap={by} onSaveKnockoutMatches={saveManualSpotlight} onRegenerateAutoBracket={rebuildSpotlight} />}
+            {isOpenSimulcastOpen && <KnockoutLiveSimulatorModal key={`spotlight-${leagueId}`} isOpen onClose={() => setIsOpenSimulcastOpen(false)} knockoutMatches={spotlightKnockoutMatches} idolsMap={by} config={crownSimConfig} onCommitMatches={commitSpotlightSimulcast} />}
+          </div>
+        );
+      })()}
+Spotlight Cup · Top 16 · Single elimination · Best of 5, final Best of 7</p></div>{champ && <span className="text-xs font-black text-emerald-400">Champion: {nm(champ)}</span>}</div>
             <div className="mb-4 flex flex-wrap items-center gap-2">
               <Btn onClick={() => buildMini(l.id)} disabled={!!ms}>Build</Btn>
               <Btn onClick={() => { const next = clone(ms); E.simulateBracket(next, by); commit({ miniCups: { ...v5.miniCups, [l.id]: next } }); }} disabled={!ms || !!champ}>Simulate all</Btn>
