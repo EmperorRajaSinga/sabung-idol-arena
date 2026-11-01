@@ -2825,6 +2825,8 @@ export function App() {
               config={appState.config}
               groups={appState.groups}
               knockoutMatches={appState.knockoutMatches}
+              v5State={v5State}
+              v5TitleArchives={appState.v5TitleArchives || []}
               onUpdateIdolPhoto={(idolId, photoUrl) => {
                 setAppState((prev) => ({
                   ...prev,
