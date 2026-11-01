@@ -109,7 +109,7 @@ import {
 import { recoverMissingSeasonArchives } from './utils/archiveRecoveryEngine';
 import { Menu, Trophy } from 'lucide-react';
 
-const CareerStatsPanel = React.lazy(() => import('./components/CareerStatsPanel').then((module) => ({ default: module.CareerStatsPanel })));
+import { CareerStatsPanel } from './components/CareerStatsPanel';
 const IdolProfilePanel = React.lazy(() => import('./components/IdolProfilePanel').then((module) => ({ default: module.IdolProfilePanel })));
 const HallOfChampionsPanel = React.lazy(() => import('./components/HallOfChampionsPanel').then((module) => ({ default: module.HallOfChampionsPanel })));
 const AllTimeRecordsPanel = React.lazy(() => import('./components/AllTimeRecordsPanel').then((module) => ({ default: module.AllTimeRecordsPanel })));
