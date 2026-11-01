@@ -82,6 +82,14 @@ const lowerRoundOne = a.matches.find((m) => m.id === 'cc_lr1')!;
 ck('D3a Upper Round 1 losers are eliminated and never enter Lower Bracket', upperRoundOneLosers.every((id) => ![lowerRoundOne.idolAId, lowerRoundOne.idolBId, ...a.matches.filter((m) => m.id !== 'cc_ur1_a' && m.id !== 'cc_ur1_b').flatMap((m) => [m.idolAId, m.idolBId])].includes(id)));
 ck('D3b Lower Round 1 pairs both Upper Semi Final losers', lowerRoundOne.idolAId === a.matches.find((m) => m.id === 'cc_usf_a')!.loserId && lowerRoundOne.idolBId === a.matches.find((m) => m.id === 'cc_usf_b')!.loserId);
 ck('D3c Lower Final pairs Lower Round 1 winner with Upper Final loser', a.matches.find((m) => m.id === 'cc_lf')!.idolAId === lowerRoundOne.winnerId && a.matches.find((m) => m.id === 'cc_lf')!.idolBId === a.matches.find((m) => m.id === 'cc_uf')!.loserId);
+const legacyCrown = [...a.matches,
+  { id: 'cc_lr2', roundName: 'Lower Round 2', bestOf: 5 as const, a: { win: 'cc_lr1' }, b: { lose: 'cc_usf_a' }, idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
+  { id: 'cc_lr3', roundName: 'Lower Round 3', bestOf: 5 as const, a: { win: 'cc_lr2' }, b: { lose: 'cc_usf_b' }, idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
+];
+const migratedCrown = E.migrateChampsCup(legacyCrown);
+ck('D3d legacy ten-match Crown Cup migrates to eight matches', migratedCrown.length === 8 && !migratedCrown.some((m) => m.id === 'cc_lr2' || m.id === 'cc_lr3'));
+ck('D3e migration preserves completed upper-round results', migratedCrown.find((m) => m.id === 'cc_ur1_a')?.winnerId === a.matches.find((m) => m.id === 'cc_ur1_a')?.winnerId);
+
 const b = cc(null); const topPts = [...b.c].sort((x, y) => (y.points - x.points) || (y.gameDiff - x.gameDiff)).slice(0, 2).map((x) => x.idolId);
 ck('D4 no trophy winners: byes go to top league points', b.byeIds.every((i) => topPts.includes(i)) || new Set(b.c.map((x) => x.points)).size < 6);
 const c3 = cc([2, 2]); ck('D5 one idol won both: gets one bye, second bye by points', c3.byeIds.includes(champs([2, 2])[2].idolId) && c3.byeIds.length === 2);
