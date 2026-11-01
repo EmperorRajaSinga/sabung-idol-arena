@@ -7,6 +7,7 @@ export interface V5State {
 }
 export const emptyV5 = (): V5State => ({ d2: [], perLeague: 20, promotionCount: 3, pendingMoves: null, champsCup: null, leagueCup: null, miniCups: {}, superA: null, superB: [] });
 const KEY = 'sabung_v5_state_v1';
+export function hasStoredV5State(): boolean { try { return localStorage.getItem(KEY) !== null; } catch { return false; } }
 export function loadV5State(): V5State {
   try { const raw = localStorage.getItem(KEY); return raw ? { ...emptyV5(), ...JSON.parse(raw) } : emptyV5(); } catch { return emptyV5(); }
 }
