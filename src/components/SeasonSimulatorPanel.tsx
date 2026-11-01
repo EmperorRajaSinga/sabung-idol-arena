@@ -290,7 +290,7 @@ export const SeasonSimulatorPanel: React.FC<SeasonSimulatorPanelProps> = ({
         const playInText = summary.postseasonFormat === 'grand_cup_64' ? 'Swiss Play-In (28 Qualifiers)' : 'Wildcard Play-In';
         const tournText = summary.postseasonFormat === 'grand_cup_64' ? 'Grand Cup 64' : 'Champions Tournament (32)';
         setSuccessBanner(
-          `Season ${summary.seasonNumber} simulated completely! ${summary.totalMatchesSimulated} matches simulated across 6 Leagues, ${playInText}, ${tournText}, and The Idols Superleague & Masters.`
+          `Season ${summary.seasonNumber} simulated completely! ${summary.totalMatchesSimulated} matches simulated across Division 1, Division 2, ${playInText}, ${tournText}, The Idols Superleague & Masters, Crown Cup, Open Arena Cup, Spotlight Cups, and Super Cups.`
         );
       } catch (err) {
         console.error('Failed during season simulation:', err);
