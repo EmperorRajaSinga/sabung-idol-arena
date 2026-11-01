@@ -69,14 +69,13 @@ export const DivisionTwoLeaguePanel: React.FC<Props> = ({
 
   const lockPromotionReview = () => {
     if (!d1Done || !d2Done) return;
-    const moves = d1.map((league) => {
+    const moves: NonNullable<V5State['pendingMoves']> = [];
+    for (const league of d1) {
       const paired = d2.find((candidate) => candidate.parentLeagueId === league.id);
-      return paired
-        ? V5Engine.computePromotionRelegation(league, paired, v5State.promotionCount || 3)
-        : null;
-    });
-    if (moves.some((move) => !move)) return;
-    onUpdateV5State({ ...v5State, pendingMoves: moves as NonNullable<V5State['pendingMoves']> });
+      if (!paired) return;
+      moves.push(V5Engine.computePromotionRelegation(league, paired, v5State.promotionCount || 3));
+    }
+    onUpdateV5State({ ...v5State, pendingMoves: moves });
   };
 
   const applyPromotionReview = () => {
