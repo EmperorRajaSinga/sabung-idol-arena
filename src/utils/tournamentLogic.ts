@@ -1533,13 +1533,23 @@ export function computeCareerStats(
     const matchId = (m.matchId || '').toLowerCase();
 
     // Strictly skip league matches and The Idols matches in tournament cup computeCareerStats
+    // V5 cup records use a shared "Cups & Divisions" stage prefix. Do not
+    // misclassify Crown Cup / Open Arena Cup as domestic league fixtures merely
+    // because their competition names contain the word "League".
+    const isV5CupMatch = stage.startsWith('cups & divisions:') &&
+      !stage.includes('division 2');
+    const isV5DivisionTwoMatch = stage.startsWith('cups & divisions:') &&
+      stage.includes('division 2');
     const isLeagueMatch =
-      matchId.startsWith('league-') ||
-      matchId.startsWith('league_') ||
-      (stage.includes('division') && !stage.includes('the idols')) ||
-      (stage.includes('league') && !stage.includes('the idols') && !stage.includes('superleague')) ||
-      (groupName.includes('division') && !groupName.includes('the idols')) ||
-      (groupName.includes('league') && !groupName.includes('the idols') && !groupName.includes('superleague'));
+      isV5DivisionTwoMatch ||
+      (!isV5CupMatch && (
+        matchId.startsWith('league-') ||
+        matchId.startsWith('league_') ||
+        (stage.includes('division') && !stage.includes('the idols')) ||
+        (stage.includes('league') && !stage.includes('the idols') && !stage.includes('superleague')) ||
+        (groupName.includes('division') && !groupName.includes('the idols')) ||
+        (groupName.includes('league') && !groupName.includes('the idols') && !groupName.includes('superleague'))
+      ));
     if (isLeagueMatch) return;
 
     const isTheIdols = matchId.startsWith('the_idols') || stage.includes('the idols') || groupName.includes('the idols');
