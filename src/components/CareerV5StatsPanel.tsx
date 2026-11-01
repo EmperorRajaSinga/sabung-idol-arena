@@ -58,6 +58,10 @@ export const CareerV5StatsPanel: React.FC<{
         String(a.date || '').localeCompare(String(b.date || '')) ||
         String(a.matchId || '').localeCompare(String(b.matchId || '')));
 
+    const eventsWithThirdPlaceMatch = new Set(sectionMatches
+      .filter((match) => /third[ -]?place|3rd[ -]?place/i.test(String(match.stage || '')))
+      .map((match) => `${Number(match.seasonId || 0)}:${eventNameFromStage(match.stage)}`));
+
     sectionMatches.forEach((match) => {
       const key = String(match.matchId || [match.seasonId, match.stage, match.idolAId, match.idolBId].join('|'));
       if (seenMatches.has(key)) return;
@@ -92,10 +96,18 @@ export const CareerV5StatsPanel: React.FC<{
         b.winResults.push({ date: String(match.date || ''), season, won: false });
       }
 
-      if (section !== 'Division 2' && /semi[ -]?final/.test(String(match.stage || '').toLowerCase())) {
-        a.top4 += 1; b.top4 += 1;
-        if (scoreA > scoreB) b.thirdPlaces += 1;
-        else if (scoreB > scoreA) a.thirdPlaces += 1;
+      if (section !== 'Division 2') {
+        const stage = String(match.stage || '').toLowerCase();
+        if (/semi[ -]?final/.test(stage)) {
+          a.top4 += 1; b.top4 += 1;
+          if (!eventsWithThirdPlaceMatch.has(eventKey)) {
+            if (scoreA > scoreB) b.thirdPlaces += 1;
+            else if (scoreB > scoreA) a.thirdPlaces += 1;
+          }
+        } else if (/third[ -]?place|3rd[ -]?place/.test(stage)) {
+          if (scoreA > scoreB) a.thirdPlaces += 1;
+          else if (scoreB > scoreA) b.thirdPlaces += 1;
+        }
       }
     });
 
