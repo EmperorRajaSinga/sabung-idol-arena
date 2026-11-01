@@ -1735,7 +1735,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 type="button"
                 onClick={() => {
                   try {
-                    const jsonStr = exportLeagueBrandingAndRosters(activeLeagueState, appState.idols, appState.customLeagueBranding);
+                    const jsonStr = exportLeagueBrandingAndRosters(activeLeagueState, appState.idols, appState.customLeagueBranding, v5State, appState.girlGroups || []);
                     const blob = new Blob([jsonStr], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     const link = document.createElement('a');
@@ -2428,6 +2428,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         <div className="space-y-8 animate-in fade-in duration-200">
           <DatabaseExportImport
             appState={appState}
+            v5State={v5State || null}
             leagueState={leagueState || null}
             leagueArchives={leagueArchives || []}
             theIdolsState={theIdolsState || null}
