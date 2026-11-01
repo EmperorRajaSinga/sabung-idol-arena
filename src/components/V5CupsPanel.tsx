@@ -264,13 +264,27 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
   const buildChamps = () => { if (d1.length !== 6) { setMsg('Champs Cup needs exactly 6 leagues.'); return; } commit({ champsCup: E.buildChampsCup(champions()) }); };
   const refreshLC = (s: E.LeagueCupState) => { if (s.rounds.length === s.plan.rounds && s.rounds[s.rounds.length - 1].every((m) => m.completed)) s.championId = s.rounds[s.rounds.length - 1][0].winnerId; return s; };
   const buildLC = () => {
-    const order = E.leagueCupOrder(d1 as any, v5.d2), leagueOf: Record<string, number> = {};
-    [...d1, ...v5.d2].forEach((l) => l.memberIds.forEach((i) => { leagueOf[i] = l.id; }));
-    const s = E.createLeagueCup(order, leagueOf, d2Count); E.stepLeagueCup(s); commit({ leagueCup: s });
+    try {
+      if (!d1Done || !d2Done) { setMsg('Open Arena Cup can be built after every Division 1 and Division 2 league has completed all matches.'); return; }
+      const order = E.leagueCupOrder(d1 as any, v5.d2), leagueOf: Record<string, number> = {};
+      [...d1, ...v5.d2].forEach((l) => l.memberIds.forEach((i) => { leagueOf[i] = l.id; }));
+      if (order.length < 2 || order.length % 2 !== 0) { setMsg(`Open Arena Cup needs an even number of qualified idols. Current total: ${order.length}.`); return; }
+      const next = E.createLeagueCup(order, leagueOf, d2Count); E.stepLeagueCup(next);
+      if (!next.rounds.length) { setMsg('Open Arena Cup could not create its first round. Check the completed league standings.'); return; }
+      commit({ leagueCup: next }); setMsg('Open Arena Cup bracket created.');
+    } catch (error) { setMsg(error instanceof Error ? `Open Arena Cup build failed: ${error.message}` : 'Open Arena Cup build failed. Check league standings and try again.'); }
   };
   const lcRound = () => { if (!v5.leagueCup) return; const s = clone(v5.leagueCup); const cur = s.rounds[s.rounds.length - 1]; cur.filter((m) => !m.completed).forEach((m) => E.playNode(m, by)); refreshLC(s); if (!s.championId) E.stepLeagueCup(s); commit({ leagueCup: s }); };
   const lcAll = () => { if (!v5.leagueCup) return; const s = clone(v5.leagueCup); E.simulateLeagueCup(s, by); commit({ leagueCup: refreshLC(s) }); };
-  const buildMini = (lid: number) => { const l = d1.find((x) => x.id === lid)!; commit({ miniCups: { ...v5.miniCups, [lid]: E.buildMiniCup(lid, rankStandings(l.standings).slice(0, 16).map((s) => s.idolId)) } }); };
+  const buildMini = (lid: number) => {
+    try {
+      const l = d1.find((x) => x.id === lid); if (!l) { setMsg('League not found.'); return; }
+      if (!l.matches.length || !l.matches.every((m: any) => m.completed)) { setMsg(`${l.name}: finish all league matches before building Spotlight Cup.`); return; }
+      const qualified = rankStandings(l.standings).slice(0, 16).map((standing) => standing.idolId);
+      if (qualified.length !== 16 || qualified.some((id) => !id)) { setMsg(`${l.name}: Spotlight Cup requires 16 valid qualifiers in the final standings. Found ${qualified.length}.`); return; }
+      const bracket = E.buildMiniCup(lid, qualified); commit({ miniCups: { ...v5.miniCups, [lid]: bracket } }); setMsg(`${l.name} Spotlight Cup bracket created.`);
+    } catch (error) { setMsg(error instanceof Error ? `Spotlight Cup build failed: ${error.message}` : 'Spotlight Cup build failed. Check the league standings and try again.'); }
+  };
   const champOf = (ms?: E.BNode[], id?: string) => { const f = ms?.find((m) => m.id === id); return f?.completed ? f.winnerId : null; };
   const buildSuperA = () => { if (!theIdolsChampionId || !grandChamp) { setMsg('Super Cup A needs The Idols champion and the Unzure Cup champion.'); return; } commit({ superA: E.buildSuperCup('sc_a', theIdolsChampionId, grandChamp, grandRunner) }); };
   const buildSuperB = () => {
@@ -318,7 +332,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
 
       {(section === 'all' || section === 'open') && (<Card title={names.leagueCup} note="Every idol of every league. Division 2 starts in round 1. Stronger Division 1 idols (league position, then points) skip rounds. Best of 5, final Best of 7.">
         <div className="flex flex-wrap gap-2 mb-2">
-          <Btn onClick={buildLC} disabled={!d1Done || !d2Done || !!lc}>Build bracket</Btn>
+          <Btn onClick={buildLC} disabled={!!lc}>Build bracket</Btn>
           <Btn onClick={lcRound} disabled={!lc || !!lc.championId}>Simulate current round</Btn>
           <Btn onClick={lcAll} disabled={!lc || !!lc.championId}>Simulate all</Btn>
           <Btn onClick={() => { if (lc && window.confirm("Reset this tournament bracket and remove all match results?")) commit({ leagueCup: null }); }} disabled={!lc} className="bg-rose-400">Reset Bracket</Btn>
@@ -341,7 +355,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
           <div key={l.id} className="rounded-2xl border-2 border-black bg-[#160f0a] p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-black text-amber-200">{l.name}</h3><p className="text-[11px] text-amber-100/50">Spotlight Cup · Top 16 · Single elimination · Best of 5, final Best of 7</p></div>{champ && <span className="text-xs font-black text-emerald-400">Champion: {nm(champ)}</span>}</div>
             <div className="mb-4 flex flex-wrap items-center gap-2">
-              <Btn onClick={() => buildMini(l.id)} disabled={!!ms || l.memberIds.length < 16 || !l.matches.every((m: any) => m.completed)}>Build</Btn>
+              <Btn onClick={() => buildMini(l.id)} disabled={!!ms}>Build</Btn>
               <Btn onClick={() => { const next = clone(ms); E.simulateBracket(next, by); commit({ miniCups: { ...v5.miniCups, [l.id]: next } }); }} disabled={!ms || !!champ}>Simulate all</Btn>
               <Btn onClick={() => { if (ms && window.confirm(`Reset the ${l.name} Spotlight Cup bracket and remove all results?`)) { const next = { ...v5.miniCups }; delete next[l.id]; commit({ miniCups: next }); } }} disabled={!ms} className="bg-rose-400">Reset Bracket</Btn>
             </div>
