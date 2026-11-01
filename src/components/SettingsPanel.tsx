@@ -2470,7 +2470,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     ...v5State,
                     d2: v5State.d2.map((league) =>
                       league.id === currentLeague.id
-                        ? V5Engine.rebuildLeague({ ...league, memberIds }, appState.idols)
+                        ? rebuildDivisionTwoRosterPreservingResults(league, memberIds, appState.idols)
                         : league
                     ),
                   });
@@ -2576,7 +2576,15 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                           ? { ...league, memberIds: [...league.memberIds, idolId] }
                                           : league
                                     );
-                                    onUpdateV5State?.({ ...v5State, d2: nextD2.map((league) => V5Engine.rebuildLeague(league, appState.idols)) });
+                                    onUpdateV5State?.({
+                                      ...v5State,
+                                      d2: nextD2.map((league) => {
+                                        const previous = v5State.d2.find((item) => item.id === league.id);
+                                        return previous
+                                          ? rebuildDivisionTwoRosterPreservingResults(previous, league.memberIds, appState.idols)
+                                          : league;
+                                      }),
+                                    });
                                     logDataChange({ action: 'roster_updated', entity: 'division_2_roster', entityName: target.name, source: 'Settings / Division 2 Roster Transfer', details: `Moved ${movingIdol?.name || idolId} from ${currentLeague.name}.` });
                                   }}
                                   className="rounded-lg border border-slate-700 bg-black px-2 py-0.5 text-[10px] font-bold text-amber-300"
