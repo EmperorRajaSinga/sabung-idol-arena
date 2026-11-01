@@ -202,10 +202,7 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
                    m.idolBId === idol.id || m.idolBName?.toLowerCase() === idol.name.toLowerCase();
       if (!isMe) return;
 
-      const stage = (m.stage || (m as any).stageOrDivision || m.groupName || '').toLowerCase();
-      const isLeague = stage.includes('league') || stage.includes('division') || stage.includes('wildcard') ||
-                       stage.includes('premier') || stage.includes('championship') || stage.includes('md ') || stage.includes('matchday') ||
-                       (m.matchId && (m.matchId.includes('league') || m.matchId.includes('wildcard') || m.matchId.includes('wm_')));
+      const isLeague = isLeagueDivisionMatch(m);
 
       // The Idols (own matchdays) and Swiss / LCQ are separate competitions, never division matches.
       const midLower = String(m.matchId || '').toLowerCase();
@@ -745,17 +742,7 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
       // Check matches for this season in matchDatabase (strictly exclude league matches)
       const seasonMatches = (matchDatabase || []).filter((m) => {
         if (Number(m.seasonId) !== sId) return false;
-        const stage = (m.stage || '').toLowerCase();
-        const groupName = (m.groupName || '').toLowerCase();
-        const matchId = (m.matchId || '').toLowerCase();
-        const isLeague =
-          matchId.startsWith('league-') ||
-          stage.includes('league') ||
-          stage.includes('division') ||
-          stage.includes('md ') ||
-          stage.includes('matchday') ||
-          groupName.includes('division') ||
-          groupName.includes('league');
+        const isLeague = isLeagueDivisionMatch(m);
         if (isLeague) return false;
         return (
           m.idolAId === idol.id ||
@@ -851,35 +838,13 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
 
   // Helper to distinguish The Idols (Superleague) matches
   const isMatchTheIdols = (m: ArchivedMatch): boolean => {
-    const stage = (m.stage || (m as any).stageOrDivision || m.groupName || '').toLowerCase();
-    const matchId = (m.matchId || '').toLowerCase();
-    return (
-      (m as any).type === 'The Idols' ||
-      stage.includes('the idols') ||
-      stage.includes('superleague') ||
-      stage.includes('masters') ||
-      matchId.includes('the_idols') ||
-      matchId.includes('superleague') ||
-      matchId.includes('ti_')
-    );
+    return isTheIdolsMatch(m);
   };
 
   // Helper to distinguish League vs Tournament matches
   const isMatchLeague = (m: ArchivedMatch): boolean => {
     if (isMatchTheIdols(m)) return false;
-    const stage = (m.stage || (m as any).stageOrDivision || m.groupName || '').toLowerCase();
-    const matchId = (m.matchId || '').toLowerCase();
-    return (
-      (m as any).type === 'League Division' ||
-      stage.includes('league') ||
-      stage.includes('division') ||
-      stage.includes('wildcard') ||
-      stage.includes('premier') ||
-      stage.includes('championship') ||
-      stage.includes('md ') ||
-      stage.includes('matchday') ||
-      Boolean(matchId && (matchId.includes('league') || matchId.includes('wildcard') || matchId.includes('wm_')))
-    );
+    return isLeagueDivisionMatch(m);
   };
 
   // All matches for this idol (League, The Idols, and Tournament combined), sorted newest to oldest chronologically
