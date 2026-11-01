@@ -22,7 +22,7 @@ const createEmptySuperFinal = (id: string, label: string, idolAId: string | null
   idolAId, idolBId, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false,
 });
 const toSuperKnockoutMatches = (matches: E.BNode[]): KnockoutMatch[] => matches.map((m, index) => ({
-  id: m.id, roundIndex: 0, roundName: 'Super Cup Grand Final', matchNumber: index + 1,
+  id: m.id, roundIndex: 0, roundName: 'Super Cup', matchNumber: index + 1,
   bestOf: m.bestOf, idolAId: m.idolAId || null, idolBId: m.idolBId || null,
   scoreA: m.scoreA, scoreB: m.scoreB, winnerId: m.winnerId, completed: m.completed,
 }));
