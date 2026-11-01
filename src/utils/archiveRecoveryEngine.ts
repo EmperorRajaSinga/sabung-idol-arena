@@ -252,6 +252,8 @@ export function recoverMissingSeasonArchives(
             completedAt: gfMatch.date || new Date().toISOString(),
             championId: champId || '',
             championName: champName || 'Unknown',
+            championGroup: champId === gfMatch.idolAId ? gfMatch.idolAGroup : gfMatch.idolBGroup,
+            championPhoto: champId === gfMatch.idolAId ? gfMatch.idolAPhoto : gfMatch.idolBPhoto,
             runnerUpId: runnerId || '',
             runnerUpName: runnerName || 'Unknown',
             thirdPlaceId: thirdId,
