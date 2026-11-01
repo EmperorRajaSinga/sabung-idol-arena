@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import type { V5State, V5TitleArchive } from '../utils/v5/store';
 import {
   TournamentArchive,
   ArchivedMatch,
@@ -27,6 +28,8 @@ interface TournamentBrowserPanelProps {
   leagueArchives?: LeagueSeasonArchive[];
   theIdolsState?: TheIdolsSeasonState | null;
   theIdolsArchives?: TheIdolsSeasonArchive[];
+  v5State?: V5State | null;
+  v5TitleArchives?: V5TitleArchive[];
 }
 
 export const TournamentBrowserPanel: React.FC<TournamentBrowserPanelProps> = ({
@@ -40,8 +43,10 @@ export const TournamentBrowserPanel: React.FC<TournamentBrowserPanelProps> = ({
   leagueArchives = [],
   theIdolsState,
   theIdolsArchives = [],
+  v5State,
+  v5TitleArchives = [],
 }) => {
-  const [activeTab, setActiveTab] = useState<'tournament' | 'league' | 'the_idols'>('tournament');
+  const [activeTab, setActiveTab] = useState<'tournament' | 'league' | 'the_idols' | 'division_two' | 'crown_cup' | 'open_arena_cup' | 'spotlight_cup' | 'super_cup_a' | 'super_cup_b'>('tournament');
 
   const allArchives = getAllSeasonArchives(
     archives,
@@ -167,6 +172,26 @@ export const TournamentBrowserPanel: React.FC<TournamentBrowserPanelProps> = ({
   const theIdolsArchiveMatches =
     (selectedTheIdolsArchive?.matches || []).filter((m) => m.matchday === theIdolsArchiveMatchday);
 
+
+  const v5ArchiveSections = useMemo(() => {
+    const defs = [
+      {key:'division_two',label:'Division 2',division:true,match:(x:string)=>x.includes('division 2'),title:(x:string)=>x.toLowerCase().startsWith('division 2')},
+      {key:'crown_cup',label:'Crown Cup',division:false,match:(x:string)=>x.includes('league champions cup'),title:(x:string)=>x.toLowerCase()==='league champions cup'},
+      {key:'open_arena_cup',label:'Open Arena Cup',division:false,match:(x:string)=>x.includes('all-league knockout cup'),title:(x:string)=>x.toLowerCase()==='all-league knockout cup'},
+      {key:'spotlight_cup',label:'Spotlight Cup',division:false,match:(x:string)=>x.includes('top 16 mini cup'),title:(x:string)=>x.toLowerCase().startsWith('top 16 mini cup')},
+      {key:'super_cup_a',label:'Super Cup A',division:false,match:(x:string)=>x.includes('super cup a'),title:(x:string)=>x.toLowerCase()==='super cup a'},
+      {key:'super_cup_b',label:'Super Cup B',division:false,match:(x:string)=>x.includes('super cup b'),title:(x:string)=>x.toLowerCase().startsWith('super cup b')},
+    ];
+    return defs.map(def=>{
+      const matches=(Array.isArray(matchDatabase)?matchDatabase:[]).filter(m=>{const stage=String(m?.stage||'').toLowerCase();return stage.startsWith('cups & divisions:')&&def.match(stage);});
+      const titles=(Array.isArray(v5TitleArchives)?v5TitleArchives:[]).filter(t=>Boolean(t)&&t.isDivision===def.division&&def.title(String(t.competition||'')));
+      const seasons=new Map<number,{seasonNumber:number;seasonName:string;matches:ArchivedMatch[];titles:V5TitleArchive[]}>();
+      matches.forEach(m=>{const n=Number(m.seasonId||1);const row=seasons.get(n)||{seasonNumber:n,seasonName:m.seasonName||('Season '+n),matches:[],titles:[]};row.matches.push(m);seasons.set(n,row);});
+      titles.forEach(t=>{const n=Number(t.seasonNumber||1);const row=seasons.get(n)||{seasonNumber:n,seasonName:t.seasonName||('Season '+n),matches:[],titles:[]};row.titles.push(t);seasons.set(n,row);});
+      return {...def,seasons:[...seasons.values()].sort((a,b)=>b.seasonNumber-a.seasonNumber),matchCount:matches.length,titleCount:titles.length};
+    });
+  },[matchDatabase,v5TitleArchives]);
+
   const theIdolsArchiveTotalMatchdays = Math.max(
     ...(selectedTheIdolsArchive?.matches || []).map((m) => m.matchday),
     19
@@ -210,6 +235,7 @@ export const TournamentBrowserPanel: React.FC<TournamentBrowserPanelProps> = ({
             <Table className="w-3.5 h-3.5" />
             <span>League Archives</span>
           </button>
+          {(['crown_cup','open_arena_cup','spotlight_cup','super_cup_a','super_cup_b','division_two'] as const).map(key=>{const section=v5ArchiveSections.find(x=>x.key===key);return <button key={key} onClick={()=>setActiveTab(key)} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-poster-body font-black transition-all ${activeTab===key?'poster-pill-gold text-amber-950 shadow':'text-amber-200/70 hover:text-white'}`}><Trophy className="w-3.5 h-3.5"/><span>{section?.label}</span></button>;})}
           <button
             onClick={() => setActiveTab('the_idols')}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-poster-body font-black transition-all ${
@@ -539,6 +565,19 @@ export const TournamentBrowserPanel: React.FC<TournamentBrowserPanelProps> = ({
       )}
 
       {/* 3. THE IDOLS ARCHIVES */}
+
+      {(['division_two','crown_cup','open_arena_cup','spotlight_cup','super_cup_a','super_cup_b'] as const).includes(activeTab as any) && (() => {
+        const section=v5ArchiveSections.find(x=>x.key===activeTab);if(!section)return null;
+        return <div className="space-y-5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{[['Seasons',section.seasons.length],['Archived Matches',section.matchCount],['Champions',section.titleCount],['Participants',new Set(section.seasons.flatMap(x=>x.matches.flatMap(m=>[m.idolAId,m.idolBId]))).size]].map(([label,value])=><div key={String(label)} className="rounded-xl border-2 border-black bg-[#1b130e] p-4"><div className="text-[10px] uppercase font-black text-amber-200/60">{label}</div><div className="mt-1 text-2xl font-poster-title text-amber-300">{value}</div></div>)}</div>
+          {section.seasons.length?section.seasons.map(season=><section key={season.seasonNumber} className="rounded-2xl border-2 border-black bg-[#1b130e] p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-black pb-3"><h3 className="font-poster-title text-lg text-amber-300">{season.seasonName}</h3><span className="text-xs text-amber-100/60">{season.matches.length} matches</span></div>
+            {season.titles.length>0?<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">{season.titles.map((t,i)=><div key={String(t.competition)+'-'+t.winnerId+'-'+i} className="rounded-xl border border-amber-500/30 bg-[#120d09] p-4"><div className="text-[10px] uppercase font-black text-amber-400">{section.label} Champion</div><div className="mt-1 font-poster-title text-base text-white">{t.winnerName}</div><div className="text-xs text-amber-200/60">{t.winnerGroup||'Solo'}</div>{t.runnerUpName&&<div className="mt-3 border-t border-white/10 pt-2 text-xs text-slate-300">Runner-up: <span className="font-bold text-white">{t.runnerUpName}</span></div>}</div>)}</div>:<div className="rounded-xl bg-black/30 p-4 text-xs text-amber-100/50">No champion archive recorded for this season.</div>}
+            <div className="space-y-2"><h4 className="font-poster-title text-sm text-amber-300">Match Archive</h4>{season.matches.length?<div className="overflow-x-auto rounded-xl border border-black"><table className="w-full min-w-[680px] text-xs"><thead className="bg-black/40 text-amber-300 uppercase"><tr>{['Stage','Idol A','Score','Idol B','Date'].map(x=><th key={x} className="p-3 text-center">{x}</th>)}</tr></thead><tbody>{season.matches.map((m,i)=><tr key={m.matchId||i} className="border-t border-black/50 text-amber-100/80"><td className="p-3">{String(m.stage||'').split(' / ').slice(1).join(' / ')||m.stage}</td><td className="p-3 text-right font-bold text-white">{m.idolAName}</td><td className="p-3 text-center font-black text-amber-300">{m.scoreA} - {m.scoreB}</td><td className="p-3 font-bold text-white">{m.idolBName}</td><td className="p-3 text-center">{m.date||'-'}</td></tr>)}</tbody></table></div>:<div className="text-xs text-amber-100/50">No archived matches for this season.</div>}</div>
+          </section>):<div className="rounded-2xl border-2 border-black bg-[#1b130e] p-10 text-center text-sm text-amber-100/60">No {section.label} archives found.</div>}
+        </div>;
+      })()}
+
       {activeTab === 'the_idols' && (
         <div className="space-y-6">
           {allTheIdolsArchives.length > 0 ? (
