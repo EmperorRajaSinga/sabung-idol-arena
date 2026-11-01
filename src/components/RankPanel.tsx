@@ -86,10 +86,12 @@ function mergeV5RankContributions(
   matchDatabase: ArchivedMatch[],
   v5State: V5State | null | undefined,
   v5TitleArchives: V5TitleArchive[],
-  leagueState: LeagueSeasonState | null
+  leagueState: LeagueSeasonState | null,
+  configuredSeasonNumber?: number,
+  configuredSeasonName?: string
 ): { topIdols: RankRecordWithV5[]; topGroups: RankRecordWithV5[] } {
-  const idolMap = new Map((Array.isArray(idols) ? idols : []).filter(Boolean).map((idol) => [idol.id, idol]));
-  const groupMeta = new Map((Array.isArray(girlGroups) ? girlGroups : []).filter(Boolean).map((group) => [group.name, group]));
+  const idolMap = new Map<string, Idol>((Array.isArray(idols) ? idols : []).filter(Boolean).map((idol) => [idol.id, idol] as [string, Idol]));
+  const groupMeta = new Map<string, GirlGroup>((Array.isArray(girlGroups) ? girlGroups : []).filter(Boolean).map((group) => [group.name, group] as [string, GirlGroup]));
   const idolRecords = new Map<string, RankRecordWithV5>();
   const groupRecords = new Map<string, RankRecordWithV5>();
 
@@ -198,8 +200,8 @@ function mergeV5RankContributions(
   const latestV5MatchSeason = v5Matches.reduce((latest, match) =>
     Math.max(latest, Number(match.seasonId || 1)), 1
   );
-  const currentSeasonNumber = Math.max(1, Number(leagueState?.seasonNumber || latestV5MatchSeason || 1));
-  const currentSeasonName = leagueState?.seasonName || ('Season ' + currentSeasonNumber);
+  const currentSeasonNumber = Math.max(1, Number(configuredSeasonNumber || leagueState?.seasonNumber || latestV5MatchSeason || 1));
+  const currentSeasonName = configuredSeasonName || leagueState?.seasonName || ('Season ' + currentSeasonNumber);
 
   const addLiveTitle = (
     competition: string,
@@ -311,6 +313,8 @@ interface RankPanelProps {
   matchDatabase?: ArchivedMatch[];
   v5State?: V5State | null;
   v5TitleArchives?: V5TitleArchive[];
+  currentSeasonNumber?: number;
+  currentSeasonName?: string;
 }
 
 export const RankPanel: React.FC<RankPanelProps> = ({
@@ -324,6 +328,8 @@ export const RankPanel: React.FC<RankPanelProps> = ({
   matchDatabase = [],
   v5State,
   v5TitleArchives = [],
+  currentSeasonNumber,
+  currentSeasonName,
 }) => {
   const [activeLeaderboard, setActiveLeaderboard] = useState<'idols' | 'groups'>('idols');
 
@@ -345,11 +351,14 @@ export const RankPanel: React.FC<RankPanelProps> = ({
       matchDatabase,
       v5State,
       v5TitleArchives,
-      leagueState
+      leagueState,
+      currentSeasonNumber,
+      currentSeasonName
     );
   }, [
     idols, girlGroups, careerStats, leagueState, leagueArchives,
     theIdolsState, theIdolsArchives, matchDatabase, v5State, v5TitleArchives,
+    currentSeasonNumber, currentSeasonName,
   ]);
 
   const idolsMap = useMemo(() => {
@@ -567,7 +576,7 @@ export const RankPanel: React.FC<RankPanelProps> = ({
           <div className="text-[10px] text-amber-100/45">Division 2 and all V5 cups</div>
         </div>
         <div className="rounded-2xl border-2 border-black bg-[#17100b] p-4 poster-shadow">
-          <div className="text-[10px] font-black uppercase tracking-wider text-amber-200/55">V5 Titles Archived</div>
+          <div className="text-[10px] font-black uppercase tracking-wider text-amber-200/55">V5 Titles Counted</div>
           <div className="mt-1 font-poster-title text-2xl text-amber-300">{v5TitleSummary.total}</div>
           <div className="text-[10px] text-amber-100/55">{v5TitleSummary.divisionTwo} Division 2 · {v5TitleSummary.cups} Cup titles</div>
         </div>
