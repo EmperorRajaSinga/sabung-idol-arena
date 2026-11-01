@@ -544,10 +544,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       return;
     }
 
-    const hasStarted = Boolean(activeLeagueState.isStarted) ||
-      leagues.some((league) => league.matches?.some((match) => match.completed));
-    if (hasStarted) {
-      showSuccessMsg('Auto-fill is locked after the Division 1 season starts. Use roster transfers for approved changes.');
+    const hasPlayedMatches = leagues.some((league) =>
+      league.matches?.some((match) => match.completed)
+    );
+    if (hasPlayedMatches) {
+      showSuccessMsg('Auto-fill is locked because at least one Division 1 match has already been played.');
       return;
     }
 
@@ -1693,14 +1694,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               <button
                 type="button"
                 onClick={handleAutoFillFreeLeagueIdols}
-                disabled={
-                  Boolean(activeLeagueState.isStarted) ||
-                  activeLeagueState.leagues.some((league) => league.matches?.some((match) => match.completed)) ||
-                  !activeLeagueState.leagues.some((league) => (league.memberIds?.length || 0) < 20) ||
-                  !appState.idols.some((idol) => isIdolActive(idol, appState.girlGroups) && !new Set(activeLeagueState.leagues.flatMap((league) => league.memberIds || [])).has(idol.id))
-                }
+                disabled={activeLeagueState.leagues.length !== 6}
                 className="flex items-center gap-1.5 rounded-xl border-2 border-black poster-pill-gold px-4 py-2.5 text-xs font-black text-amber-950 shadow-lg transition-all hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-40"
-                title="Distribute active unassigned idols into available Division 1 roster slots, up to 20 per league"
+                title="Distribute active unassigned idols into available Division 1 roster slots, up to 20 per league. Click to see availability if no idols can be assigned."
               >
                 <Sparkles className="h-4 w-4" />
                 <span>Auto-fill from Free Idols</span>
