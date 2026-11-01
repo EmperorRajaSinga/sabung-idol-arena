@@ -56,7 +56,7 @@ const Row: React.FC<{ m: E.BNode; idols: Map<string, Idol>; nm: (id: string | nu
   );
 
   return (
-    <div onClick={() => ready && setScoreModalOpen(true)} role={ready ? 'button' : undefined} tabIndex={ready ? 0 : undefined} onKeyDown={(e) => { if (ready && (e.key === 'Enter' || e.key === ' ')) setScoreModalOpen(true); }} className={`relative w-[320px] shrink-0 rounded-2xl border-2 p-4 shadow-xl transition-all sm:w-[340px] ${
+    <div className={`relative w-[320px] shrink-0 rounded-2xl border-2 p-4 shadow-xl transition-all sm:w-[340px] ${
       m.completed
         ? 'border-emerald-900/80 bg-[#19140f]'
         : ready
@@ -92,7 +92,7 @@ const Row: React.FC<{ m: E.BNode; idols: Map<string, Idol>; nm: (id: string | nu
       ) : (
         <div className="mt-3 rounded-xl border border-black/70 bg-black/25 px-3 py-2 text-[11px] font-bold italic text-amber-100/40">Waiting for previous round</div>
       )}
-      {ready && <MatchModal isOpen={scoreModalOpen} onClose={() => setScoreModalOpen(false)} idolA={idolA} idolB={idolB} currentScoreA={m.scoreA} currentScoreB={m.scoreB} matchTitle={m.roundName} stageName="Cups & Divisions" isKnockout isCompleted={m.completed} onFinish={(scoreA, scoreB) => { const result = onSave(scoreA, scoreB); if (result) setErr(result); else setScoreModalOpen(false); }} onReset={m.completed ? () => { setErr('Use the competition reset control to clear this result.'); } : undefined} />}
+
     </div>
   );
 };
@@ -123,7 +123,9 @@ const Bracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (id: stri
   </div>;
 };
 
-const OpenArenaMatchList: React.FC<{ matches: E.BNode[]; idols: Map<string, Idol>; nm: (id: string | null) => string; onSelect: (m: E.BNode) => void }> = ({ matches, idols, nm, onSelect }) => {
+const OpenArenaMatchList: React.FC<{ matches: E.BNode[]; idols: Map<string, Idol>; nm: (id: string | null) => string; onSave: (id: string, a: number, b: number) => string | null }> = ({ matches, idols, nm, onSave }) => {
+  const [selectedMatch, setSelectedMatch] = useState<E.BNode | null>(null);
+  const [error, setError] = useState('');
   const rounds = Array.from(new Set(matches.map((m) => m.roundName)));
   const [activeRound, setActiveRound] = useState(rounds[0] || '');
   React.useEffect(() => { if (!rounds.includes(activeRound)) setActiveRound(rounds[0] || ''); }, [matches, activeRound]);
@@ -142,13 +144,15 @@ const OpenArenaMatchList: React.FC<{ matches: E.BNode[]; idols: Map<string, Idol
     </div>
     <div className="mb-2 flex items-center justify-between"><h3 className="text-sm font-black uppercase tracking-wider text-amber-300">{activeRound}</h3><span className="text-[10px] font-mono font-bold text-amber-100/50">{completed}/{current.length} matches completed</span></div>
     <div className="space-y-2">
-      {current.map((m) => <button key={m.id} type="button" onClick={() => onSelect(m)} className={`flex w-full min-w-0 items-center gap-2 rounded-2xl border-2 px-2.5 py-3 text-left transition-colors sm:gap-3 sm:px-4 ${m.completed ? 'border-black bg-[#130d09]' : 'border-amber-900/70 bg-[#1b110a] hover:border-amber-600'}`}>
+      {current.map((m) => <button key={m.id} type="button" onClick={() => { if (m.idolAId && m.idolBId) { setSelectedMatch(m); setError(''); } }} className={`flex w-full min-w-0 items-center gap-2 rounded-2xl border-2 px-2.5 py-3 text-left transition-colors sm:gap-3 sm:px-4 ${m.completed ? 'border-black bg-[#130d09]' : 'border-amber-900/70 bg-[#1b110a] hover:border-amber-600'}`}>
         {competitor(m.idolAId, m.scoreA, m.completed && m.winnerId === m.idolAId, 'left')}
         <span className="flex h-9 min-w-[58px] shrink-0 items-center justify-center rounded-xl border-2 border-black bg-black/60 px-2 font-mono text-sm font-black tracking-wider text-amber-300 sm:min-w-[66px] sm:text-base">{m.completed ? `${m.scoreA} - ${m.scoreB}` : 'VS'}</span>
         {competitor(m.idolBId, m.scoreB, m.completed && m.winnerId === m.idolBId, 'right')}
       </button>)}
     </div>
     <p className="mt-2 text-[10px] text-amber-100/40">Select a match row to enter or edit its result.</p>
+    {error && <p role="alert" className="mt-2 text-xs font-bold text-rose-400">{error}</p>}
+    {selectedMatch && <MatchModal isOpen onClose={() => setSelectedMatch(null)} idolA={selectedMatch.idolAId ? idols.get(selectedMatch.idolAId) || null : null} idolB={selectedMatch.idolBId ? idols.get(selectedMatch.idolBId) || null : null} currentScoreA={selectedMatch.scoreA} currentScoreB={selectedMatch.scoreB} matchTitle={selectedMatch.roundName} stageName="Open Arena Cup" isKnockout isGrandFinal={/final/i.test(selectedMatch.roundName) && !/semi|quarter/i.test(selectedMatch.roundName)} isCompleted={selectedMatch.completed} onFinish={(a, b) => { const result = onSave(selectedMatch.id, a, b); if (result) setError(result); else setSelectedMatch(null); }} />}
   </div>;
 };
 
@@ -350,17 +354,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
           <Btn onClick={() => { if (lc && window.confirm("Reset this tournament bracket and remove all match results?")) commit({ leagueCup: null }); }} disabled={!lc} className="bg-rose-400">Reset Bracket</Btn>
         </div>
         {lc && <p className="text-xs mb-2 font-mono">{lc.order.length} idols · {lc.plan.rounds} rounds · entering per round: {lc.plan.entrants.join(' / ')}{lc.championId ? ` · Champion: ${nm(lc.championId)}` : ''}</p>}
-        {lc && <OpenArenaMatchList matches={lc.rounds.flat()} idols={by} nm={nm} onSelect={(current) => {
-          if (!current.idolAId || !current.idolBId) return;
-          const target = current.bestOf === 7 ? 4 : 3;
-          const result = window.prompt(`Enter score for ${nm(current.idolAId)} vs ${nm(current.idolBId)} (example: ${target}-1)`, current.completed ? `${current.scoreA}-${current.scoreB}` : '');
-          if (result === null) return;
-          const parsed = result.trim().match(/^(\\d+)\\s*[-:]\\s*(\\d+)$/);
-          if (!parsed) { window.alert('Invalid score. Use a format such as 3-1.'); return; }
-          const next = clone(lc); const error = manual(next.rounds.flat(), current.id, Number(parsed[1]), Number(parsed[2]));
-          if (error) { window.alert(error); return; }
-          commit({ leagueCup: refreshLC(next) });
-        }} />}
+        {lc && <OpenArenaMatchList matches={lc.rounds.flat()} idols={by} nm={nm} onSave={(id, a, b) => { const next = clone(lc); const error = manual(next.rounds.flat(), id, a, b); if (error) return error; commit({ leagueCup: refreshLC(next) }); return null; }} />}
         {lcMatches.length > 0 && <span className="sr-only">{lcMatches.length} matches</span>}
       </Card> )}
 
