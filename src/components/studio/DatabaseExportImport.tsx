@@ -38,9 +38,12 @@ import { saveIdols, saveGirlGroups, saveTournamentArchives, saveMatchDatabase } 
 import { saveLeagueSeasonState, saveLeagueArchives, saveCustomLeagueBranding } from '../../utils/leagueLogic';
 import { saveTheIdolsState, saveTheIdolsArchives } from '../../utils/theIdolsLogic';
 import { saveV5State } from '../../utils/v5/store';
+import type { V5State } from '../../utils/v5/store';
+import { rebuildLeague } from '../../utils/v5/engine';
 
 interface DatabaseExportImportProps {
   appState: AppState;
+  v5State?: V5State | null;
   leagueState: LeagueSeasonState | null;
   leagueArchives: LeagueSeasonArchive[];
   theIdolsState?: TheIdolsSeasonState | null;
@@ -59,6 +62,7 @@ interface DatabaseExportImportProps {
 
 export const DatabaseExportImport: React.FC<DatabaseExportImportProps> = ({
   appState,
+  v5State,
   leagueState,
   leagueArchives,
   theIdolsState,
@@ -143,7 +147,9 @@ export const DatabaseExportImport: React.FC<DatabaseExportImportProps> = ({
       const jsonStr = exportLeagueBrandingAndRosters(
         leagueState,
         appState.idols,
-        appState.customLeagueBranding
+        appState.customLeagueBranding,
+        v5State,
+        appState.girlGroups || []
       );
       triggerDownload(`sabung_league_branding_and_rosters_${todayStr}.json`, jsonStr);
     } catch (err: any) {
@@ -356,7 +362,7 @@ export const DatabaseExportImport: React.FC<DatabaseExportImportProps> = ({
         case 'idols_groups':
           return exportIdolGroupDatabase(appState);
         case 'league_branding_rosters':
-          return exportLeagueBrandingAndRosters(leagueState, appState.idols, appState.customLeagueBranding);
+          return exportLeagueBrandingAndRosters(leagueState, appState.idols, appState.customLeagueBranding, v5State, appState.girlGroups || []);
         case 'permanent_match_db':
           return exportPermanentMatchDatabase(appState, leagueState, leagueArchives, theIdolsState, theIdolsArchives);
         case 'full_historical_stats':
