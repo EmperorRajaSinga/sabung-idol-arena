@@ -218,6 +218,8 @@ export const SeasonSimulatorPanel: React.FC<SeasonSimulatorPanelProps> = ({
         knockoutMatches: simulationResult.updatedAppState.knockoutMatches,
         groups: simulationResult.updatedAppState.groups,
         matchDatabase: simulationResult.syncedMatchDatabase,
+        v5State: simulationResult.updatedV5State || prev.v5State,
+        v5TitleArchives: simulationResult.updatedV5TitleArchives || prev.v5TitleArchives,
       }));
     }
     flushAppStateToIndexedDB();
@@ -255,6 +257,8 @@ export const SeasonSimulatorPanel: React.FC<SeasonSimulatorPanelProps> = ({
           matchDatabase: summary.syncedMatchDatabase,
           leagueState: summary.updatedLeagueState,
           theIdolsState: summary.updatedTheIdolsState,
+          v5State: summary.updatedV5State || prev.v5State,
+          v5TitleArchives: summary.updatedV5TitleArchives || prev.v5TitleArchives,
         }));
 
         onUpdateLeagueState(summary.updatedLeagueState);
