@@ -2369,7 +2369,6 @@ export function App() {
               v5State={v5State}
               v5TitleArchives={appState.v5TitleArchives || []}
             />
-            </SeasonProfileCrashBoundary>
           )}
 
           {activeTab === 'settings' && (
@@ -2817,7 +2816,10 @@ export function App() {
               leagueArchives={leagueArchives}
               theIdolsState={theIdolsState}
               theIdolsArchives={theIdolsArchives}
+              v5State={v5State}
+              v5TitleArchives={appState.v5TitleArchives || []}
             />
+            </SeasonProfileCrashBoundary>
           )}
 
           {activeTab === 'idol_profile' && (
