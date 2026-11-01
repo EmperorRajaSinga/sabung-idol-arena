@@ -3,7 +3,7 @@ import { CombinedStatsRecord } from '../utils/leagueLogic';
 import { Trophy, Crown, Medal, Flame, Sparkles, TrendingUp } from 'lucide-react';
 import { getCountryFlag } from '../utils/nationalityHelper';
 
-type PodiumRankRecord = CombinedStatsRecord & { v5Titles?: number };
+type PodiumRankRecord = CombinedStatsRecord & { v5Titles?: number; currentDivision?: string; promotions?: number; relegations?: number };
 
 interface KahootPodiumProps {
   records: PodiumRankRecord[];
@@ -100,6 +100,9 @@ export const KahootPodium: React.FC<KahootPodiumProps> = ({
             <p className="text-[10px] font-bold text-amber-400/80 truncate">
               {rec.girlGroup}
             </p>
+          )}
+          {rec.currentDivision && (
+            <p className="text-[9px] font-bold text-cyan-300/80 truncate">{rec.currentDivision}</p>
           )}
         </div>
 
