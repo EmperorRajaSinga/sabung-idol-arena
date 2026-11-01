@@ -47,9 +47,7 @@ const SeedManagerPanel = React.lazy(() => import('./components/SeedManagerPanel'
 const NationalityManagerPanel = React.lazy(() => import('./components/NationalityManagerPanel').then((module) => ({ default: module.NationalityManagerPanel })));
 const InactiveManagerPanel = React.lazy(() => import('./components/InactiveManagerPanel').then((module) => ({ default: module.InactiveManagerPanel })));
 const CompetitionManagerPanel = React.lazy(() => import('./components/CompetitionManagerPanel').then((module) => ({ default: module.CompetitionManagerPanel })));
-const GroupDrawPanel = React.lazy(() => import('./components/GroupDrawPanel').then((module) => ({ default: module.GroupDrawPanel })));
-const GroupStagePanel = React.lazy(() => import('./components/GroupStagePanel').then((module) => ({ default: module.GroupStagePanel })));
-const KnockoutBracketPanel = React.lazy(() => import('./components/KnockoutBracketPanel').then((module) => ({ default: module.KnockoutBracketPanel })));
+const UnzureCupPanel = React.lazy(() => import('./components/UnzureCupPanel').then((module) => ({ default: module.UnzureCupPanel })));
 const PublicResultsPanel = React.lazy(() => import('./components/PublicResultsPanel').then((module) => ({ default: module.PublicResultsPanel })));
 
 
@@ -470,7 +468,7 @@ export function App() {
       saveLeagueSeasonState(updatedLeague);
     }
 
-    setActiveTab('group_stage');
+    setActiveTab('unzure_cup');
   };
 
   const handleSelectIdolProfile = (idolId: string) => {
@@ -1794,7 +1792,7 @@ export function App() {
       config: { ...prev.config, isGroupStageFinished: true },
     }));
 
-    setActiveTab('knockout');
+    setActiveTab('unzure_cup');
   };
 
   // --- HANDLERS: KNOCKOUT MATCH UPDATE ---
@@ -2596,18 +2594,19 @@ export function App() {
               onEnsureIdolCount={handleEnsureIdolCount}
               onProceedToGroupDraw={() => {
                 handlePerformGroupDraw();
-                setActiveTab('draw');
+                setActiveTab('unzure_cup');
               }}
             />
           )}
 
-          {activeTab === 'draw' && (
-            <GroupDrawPanel
+          {activeTab === 'unzure_cup' && (
+            <UnzureCupPanel
               groups={appState.groups}
+              knockoutMatches={appState.knockoutMatches}
               idolsMap={idolsMap}
               config={appState.config}
               onRedrawGroups={handlePerformGroupDraw}
-              onStartGroupStage={() => setActiveTab('group_stage')}
+              onStartGroupStage={() => setActiveTab('unzure_cup')}
               onSaveGroups={handleSaveGroups}
               onUpdateFavoriteIdols={(favoriteIds) => {
                 setAppState((prev) => ({
@@ -2618,37 +2617,19 @@ export function App() {
                   },
                 }));
               }}
-            />
-          )}
-
-          {activeTab === 'group_stage' && (
-            <GroupStagePanel
-              groups={appState.groups}
-              idolsMap={idolsMap}
-              config={appState.config}
               onUpdateGroupMatch={handleUpdateGroupMatch}
               onFinalizeGroupStageAndBuildKnockout={handleFinalizeGroupStageAndBuildKnockout}
-              onSaveGroups={handleSaveGroups}
               onResetCurrentSeason={handleResetCurrentSeason}
               onResetGroupScoresOnly={handleResetGroupScoresOnly}
               onResetSingleGroupMatch={handleResetSingleGroupMatch}
-              onSimulateAllMatches={handleSimulateAllGroupMatches}
-            />
-          )}
-
-          {activeTab === 'knockout' && (
-            <KnockoutBracketPanel
-              knockoutMatches={appState.knockoutMatches}
-              idolsMap={idolsMap}
-              config={appState.config}
+              onSimulateAllGroupMatches={handleSimulateAllGroupMatches}
               onUpdateKnockoutMatch={handleUpdateKnockoutMatch}
               onCrownChampionAndArchive={handleCrownChampionAndArchive}
               onSaveKnockoutMatches={handleSaveKnockoutMatches}
               onRegenerateAutoBracket={handleFinalizeGroupStageAndBuildKnockout}
-              onResetCurrentSeason={handleResetCurrentSeason}
               onResetKnockoutOnly={handleResetKnockoutToGroupStage}
               onResetSingleKnockoutMatch={handleResetSingleKnockoutMatch}
-              onSimulateAllMatches={handleSimulateAllKnockoutMatches}
+              onSimulateAllKnockoutMatches={handleSimulateAllKnockoutMatches}
             />
           )}
 
