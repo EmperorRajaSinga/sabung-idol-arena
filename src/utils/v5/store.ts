@@ -8,9 +8,44 @@ export interface V5State {
   miniCups: Record<string, BNode[]>; superA: BNode | null; superB: BNode[];
 }
 export const emptyV5 = (): V5State => ({ d2: [], perLeague: 20, promotionCount: 3, pendingMoves: null, promotionHistory: [], champsCup: null, leagueCup: null, miniCups: {}, superA: null, superB: [] });
+
+// PERSISTENCE CONTRACT: user-entered data must survive refresh. Keep the primary
+// key and a recovery copy in sync synchronously. Never treat a failed write as saved.
 const KEY = 'sabung_v5_state_v1';
-export function hasStoredV5State(): boolean { try { return localStorage.getItem(KEY) !== null; } catch { return false; } }
-export function loadV5State(): V5State {
-  try { const raw = localStorage.getItem(KEY); return raw ? { ...emptyV5(), ...JSON.parse(raw) } : emptyV5(); } catch { return emptyV5(); }
+const BACKUP_KEY = 'sabung_v5_state_backup_v1';
+function parseState(raw: string | null): V5State | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.d2)) return null;
+    return { ...emptyV5(), ...parsed };
+  } catch {
+    return null;
+  }
 }
-export function saveV5State(s: V5State): boolean { try { localStorage.setItem(KEY, JSON.stringify(s)); return true; } catch { return false; } }
+export function hasStoredV5State(): boolean {
+  try { return Boolean(parseState(localStorage.getItem(KEY)) || parseState(localStorage.getItem(BACKUP_KEY))); }
+  catch { return false; }
+}
+export function loadV5State(): V5State {
+  try {
+    const primary = parseState(localStorage.getItem(KEY));
+    if (primary) return primary;
+    const backup = parseState(localStorage.getItem(BACKUP_KEY));
+    if (backup) {
+      // Repair the primary key from the last known-good backup.
+      try { localStorage.setItem(KEY, JSON.stringify(backup)); } catch { /* backup remains available */ }
+      return backup;
+    }
+    return emptyV5();
+  } catch { return emptyV5(); }
+}
+export function saveV5State(s: V5State): boolean {
+  let serialized: string;
+  try { serialized = JSON.stringify(s); } catch { return false; }
+  let primarySaved = false;
+  let backupSaved = false;
+  try { localStorage.setItem(KEY, serialized); primarySaved = true; } catch { /* attempt recovery copy */ }
+  try { localStorage.setItem(BACKUP_KEY, serialized); backupSaved = true; } catch { /* report partial failure */ }
+  return primarySaved && backupSaved;
+}
