@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { V5CompetitionStatsPanel } from './V5CompetitionStatsPanel';
+import type { V5State, V5TitleArchive } from '../utils/v5/store';
 import {
   CareerStat,
   LeagueSeasonArchive,
@@ -45,6 +45,8 @@ interface AllTimeRecordsPanelProps {
   idols?: Idol[];
   archives?: TournamentArchive[];
   matchDatabase?: ArchivedMatch[];
+  v5State?: V5State | null;
+  v5TitleArchives?: V5TitleArchive[];
 }
 
 interface LeagueAggregatedStat {
@@ -97,9 +99,11 @@ export const AllTimeRecordsPanel: React.FC<AllTimeRecordsPanelProps> = ({
   idols = [],
   archives = [],
   matchDatabase = [],
+  v5State,
+  v5TitleArchives = [],
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'tournament' | 'league' | 'the_idols' | 'combined' | 'achievements' | 'v5_competitions'
+    'tournament' | 'league' | 'division_two' | 'crown_cup' | 'open_arena_cup' | 'spotlight_cup' | 'super_cup_a' | 'super_cup_b' | 'the_idols' | 'combined' | 'achievements'
   >('tournament');
 
   const [showAllRows, setShowAllRows] = useState<boolean>(true);
@@ -537,6 +541,30 @@ export const AllTimeRecordsPanel: React.FC<AllTimeRecordsPanelProps> = ({
   const displayedTheIdolsLeaderboard = showAllRows
     ? fullTheIdolsLeaderboard
     : fullTheIdolsLeaderboard.slice(0, 10);
+
+
+  const v5RecordSections = useMemo(() => {
+    const defs = [
+      {key:'division_two',label:'Division 2',division:true,match:(x:string)=>x.includes('division 2'),title:(x:string)=>x.toLowerCase().startsWith('division 2')},
+      {key:'crown_cup',label:'Crown Cup',division:false,match:(x:string)=>x.includes('league champions cup'),title:(x:string)=>x.toLowerCase()==='league champions cup'},
+      {key:'open_arena_cup',label:'Open Arena Cup',division:false,match:(x:string)=>x.includes('all-league knockout cup'),title:(x:string)=>x.toLowerCase()==='all-league knockout cup'},
+      {key:'spotlight_cup',label:'Spotlight Cup',division:false,match:(x:string)=>x.includes('top 16 mini cup'),title:(x:string)=>x.toLowerCase().startsWith('top 16 mini cup')},
+      {key:'super_cup_a',label:'Super Cup A',division:false,match:(x:string)=>x.includes('super cup a'),title:(x:string)=>x.toLowerCase()==='super cup a'},
+      {key:'super_cup_b',label:'Super Cup B',division:false,match:(x:string)=>x.includes('super cup b'),title:(x:string)=>x.toLowerCase().startsWith('super cup b')},
+    ];
+    return defs.map(def=>{
+      const matches=(Array.isArray(matchDatabase)?matchDatabase:[]).filter(m=>{const stage=String(m?.stage||'').toLowerCase();return stage.startsWith('cups & divisions:')&&def.match(stage)&&m.scoreA!=null&&m.scoreB!=null;});
+      const titles=(Array.isArray(v5TitleArchives)?v5TitleArchives:[]).filter(t=>Boolean(t)&&t.isDivision===def.division&&def.title(String(t.competition||'')));
+      const rows=new Map<string,{idolId:string;name:string;group:string;played:number;wins:number;draws:number;losses:number;gf:number;ga:number;titles:number;runnerUps:number}>();
+      const get=(id:string,name:string,group:string)=>{if(!rows.has(id))rows.set(id,{idolId:id,name:name||'Unknown Idol',group:group||'Solo',played:0,wins:0,draws:0,losses:0,gf:0,ga:0,titles:0,runnerUps:0});return rows.get(id)!;};
+      const seen=new Set<string>();
+      matches.forEach(m=>{const key=String(m.matchId||[m.seasonId,m.stage,m.idolAId,m.idolBId,m.scoreA,m.scoreB].join('|'));if(seen.has(key))return;seen.add(key);const a=Number(m.scoreA),b=Number(m.scoreB);if(!Number.isFinite(a)||!Number.isFinite(b))return;
+        [[m.idolAId,m.idolAName,m.idolAGroup,a,b],[m.idolBId,m.idolBName,m.idolBGroup,b,a]].forEach(v=>{if(!v[0])return;const r=get(String(v[0]),String(v[1]||''),String(v[2]||''));r.played++;r.gf+=Number(v[3]);r.ga+=Number(v[4]);if(Number(v[3])>Number(v[4]))r.wins++;else if(Number(v[3])===Number(v[4]))r.draws++;else r.losses++;});
+      });
+      titles.forEach(t=>{if(t.winnerId)get(t.winnerId,t.winnerName,t.winnerGroup||'').titles++;if(t.runnerUpId)get(t.runnerUpId,t.runnerUpName,t.runnerUpGroup||'').runnerUps++;});
+      return {...def,rows:[...rows.values()].sort((a,b)=>b.titles-a.titles||b.wins-a.wins||(b.gf-b.ga)),matches:matches.length,titles:titles.length,seasons:new Set([...matches.map(m=>Number(m.seasonId||1)),...titles.map(t=>Number(t.seasonNumber||1))]).size};
+    });
+  },[matchDatabase,v5TitleArchives]);
 
   // 4. Combined Stats Leaderboard
   const [activeCombinedCat, setActiveCombinedCat] = useState<CombinedMetricKey>('totalTitles');
