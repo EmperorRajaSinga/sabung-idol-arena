@@ -88,14 +88,22 @@ function writeSnapshot(next: RosterSnapshot): boolean {
   return primarySaved || backupSaved;
 }
 
-function toMemberships<T extends { id: number; memberIds: string[] }>(leagues: T[]): RosterMembership[] {
-  return leagues.map((league) => ({
-    id: Number(league.id),
-    memberIds: Array.isArray(league.memberIds) ? [...league.memberIds] : [],
-  }));
+function toMemberships<T extends { id: number; memberIds: string[]; standings?: Array<{ idolId?: string }> }>(leagues: T[]): RosterMembership[] {
+  return leagues.map((league) => {
+    const memberIds = Array.isArray(league.memberIds) ? [...league.memberIds] : [];
+    // Older league records can have an empty memberIds array while their
+    // standings still contain the actual roster. Recover that legacy shape.
+    const recoveredIds = memberIds.length > 0
+      ? memberIds
+      : (league.standings || []).map((standing) => standing.idolId).filter((id): id is string => typeof id === 'string' && id.length > 0);
+    return { id: Number(league.id), memberIds: Array.from(new Set(recoveredIds)) };
+  });
 }
 
-export function saveDivisionOneRosterSnapshot<T extends { id: number; memberIds: string[] }>(leagues: T[]): boolean {
+export function saveDivisionOneRosterSnapshot<T extends { id: number; memberIds: string[]; standings?: Array<{ idolId?: string }> }>(
+  leagues: T[],
+  options: { allowEmptyRosterIds?: number[] } = {}
+): boolean {
   const expectedIds = new Set([1, 2, 3, 4, 5, 6]);
   if (
     !Array.isArray(leagues) ||
@@ -116,7 +124,8 @@ export function saveDivisionOneRosterSnapshot<T extends { id: number; memberIds:
   // clearDivisionOneRosterSnapshot operation.
   const protectedMembership = incoming.map((league) => {
     const savedMembers = savedById.get(league.id) || [];
-    if (league.memberIds.length === 0 && savedMembers.length > 0) {
+    const explicitlyCleared = (options.allowEmptyRosterIds || []).includes(league.id);
+    if (league.memberIds.length === 0 && savedMembers.length > 0 && !explicitlyCleared) {
       return { ...league, memberIds: [...savedMembers] };
     }
     return league;
@@ -155,15 +164,27 @@ export function saveDivisionTwoRosterSnapshot<T extends { id: number; memberIds:
   });
 }
 
-export function restoreDivisionOneRoster<T extends { id: number; memberIds: string[] }>(
+export function restoreDivisionOneRoster<T extends { id: number; memberIds: string[]; standings?: Array<{ idolId?: string }> }>(
   leagues: T[] | null | undefined,
   snapshot: RosterSnapshot | null
 ): T[] | null | undefined {
-  if (!Array.isArray(leagues) || !snapshot?.division1) return leagues;
-  const saved = new Map(snapshot.division1.map((item) => [item.id, item.memberIds]));
-  return leagues.map((league) => saved.has(Number(league.id))
-    ? { ...league, memberIds: [...saved.get(Number(league.id))!] }
-    : league);
+  if (!Array.isArray(leagues)) return leagues;
+  const saved = new Map((snapshot?.division1 || []).map((item) => [item.id, item.memberIds]));
+  return leagues.map((league) => {
+    const savedIds = saved.get(Number(league.id)) || [];
+    const currentIds = Array.isArray(league.memberIds) ? league.memberIds : [];
+    const standingsIds = (league.standings || [])
+      .map((standing) => standing.idolId)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0);
+    // Prefer a populated independent snapshot. If it is empty or missing,
+    // recover from the league's standings instead of silently showing 0/20.
+    const memberIds = savedIds.length > 0
+      ? [...savedIds]
+      : currentIds.length > 0
+        ? [...currentIds]
+        : Array.from(new Set(standingsIds));
+    return memberIds.length > 0 ? { ...league, memberIds } : league;
+  });
 }
 
 export function restoreDivisionTwoRoster<T extends { id: number; memberIds: string[] }>(
