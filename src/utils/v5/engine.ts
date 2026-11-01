@@ -23,10 +23,15 @@ const slotIdol = (s: Slot, by: Map<string, BNode>): string | null => {
 export function advanceBracket(ms: BNode[]) { const by = new Map(ms.map((m) => [m.id, m])); ms.forEach((m) => { if (!m.completed) { m.idolAId = slotIdol(m.a, by); m.idolBId = slotIdol(m.b, by); } }); }
 /**
  * Invalidates every downstream match fed by an edited result.
- * Clears results as well as participants, then recalculates the bracket
- * from the first changed match so stale winners cannot survive an edit.
+ * Results and participant snapshots are cleared for the full dependency
+ * chain. Do not advance the bracket here: that would immediately repopulate
+ * participant IDs from the edited source and violate the reset boundary.
+ * The UI/simulation path calls advanceBracket when it is ready to resume play.
  */
 export function invalidateDownstream(ms: BNode[], changedMatchId: string): string[] {
+  const sourceExists = ms.some((match) => match.id === changedMatchId);
+  if (!sourceExists) return [];
+
   const invalidated = new Set<string>();
   const queue = [changedMatchId];
   while (queue.length) {
@@ -37,14 +42,19 @@ export function invalidateDownstream(ms: BNode[], changedMatchId: string): strin
         (('win' in match.a && match.a.win === sourceId) || ('lose' in match.a && match.a.lose === sourceId)) ||
         (('win' in match.b && match.b.win === sourceId) || ('lose' in match.b && match.b.lose === sourceId));
       if (!dependsOnSource) continue;
+
       invalidated.add(match.id);
       queue.push(match.id);
-      match.idolAId = null; match.idolBId = null;
-      match.scoreA = null; match.scoreB = null;
-      match.winnerId = null; match.loserId = null; match.completed = false;
+      match.idolAId = null;
+      match.idolBId = null;
+      match.scoreA = null;
+      match.scoreB = null;
+      match.winnerId = null;
+      match.loserId = null;
+      match.completed = false;
     }
   }
-  advanceBracket(ms);
+
   return [...invalidated];
 }
 export function playNode(m: BNode, idols: Map<string, Idol>) {
