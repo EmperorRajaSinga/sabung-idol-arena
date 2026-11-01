@@ -656,6 +656,7 @@ export function normalizeAppState(parsed: any, isFullRestore: boolean = false): 
     theIdolsArchives,
     // The dedicated V5 key is written synchronously after every competition edit, so prefer it over a possibly older main snapshot.
     v5State: hasStoredV5State() ? loadV5State() : (parsed.v5State && typeof parsed.v5State === 'object' ? parsed.v5State as V5State : loadV5State()),
+    v5TitleArchives: Array.isArray(parsed.v5TitleArchives) ? parsed.v5TitleArchives as V5TitleArchive[] : [],
     _savedAt: typeof parsed._savedAt === 'number' ? parsed._savedAt : Date.now(),
   };
 
@@ -1511,6 +1512,8 @@ export function exportHistoricalStatsToJSON(
     tournamentArchives: appState.archives,
     leagueArchives: lArchives,
     theIdolsArchives: tiArchives,
+    v5TitleArchives: appState.v5TitleArchives || [],
+    totalV5CompetitionTitlesArchived: (appState.v5TitleArchives || []).length,
     totalTournamentSeasonsArchived: appState.archives.length,
     totalLeagueSeasonsArchived: lArchives.length,
     totalTheIdolsSeasonsArchived: tiArchives.length,
