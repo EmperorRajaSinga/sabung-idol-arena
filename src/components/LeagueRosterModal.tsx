@@ -263,6 +263,21 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
       return;
     }
 
+    const existingElsewhere = new Map<string, number[]>();
+    for (let division = 1; division <= 6; division++) {
+      if (division === activeDivisionTab) continue;
+      for (const id of divisionMembers[division] || []) {
+        const key = normalizeDataName(idolsMap.get(id)?.name || id);
+        if (!key) continue;
+        existingElsewhere.set(key, [...(existingElsewhere.get(key) || []), division]);
+      }
+    }
+    const conflicts = Array.from(new Set(lines.filter((name) => existingElsewhere.has(normalizeDataName(name)))));
+    if (conflicts.length) {
+      triggerFeedback(`Paste blocked. Already assigned to another Division 1 league: ${conflicts.slice(0, 8).join(', ')}. Use the Move control to transfer an idol.`, 'error');
+      return;
+    }
+
     const newlyCreated: Idol[] = [];
     const memberIds: string[] = [];
     const usedIds = new Set<string>();
@@ -350,6 +365,21 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
     const reservedConflicts = Array.from(new Set(Object.values(sections).flat().filter((name) => reservedNameSet.has(normalizeDataName(name)))));
     if (reservedConflicts.length) {
       triggerFeedback(`Bulk paste blocked. Already assigned to Division 2: ${reservedConflicts.slice(0, 10).join(', ')}.`, 'error');
+      return;
+    }
+    const assignedByName = new Map<string, number>();
+    const crossLeagueDuplicates: string[] = [];
+    for (let division = 1; division <= 6; division++) {
+      for (const name of sections[division]) {
+        const key = normalizeDataName(name);
+        if (!key) continue;
+        const priorDivision = assignedByName.get(key);
+        if (priorDivision !== undefined && priorDivision !== division) crossLeagueDuplicates.push(name);
+        else assignedByName.set(key, division);
+      }
+    }
+    if (crossLeagueDuplicates.length) {
+      triggerFeedback(`Bulk paste blocked. These names appear in more than one Division 1 league: ${Array.from(new Set(crossLeagueDuplicates)).slice(0, 10).join(', ')}.`, 'error');
       return;
     }
     const newlyCreated: Idol[] = [];
