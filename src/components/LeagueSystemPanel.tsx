@@ -97,6 +97,7 @@ interface LeagueSystemPanelProps {
   onUpdateIdols?: (idols: Idol[]) => void;
   persistState?: boolean;
   divisionLabel?: string;
+  hidePostseason?: boolean;
 }
 
 export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
@@ -113,6 +114,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
   onUpdateIdols,
   persistState = true,
   divisionLabel = 'Division 1',
+  hidePostseason = false,
 }) => {
   // Ensure we have a valid state
   const state: LeagueSeasonState = useMemo(() => {
@@ -901,13 +903,13 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
             <span>Favorites ({config?.favoriteIdolIds?.length || 0})</span>
           </button>
 
-          <button
+          {!hidePostseason && <button
             onClick={() => setShowQualifiersModal(true)}
             className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-amber-300 hover:text-white font-poster-title text-xs font-black transition-all"
           >
             <Crown className="w-4 h-4 text-amber-400" />
             <span>View {postseasonFormat === 'grand_cup_64' ? 'Top 64' : 'Top 32'} Qualifiers</span>
-          </button>
+          </button>}
 
           <button
             onClick={handleSimulateAllLeagues}
@@ -928,6 +930,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
         </div>
       </div>
 
+      {!hidePostseason && <>
       {/* Postseason Format Selection Card */}
       <div className="rounded-2xl border-2 border-black bg-[#150f0b] p-4 poster-shadow flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -974,6 +977,8 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
         </div>
       </div>
 
+      </>}
+
       {/* Simulation Pause / Alert Banner */}
       {simAlertMessage && (
         <div className="rounded-2xl border-2 border-amber-400/50 bg-amber-950/40 p-4 poster-shadow flex items-center justify-between gap-3 text-amber-200 text-xs font-bold animate-in fade-in duration-200">
@@ -990,6 +995,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
         </div>
       )}
 
+      {!hidePostseason && <>
       {/* 2. Sub-View Switcher: Divisions vs Postseason Play-In */}
       <div className="flex flex-wrap items-center gap-3 border-b-2 border-black pb-3">
         <button
@@ -1036,7 +1042,8 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
         </button>
       </div>
 
-      {leagueViewMode === 'wildcard' ? (
+      </>}
+      {(!hidePostseason && leagueViewMode === 'wildcard') ? (
         <div className="space-y-6">
           {/* Postseason Format Quick-Selector Bar in Wildcard View */}
           <div className="rounded-2xl border-2 border-black bg-[#160f0b] p-3.5 flex flex-wrap items-center justify-between gap-3 poster-shadow-sm">
@@ -1164,7 +1171,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
                     {activeLeague?.name} Standings
                   </h3>
                   <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                    {postseasonFormat === 'grand_cup_64' ? 'Grand Cup 64 Format' : 'Classic 32 Format'}
+                    {hidePostseason ? 'League Division' : postseasonFormat === 'grand_cup_64' ? 'Grand Cup 64 Format' : 'Classic 32 Format'}
                   </span>
                 </div>
                 <p className="text-[11px] text-amber-300/80 font-semibold mt-0.5">
@@ -1783,6 +1790,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
       </>
       )}
 
+      {!hidePostseason && <>
       {/* 4. Champions Qualification Advance Banner */}
       <div className="rounded-3xl border-2 border-black bg-gradient-to-r from-[#1e150f] via-[#16100b] to-[#120d09] p-6 poster-shadow flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-1">
@@ -1953,6 +1961,8 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
           </div>
         </div>
       )}
+
+      </>}
 
       {/* 6. Favorite Idols Selector Modal */}
       {showFavoriteModal && (

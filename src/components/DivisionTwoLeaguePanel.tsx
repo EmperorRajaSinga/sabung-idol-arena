@@ -58,5 +58,6 @@ export const DivisionTwoLeaguePanel: React.FC<Props> = ({
     onUpdateFavoriteIdols={onUpdateFavoriteIdols}
     persistState={false}
     divisionLabel="Division 2"
+    hidePostseason
   />;
 };
