@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import type { Idol, GirlGroup, LeagueSeasonState, KnockoutMatch } from '../types';
-import { loadV5State, saveV5State, V5State } from '../utils/v5/store';
-import { loadNames, saveNames, CompetitionNames } from '../utils/v5/names';
+import type { Idol, LeagueSeasonState, KnockoutMatch } from '../types';
+import { saveV5State, V5State } from '../utils/v5/store';
+import { loadNames } from '../utils/v5/names';
 import * as E from '../utils/v5/engine';
 import { rankStandings } from '../utils/swissLogic';
 import { getIdolRating } from '../utils/ratingHelper';
@@ -9,11 +9,10 @@ import { TournamentBracketTree } from './TournamentBracketTree';
 import { MatchModal } from './MatchModal';
 
 interface Props {
-  idols: Idol[]; girlGroups: GirlGroup[]; leagueState: LeagueSeasonState | null; section?: 'all' | 'crown' | 'super' | 'open' | 'spotlight';
+  idols: Idol[]; leagueState: LeagueSeasonState | null; section: 'crown' | 'super' | 'open' | 'spotlight';
   v5State: V5State; onUpdateV5State: (s: V5State) => void;
-  onUpdateLeagueState: (s: LeagueSeasonState) => void; theIdolsChampionId: string | null; knockoutMatches: KnockoutMatch[];
+  theIdolsChampionId: string | null; knockoutMatches: KnockoutMatch[];
 }
-const NAME_LABELS: Record<keyof CompetitionNames, string> = { division2: 'Division 2', champsCup: 'League champions cup (double elimination)', leagueCup: 'All-league knockout cup', miniCup: 'Top 16 mini cup', superCupA: 'Super Cup A (The Idols vs Unzure Cup)', superCupB: 'Super Cup B (league vs mini cup)' };
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 const Card: React.FC<{ title: string; note?: string; children: React.ReactNode }> = ({ title, note, children }) => (
   <section className="rounded-2xl border-2 border-black bg-[#20120a] p-4 mb-4 poster-shadow-lg">
@@ -244,7 +243,7 @@ const CrownCupBracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (
   );
 };
 
-export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, section = 'all', v5State, onUpdateV5State, onUpdateLeagueState, theIdolsChampionId, knockoutMatches }) => {
+export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5State, onUpdateV5State, theIdolsChampionId, knockoutMatches }) => {
   const v5 = v5State;
   const [names, setNames] = useState<CompetitionNames>(() => loadNames());
   const [msg, setMsg] = useState('');
@@ -257,7 +256,6 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
   const commit = (patch: Partial<V5State>) => { const n = { ...v5, ...patch }; onUpdateV5State(n); if (!saveV5State(n)) setMsg('Storage is full: this change is not saved. Export a backup and clear old data.'); };
   const done = (ls: { matches: any[] }[]) => ls.length > 0 && ls.every((l) => l.matches.length > 0 && l.matches.every((m: any) => m.completed));
   const d1Done = done(d1 as any), d2Done = done(v5.d2 as any);
-  const d1Fresh = d1.every((l) => l.matches.every((m: any) => !m.completed));
   const gf = knockoutMatches.find((m) => m.completed && /grand final/i.test(m.roundName));
   const grandChamp = gf?.winnerId || null, grandRunner = gf ? (gf.winnerId === gf.idolAId ? gf.idolBId : gf.idolAId) : null;
   const d2Count = v5.d2.reduce((a, l) => a + l.memberIds.length, 0);
@@ -271,19 +269,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
     return null;
   };
   /* ---------- actions */
-  const fillD2 = () => commit({ d2: E.autoFillDivisionTwo(d1, v5.d2, idols, girlGroups, v5.perLeague, names.division2) });
-  const rebuildD2 = () => { if (v5.d2.some((l) => l.matches.some((m: any) => m.completed))) { setMsg('Division 2 already has results. Finish the season first.'); return; } commit({ d2: v5.d2.map((l) => E.rebuildLeague(l, idols)) }); };
-  const simD2 = () => commit({ d2: v5.d2.map((l) => E.simulateLeagueMatches(l, idols)) });
-  const lockMoves = () => commit({ pendingMoves: d1.map((l) => E.computePromotionRelegation(l, v5.d2.find((x) => x.parentLeagueId === l.id) || { ...l, memberIds: [], standings: [], matches: [] } as any, v5.promotionCount)) });
-  const applyMoves = () => {
-    if (!leagueState || !v5.pendingMoves) return;
-    const r = E.applyMoves(d1, v5.d2, v5.pendingMoves, idols);
-    onUpdateLeagueState({ ...leagueState, leagues: r.d1 as any });
-    const seasonNumber = Number(leagueState.seasonNumber || 1);
-    const history = [...(v5.promotionHistory || [])].filter((entry) => Number(entry.seasonNumber) !== seasonNumber);
-    history.push({ seasonNumber, seasonName: leagueState.seasonName || `Season ${seasonNumber}`, appliedAt: new Date().toISOString(), moves: clone(v5.pendingMoves) });
-    commit({ d2: r.d2, pendingMoves: null, promotionHistory: history }); setMsg('Promotion and relegation applied to the new season rosters.');
-  };
+
   const champions = (): E.ChampionInfo[] => d1.map((l) => { const t = rankStandings(l.standings)[0]; return { idolId: t.idolId, leagueId: l.id, wonGrandCup: t.idolId === grandChamp, wonTheIdols: t.idolId === theIdolsChampionId, points: t.points || 0, gameDiff: t.gameDiff || 0 }; });
   const buildChamps = () => { if (d1.length !== 6) { setMsg('Champs Cup needs exactly 6 leagues.'); return; } commit({ champsCup: E.buildChampsCup(champions()) }); };
   const refreshLC = (s: E.LeagueCupState) => { if (s.rounds.length === s.plan.rounds && s.rounds[s.rounds.length - 1].every((m) => m.completed)) s.championId = s.rounds[s.rounds.length - 1][0].winnerId; return s; };
@@ -340,32 +326,19 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
   };
 
   const lc = v5.leagueCup, lcMatches = lc ? lc.rounds.flat() : [];
+  const panelTitle = section === 'crown' ? names.champsCup : section === 'open' ? names.leagueCup : section === 'spotlight' ? names.miniCup : 'Super Cups';
+  const panelDescription = section === 'crown'
+    ? 'The six Division 1 league champions compete in a double-elimination bracket.'
+    : section === 'open'
+      ? 'All Division 1 and Division 2 league participants compete in the all-league knockout bracket.'
+      : section === 'spotlight'
+        ? 'The top 16 finishers from each Division 1 league compete in their own seeded knockout bracket.'
+        : 'Manage the two Super Cup competitions and their championship matches.';
   return (
     <div className="w-full min-w-0 max-w-none p-4 text-amber-100 sm:p-6 xl:p-8">
-      <h1 className="text-3xl font-black text-amber-300 mb-1">Cups &amp; Divisions</h1>
-      <p className="text-sm text-amber-100/60 mb-4">{names.division2}, promotion and relegation, {names.champsCup}, {names.leagueCup}, {names.miniCup} and the Super Cups. Everything runs after the league season.</p>
+      <h1 className="text-3xl font-black text-amber-300 mb-1">{panelTitle}</h1>
+      <p className="text-sm text-amber-100/60 mb-4">{panelDescription}</p>
       {msg && <div role="status" className="mb-4 rounded-xl border-2 border-black bg-black/50 p-3 text-sm text-amber-200">{msg} <button className="underline ml-2" onClick={() => setMsg('')}>close</button></div>}
-
-      {section === 'all' && (<Card title="Competition names" note="Rename anything. Names are saved on this device.">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-          {(Object.keys(names) as Array<keyof CompetitionNames>).map((k) => (
-            <label key={k} className="text-[11px] font-bold text-amber-100/70">{NAME_LABELS[k]}
-              <input value={names[k]} onChange={(e) => { const n = { ...names, [k]: e.target.value }; setNames(n); saveNames(n); }} className="mt-1 w-full rounded-lg border-2 border-black bg-black/50 px-2 py-1 text-sm text-amber-100" />
-            </label>
-          ))}
-        </div>
-      </Card> )}
-
-      {(section === 'all') && (<Card title="Promotion and relegation" note={`Bottom ${v5.promotionCount} of each Division 1 league go down. Top ${v5.promotionCount} of its Division 2 go up. Lock the review after all leagues finish, then apply it when the new season has started.`}>
-        <div className="flex flex-wrap gap-2 mb-3">
-          <Btn onClick={lockMoves} disabled={!d1Done || !d2Done}>Lock review</Btn>
-          <Btn onClick={applyMoves} disabled={!v5.pendingMoves || !d1Fresh} title={!d1Fresh ? 'Start the new season first' : ''}>Apply to new season</Btn>
-        </div>
-        {!d1Done || !d2Done ? <p className="text-xs text-amber-100/60">Waiting for all Division 1 and Division 2 matches to finish.</p> : null}
-        {v5.pendingMoves && <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">{v5.pendingMoves.map((mv) => (
-          <div key={mv.leagueId} className="rounded-lg border-2 border-black bg-black/30 p-2"><div className="font-black">League {mv.leagueId}</div>
-            <div className="text-rose-300">Down: {mv.relegated.map(nm).join(', ') || 'none'}</div><div className="text-emerald-300">Up: {mv.promoted.map(nm).join(', ') || 'none'}</div></div>))}</div>}
-      </Card> )}
 
       {(section === 'all' || section === 'crown') && (<Card title={names.champsCup} note="The 6 league champions, double elimination. Byes: Unzure Cup winner, then The Idols winner, then league points. Best of 5, Lower Final and Grand Final Best of 7.">
         <div className="flex gap-2 mb-2">
