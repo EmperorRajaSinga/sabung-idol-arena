@@ -444,6 +444,11 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
     seasons.get(groupName)!.add(season);
   });
 
+  // Keep historical group names visible even if the current idol roster has changed.
+  v5WinnerByCompetition.forEach((groups) => groups.forEach((_seasons, groupName) => {
+    if (!groupMembersMap.has(groupName)) groupMembersMap.set(groupName, []);
+  }));
+
   // 4. Build GirlGroupStat list
   const groupStatsList: GirlGroupStat[] = [];
 
