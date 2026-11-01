@@ -50,6 +50,7 @@ type RankRecordWithV5 = CombinedStatsRecord & {
   v5CupTitles: number;
   promotions: number;
   relegations: number;
+  currentDivision: string;
 };
 
 const makeEmptyRankRecord = (
@@ -74,6 +75,7 @@ const makeEmptyRankRecord = (
   v5CupTitles: 0,
   promotions: 0,
   relegations: 0,
+  currentDivision: '',
   totalPoints: 0,
   matches: 0,
   wins: 0,
@@ -108,6 +110,7 @@ function mergeV5RankContributions(
       v5CupTitles: 0,
       promotions: 0,
       relegations: 0,
+      currentDivision: '',
     });
   });
   (base.topGroups || []).forEach((record) => {
@@ -119,6 +122,7 @@ function mergeV5RankContributions(
       v5CupTitles: 0,
       promotions: 0,
       relegations: 0,
+      currentDivision: '',
     });
   });
 
@@ -148,6 +152,26 @@ function mergeV5RankContributions(
     groupRecords.set(normalized, record);
     return record;
   };
+
+
+  const assignCurrentDivision = (league: { name: string; memberIds?: string[]; standings?: Array<{ idolId: string; rank?: number }> }, tier: 'D1' | 'D2') => {
+    const memberIds = Array.isArray(league.memberIds) ? league.memberIds : [];
+    const standings = Array.isArray(league.standings) ? league.standings : [];
+    memberIds.forEach((idolId) => {
+      const idol = idolMap.get(idolId);
+      const standing = standings.find((row) => row.idolId === idolId);
+      const position = Number(standing?.rank || 0);
+      const record = ensureIdol(idolId, idol?.name, idol?.girlGroup, idol?.photoUrl);
+      record.currentDivision = tier + ' · ' + league.name + (position > 0 ? ' · #' + position : '');
+    });
+  };
+
+  (Array.isArray(leagueState?.leagues) ? leagueState.leagues : []).forEach((league) => {
+    assignCurrentDivision(league, 'D1');
+  });
+  (Array.isArray(v5State?.d2) ? v5State.d2 : []).forEach((league) => {
+    assignCurrentDivision(league, 'D2');
+  });
 
   const seenMatches = new Set<string>();
   (Array.isArray(matchDatabase) ? matchDatabase : []).forEach((match) => {
@@ -726,10 +750,11 @@ export const RankPanel: React.FC<RankPanelProps> = ({
                               />
                             )}
                           </div>
-                          {item.girlGroup && item.girlGroup !== 'Solo' && (
-                            <span className="text-[10px] font-bold text-amber-400/80">
-                              {item.girlGroup} &bull; {item.seed || 'Tier Competitor'}
-                            </span>
+                          {((item.girlGroup && item.girlGroup !== 'Solo') || item.currentDivision) && (
+                            <div className="text-[10px] font-bold text-amber-400/80">
+                              {item.girlGroup && item.girlGroup !== 'Solo' ? item.girlGroup + ' · ' + (item.seed || 'Tier Competitor') : (item.seed || 'Unseeded')}
+                              {item.currentDivision && <span className="block text-cyan-300/80">{item.currentDivision}</span>}
+                            </div>
                           )}
                         </div>
                       </div>
