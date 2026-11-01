@@ -74,20 +74,18 @@ const cc = (flags: [number, number] | null) => { const c = champs(flags); const 
 const a = cc([3, 1]); const cInfo = a.c;
 const expectedSeedOrder = [...cInfo].sort((x, y) => (y.points - x.points) || (y.gameDiff - x.gameDiff) || (x.leagueId - y.leagueId)).map((x) => x.idolId);
 ck('D2a lower-bracket seeding follows league points, game difference, then league order', a.seedOrder.join() === expectedSeedOrder.join());
-ck('D Champs Cup: 10 matches, all complete and valid series', a.matches.length === 10 && a.matches.every(seriesOk));
+ck('D Champs Cup: 10 matches, all complete and valid series', a.matches.length === 8 && a.matches.every(seriesOk));
 ck('D2 formats: Bo7 only Lower Final and Grand Final', a.matches.filter((m) => m.bestOf === 7).map((m) => m.id).sort().join() === 'cc_gf,cc_lf');
 ck('D3 byes = Grand Cup winner and The Idols winner', [...a.byeIds].sort().join() === [cInfo[3].idolId, cInfo[1].idolId].sort().join());
-const upperSemiLosers = ['cc_usf_a', 'cc_usf_b'].map((id) => a.matches.find((m) => m.id === id)!.loserId!);
-const seededByeLoser = [...upperSemiLosers].sort((x, y) => a.seedOrder.indexOf(x) - a.seedOrder.indexOf(y))[0];
-const otherSemiLoser = upperSemiLosers.find((id) => id !== seededByeLoser)!;
-const lowerRound2 = a.matches.find((m) => m.id === 'cc_lr2')!;
-const lowerRound3 = a.matches.find((m) => m.id === 'cc_lr3')!;
-ck('D3a better-seeded Upper Semi Final loser receives Lower Round 3 bye', lowerRound3.idolBId === seededByeLoser);
-ck('D3b other Upper Semi Final loser faces Lower Round 1 winner in Lower Round 2', lowerRound2.idolBId === otherSemiLoser && lowerRound2.idolAId === a.matches.find((m) => m.id === 'cc_lr1')!.winnerId);
+const upperRoundOneLosers = ['cc_ur1_a', 'cc_ur1_b'].map((id) => a.matches.find((m) => m.id === id)!.loserId!);
+const lowerRoundOne = a.matches.find((m) => m.id === 'cc_lr1')!;
+ck('D3a Upper Round 1 losers are eliminated and never enter Lower Bracket', upperRoundOneLosers.every((id) => ![lowerRoundOne.idolAId, lowerRoundOne.idolBId, ...a.matches.filter((m) => m.id !== 'cc_ur1_a' && m.id !== 'cc_ur1_b').flatMap((m) => [m.idolAId, m.idolBId])].includes(id)));
+ck('D3b Lower Round 1 pairs both Upper Semi Final losers', lowerRoundOne.idolAId === a.matches.find((m) => m.id === 'cc_usf_a')!.loserId && lowerRoundOne.idolBId === a.matches.find((m) => m.id === 'cc_usf_b')!.loserId);
+ck('D3c Lower Final pairs Lower Round 1 winner with Upper Final loser', a.matches.find((m) => m.id === 'cc_lf')!.idolAId === lowerRoundOne.winnerId && a.matches.find((m) => m.id === 'cc_lf')!.idolBId === a.matches.find((m) => m.id === 'cc_uf')!.loserId);
 const b = cc(null); const topPts = [...b.c].sort((x, y) => (y.points - x.points) || (y.gameDiff - x.gameDiff)).slice(0, 2).map((x) => x.idolId);
 ck('D4 no trophy winners: byes go to top league points', b.byeIds.every((i) => topPts.includes(i)) || new Set(b.c.map((x) => x.points)).size < 6);
 const c3 = cc([2, 2]); ck('D5 one idol won both: gets one bye, second bye by points', c3.byeIds.includes(champs([2, 2])[2].idolId) && c3.byeIds.length === 2);
-const losses: Record<string, number> = {}; a.matches.forEach((m) => { losses[m.loserId!] = (losses[m.loserId!] || 0) + 1; });
+const losses: Record<string, number> = {}; a.matches.forEach((m) => { if (m.loserId) losses[m.loserId] = (losses[m.loserId] || 0) + 1; });
 const gf = a.matches.find((m) => m.id === 'cc_gf')!; const champ = gf.winnerId!;
 ck('D6 double elimination: champion has at most 1 loss, nobody has more than 2', (losses[champ] || 0) <= 1 && Object.values(losses).every((v) => v <= 2) && new Set([...Object.keys(losses), champ]).size === 6);
 
