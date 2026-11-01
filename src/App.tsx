@@ -2301,6 +2301,8 @@ export function App() {
               onResetWorkspace={handleStartNewTournament}
               onRestoreDefaultData={handleResetData}
               onResetCurrentSeason={handleResetCurrentSeason}
+              v5State={v5State}
+              onUpdateV5State={handleUpdateV5State}
               leagueState={leagueState}
               leagueArchives={leagueArchives}
               onUpdateLeagueState={handleUpdateLeagueState}

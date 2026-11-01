@@ -164,28 +164,6 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
         </div>
       </Card> )}
 
-      {(section === 'all') && (<Card title={names.division2} note="Each Division 1 league has a Division 2 below it. Idols can be added or activated at any time, then press Auto-fill.">
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          <label className="text-xs font-bold">Capacity per league
-            <input type="number" min={2} max={40} value={v5.perLeague} onChange={(e) => commit({ perLeague: Math.max(2, Number(e.target.value) || 20) })} className="ml-2 w-16 rounded border-2 border-black bg-black/50 px-1 text-center font-mono" /></label>
-          <label className="text-xs font-bold">Promotion / relegation
-            <input type="number" min={1} max={5} value={v5.promotionCount} onChange={(e) => commit({ promotionCount: Math.max(1, Number(e.target.value) || 3) })} className="ml-2 w-12 rounded border-2 border-black bg-black/50 px-1 text-center font-mono" /></label>
-          <Btn onClick={fillD2} disabled={d1.length === 0}>Auto-fill from free idols</Btn>
-          <Btn onClick={rebuildD2} disabled={v5.d2.length === 0}>Rebuild fixtures</Btn>
-          <Btn onClick={simD2} disabled={v5.d2.length === 0 || d2Done}>Simulate {names.division2}</Btn>
-        </div>
-        {d1.length === 0 && <p className="text-xs text-rose-300">Set up the Division 1 leagues in League System first.</p>}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          {v5.d2.map((l) => { const r = rankStandings(l.standings); const total = l.matches.length, played = l.matches.filter((m: any) => m.completed).length; return (
-            <div key={l.id} className="rounded-xl border-2 border-black bg-black/30 p-3">
-              <div className="font-black text-sm">{l.name}</div>
-              <div className="text-[11px] text-amber-100/60 mb-1">{l.memberIds.length} idols · {played}/{total} matches</div>
-              <ol className="text-xs">{r.slice(0, Math.min(r.length, 10)).map((s, i) => (
-                <li key={s.idolId} className={`flex justify-between ${i < v5.promotionCount && played === total && total > 0 ? 'text-emerald-400 font-bold' : ''}`}><span>{i + 1}. {nm(s.idolId)}</span><span className="font-mono">{s.points}</span></li>))}</ol>
-            </div>); })}
-        </div>
-      </Card> )}
-
       {(section === 'all') && (<Card title="Promotion and relegation" note={`Bottom ${v5.promotionCount} of each Division 1 league go down. Top ${v5.promotionCount} of its Division 2 go up. Lock the review after all leagues finish, then apply it when the new season has started.`}>
         <div className="flex flex-wrap gap-2 mb-3">
           <Btn onClick={lockMoves} disabled={!d1Done || !d2Done}>Lock review</Btn>
