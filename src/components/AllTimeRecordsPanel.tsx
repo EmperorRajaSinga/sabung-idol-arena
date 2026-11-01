@@ -605,7 +605,9 @@ export const AllTimeRecordsPanel: React.FC<AllTimeRecordsPanelProps> = ({
       const photoUrl = idol?.photoUrl || cStat?.photoUrl || lStat?.photoUrl || tiStat?.photoUrl;
 
       const cupTitles = isOv && ov.championships !== undefined ? ov.championships : (cStat?.championships || 0);
-      const leagueTitles = isOv && ov.divisionTitles !== undefined ? ov.divisionTitles : (lStat?.leagueTitles || 0);
+      const legacyLeagueTitles = isOv && ov.divisionTitles !== undefined ? ov.divisionTitles : (lStat?.leagueTitles || 0);
+      const v5DivisionTitles = v5RecordSections.find(x => x.key === 'division_two')?.rows.find(x => x.idolId === id)?.titles || 0;
+      const leagueTitles = legacyLeagueTitles + v5DivisionTitles;
       const theIdolsSuperleagueTitles = isOv && ov.theIdolsSuperleagueTitles !== undefined
         ? ov.theIdolsSuperleagueTitles
         : (tiStat?.theIdolsTitles || 0);
@@ -613,15 +615,15 @@ export const AllTimeRecordsPanel: React.FC<AllTimeRecordsPanelProps> = ({
         ? ov.theIdolsMastersTitles
         : 0;
       const theIdolsTitles = theIdolsSuperleagueTitles + theIdolsMastersTitles;
-      const totalTitles = calculateUnifiedTotalTitles(cupTitles, leagueTitles, theIdolsSuperleagueTitles, theIdolsMastersTitles);
+      const v5CupTitles = v5RecordSections.filter(x => x.key !== 'division_two').reduce((sum, section) => sum + (section.rows.find(x => x.idolId === id)?.titles || 0), 0);
+      const totalTitles = calculateUnifiedTotalTitles(cupTitles + v5CupTitles, leagueTitles, theIdolsSuperleagueTitles, theIdolsMastersTitles);
 
-      const totalMatches = isOv && ov.matches !== undefined
-        ? ov.matches + (lStat?.leagueMatches || 0) + (tiStat?.theIdolsMatches || 0)
-        : ((cStat?.matches || 0) + (lStat?.leagueMatches || 0) + (tiStat?.theIdolsMatches || 0));
-      const totalWins = isOv && ov.wins !== undefined
-        ? ov.wins + (lStat?.leagueWins || 0) + (tiStat?.theIdolsWins || 0)
-        : ((cStat?.wins || 0) + (lStat?.leagueWins || 0) + (tiStat?.theIdolsWins || 0));
-      const totalGF = (cStat?.gamesFor || 0) + (lStat?.leagueGF || 0) + (tiStat?.theIdolsGF || 0);
+      const v5Played = v5RecordSections.reduce((sum, section) => sum + (section.rows.find(x => x.idolId === id)?.played || 0), 0);
+      const v5Wins = v5RecordSections.reduce((sum, section) => sum + (section.rows.find(x => x.idolId === id)?.wins || 0), 0);
+      const v5GF = v5RecordSections.reduce((sum, section) => sum + (section.rows.find(x => x.idolId === id)?.gf || 0), 0);
+      const totalMatches = (isOv && ov.matches !== undefined ? ov.matches : (cStat?.matches || 0)) + (lStat?.leagueMatches || 0) + (tiStat?.theIdolsMatches || 0) + v5Played;
+      const totalWins = (isOv && ov.wins !== undefined ? ov.wins : (cStat?.wins || 0)) + (lStat?.leagueWins || 0) + (tiStat?.theIdolsWins || 0) + v5Wins;
+      const totalGF = (cStat?.gamesFor || 0) + (lStat?.leagueGF || 0) + (tiStat?.theIdolsGF || 0) + v5GF;
       const winRate =
         totalMatches > 0 ? Math.round((totalWins / totalMatches) * 100) : 0;
 
@@ -655,7 +657,7 @@ export const AllTimeRecordsPanel: React.FC<AllTimeRecordsPanelProps> = ({
         const valB = (b as any)[activeCombinedCat] || 0;
         return valB - valA;
       });
-  }, [idols, careerStats, leagueStatsMap, theIdolsStatsMap, activeCombinedCat, searchFilter]);
+  }, [idols, careerStats, leagueStatsMap, theIdolsStatsMap, v5RecordSections, activeCombinedCat, searchFilter]);
 
   const displayedCombinedLeaderboard = showAllRows
     ? fullCombinedLeaderboard
@@ -785,9 +787,7 @@ export const AllTimeRecordsPanel: React.FC<AllTimeRecordsPanelProps> = ({
             <Star className="w-3.5 h-3.5" />
             <span>Combined Career</span>
           </button>
-          <button onClick={() => setActiveTab('v5_competitions')} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-poster-body font-black transition-all ${activeTab === 'v5_competitions' ? 'bg-amber-500 text-black shadow' : 'text-amber-200/70 hover:text-white'}`}>
-            <Trophy className="w-3.5 h-3.5" /><span>New V5 Competitions</span>
-          </button>
+          {(['division_two','crown_cup','open_arena_cup','spotlight_cup','super_cup_a','super_cup_b'] as const).map((key) => { const section = v5RecordSections.find((item) => item.key === key); return <button key={key} onClick={() => setActiveTab(key)} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-poster-body font-black transition-all ${activeTab === key ? 'bg-amber-500 text-black shadow' : 'text-amber-200/70 hover:text-white'}`}><Trophy className="w-3.5 h-3.5"/><span>{section?.label}</span></button>; })}
           <button
             onClick={() => setActiveTab('achievements')}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-poster-body font-black transition-all ${
@@ -803,7 +803,7 @@ export const AllTimeRecordsPanel: React.FC<AllTimeRecordsPanelProps> = ({
       </div>
 
       {/* Global Filter & Expand Bar (For Leaderboard tabs) */}
-      {activeTab !== 'achievements' && activeTab !== 'v5_competitions' && (
+      {activeTab !== 'achievements' && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#17100b] p-3 rounded-2xl border-2 border-black poster-shadow-sm">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-400/60" />
@@ -841,7 +841,7 @@ export const AllTimeRecordsPanel: React.FC<AllTimeRecordsPanelProps> = ({
         </div>
       )}
 
-      {activeTab === 'v5_competitions' && <V5CompetitionStatsPanel matchDatabase={matchDatabase} idols={idols} />}
+      {(['division_two','crown_cup','open_arena_cup','spotlight_cup','super_cup_a','super_cup_b'] as const).includes(activeTab as any) && (() => { const section=v5RecordSections.find(item=>item.key===activeTab); if(!section)return null; return <div className="space-y-4"><div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{[['Seasons',section.seasons],['Matches',section.matches],['Champions',section.titles],['Idols',section.rows.length]].map(([label,value])=><div key={String(label)} className="rounded-xl border-2 border-black bg-[#1b130e] p-4"><div className="text-[10px] uppercase font-black text-amber-200/60">{label}</div><div className="mt-1 text-2xl font-poster-title text-amber-300">{value}</div></div>)}</div><div className="overflow-x-auto rounded-2xl border-2 border-black bg-[#1b130e]"><table className="w-full min-w-[760px] text-xs"><thead className="bg-black/40 text-amber-300 uppercase"><tr>{['Rank','Idol','Group','Titles','Runner-ups','MP','W-D-L','Win Rate','GF','GA','GD'].map(x=><th key={x} className="p-3 text-center">{x}</th>)}</tr></thead><tbody>{section.rows.map((row,index)=><tr key={row.idolId} className="border-t border-black/50 text-amber-100/80"><td className="p-3 text-center">{index+1}</td><td className="p-3 font-bold text-white">{row.name}</td><td className="p-3">{row.group}</td><td className="p-3 text-center text-amber-300 font-black">{row.titles}</td><td className="p-3 text-center">{row.runnerUps}</td><td className="p-3 text-center">{row.played}</td><td className="p-3 text-center">{row.wins}-{row.draws}-{row.losses}</td><td className="p-3 text-center">{row.played?(row.wins/row.played*100).toFixed(1):'0.0'}%</td><td className="p-3 text-center">{row.gf}</td><td className="p-3 text-center">{row.ga}</td><td className="p-3 text-center">{row.gf-row.ga>0?'+':''}{row.gf-row.ga}</td></tr>)}</tbody></table></div></div>; })()}
 
       {/* 1. TOURNAMENT CUP RECORDS */}
       {activeTab === 'tournament' && (
