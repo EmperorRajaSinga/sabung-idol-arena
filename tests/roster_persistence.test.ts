@@ -54,6 +54,18 @@ const changedD1 = d1.map((league, index) => ({
 assert.equal(saveDivisionOneRosterSnapshot(changedD1), true);
 assert.deepEqual(loadRosterSnapshot()?.division2, d2);
 
+// A stale panel update with empty YG/JYP arrays must not erase their last
+// committed membership while the other four divisions remain unchanged.
+const staleRender = changedD1.map((league) => ({
+  ...league,
+  memberIds: [3, 4].includes(league.id) ? [] : [...league.memberIds],
+}));
+assert.equal(saveDivisionOneRosterSnapshot(staleRender), true);
+assert.deepEqual(
+  loadRosterSnapshot()?.division1?.map((league) => league.memberIds),
+  changedD1.map((league) => league.memberIds),
+);
+
 // Partial data and accidental empty Division 2 state must not erase a complete roster.
 assert.equal(saveDivisionOneRosterSnapshot(d1.slice(0, 5)), false);
 assert.equal(saveDivisionTwoRosterSnapshot([]), false);
