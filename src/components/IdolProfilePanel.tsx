@@ -204,7 +204,10 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
 
       const isLeague = isLeagueDivisionMatch(m);
 
-      // The Idols (own matchdays) and Swiss / LCQ are separate competitions, never division matches.
+      // Normalize the stage from this match before classifying its competition.
+      // The previous implementation referenced an undeclared "stage" variable,
+      // which threw a ReferenceError while opening any idol profile with match history.
+      const stage = String(m.stage || '').toLowerCase();
       const midLower = String(m.matchId || '').toLowerCase();
       const isOtherCompetition =
         midLower.startsWith('the_idols') || midLower.startsWith('swiss_') ||
