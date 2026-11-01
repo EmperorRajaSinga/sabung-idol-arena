@@ -10,6 +10,7 @@ import {
 } from '../utils/leagueLogic';
 import { generateAvatarUrl } from '../data/initialData';
 import { normalizeDataName } from '../utils/dataChangeHistory';
+import { saveDivisionOneRosterSnapshot } from '../utils/rosterPersistence';
 import { getCountryFlag } from '../utils/nationalityHelper';
 import {
   X,
@@ -504,6 +505,15 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
       ...leagueState,
       leagues: updatedLeagues,
     };
+
+    // Commit the compact roster snapshot directly from the Save & Apply action.
+    // This avoids relying only on parent React state updates or the larger app-state
+    // write, either of which may be delayed or rejected by browser storage limits.
+    const rosterSnapshotSaved = saveDivisionOneRosterSnapshot(updatedLeagues);
+    if (!rosterSnapshotSaved) {
+      triggerFeedback('Save failed. The roster snapshot could not be written. Keep this window open and do not refresh.', 'error');
+      return;
+    }
 
     if (createdIdolsAccumulator.length > 0 && onUpdateIdols) {
       onUpdateIdols(allKnownIdols);
