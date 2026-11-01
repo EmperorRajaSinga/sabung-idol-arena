@@ -32,7 +32,7 @@ import { getAllSeasonArchives } from '../utils/tournamentLogic';
 import { DEFAULT_LEAGUE_DEFS } from '../utils/leagueLogic';
 import { getCountryFlag } from '../utils/nationalityHelper';
 import { recoverMissingSeasonArchives } from '../utils/archiveRecoveryEngine';
-import type { V5State } from '../utils/v5/store';
+import type { V5State, V5TitleArchive } from '../utils/v5/store';
 
 interface HallOfChampionsPanelProps {
   archives: TournamentArchive[];
@@ -45,7 +45,7 @@ interface HallOfChampionsPanelProps {
   leagueArchives?: LeagueSeasonArchive[];
   theIdolsState?: TheIdolsSeasonState | null;
   theIdolsArchives?: TheIdolsSeasonArchive[];
-  v5State?: V5State;
+  v5State?: V5State;\n  v5TitleArchives?: V5TitleArchive[];
   onReconcileArchives?: () => void;
 }
 
@@ -687,66 +687,80 @@ export const HallOfChampionsPanel: React.FC<HallOfChampionsPanelProps> = ({
       }
     }
 
-    // V5 Cups & Divisions titles join the same combined Hall of Champions records.
+    // V5 titles come from the permanent season archive. Fall back to live state
+    // only for titles that have not yet been captured in the archive collection.
+    const archivedV5Keys = new Set<string>();
+    v5TitleArchives.forEach((title) => {
+      const winner = getOrCreate(title.winnerId, title.winnerName, title.winnerGroup, title.winnerPhoto);
+      if (title.isDivision) {
+        winner.otherDivisionTitles += 1;
+        winner.totalLeagueTitles += 1;
+        leagueTitlesCount += 1;
+      } else {
+        winner.tournamentCups += 1;
+        cupsCount += 1;
+      }
+      winner.totalMajorTrophies += 1;
+      winner.honourPoints += title.isDivision ? 4 : 10;
+      winner.titlesHistory.push({
+        type: title.isDivision ? 'DIV_OTHER' : 'CUP',
+        label: `V5: ${title.seasonName} / ${title.competition} Champion`,
+        seasonName: title.seasonName,
+        seasonNumber: title.seasonNumber,
+        color: title.isDivision ? '#10b981' : '#eab308',
+      });
+      if (title.runnerUpId) {
+        const runner = getOrCreate(title.runnerUpId, title.runnerUpName, title.runnerUpGroup, title.runnerUpPhoto);
+        if (title.isDivision) runner.honourPoints += 2;
+        else { runner.tournamentRunnersUp += 1; runner.honourPoints += 3; }
+        runner.titlesHistory.push({
+          type: 'RUNNER_UP',
+          label: `V5: ${title.seasonName} / ${title.competition} Runner-Up`,
+          seasonName: title.seasonName,
+          seasonNumber: title.seasonNumber,
+          color: '#94a3b8',
+        });
+      }
+      archivedV5Keys.add(`${title.seasonNumber}:${title.competition}`);
+    });
     const v5SeasonNumber = Number(leagueState?.seasonNumber || currentConfig?.seasonNumber || 1);
-    const v5SeasonName = leagueState?.seasonName || currentConfig?.seasonName || `Season ${v5SeasonNumber}`;
-    const addV5Champion = (competitionName: string, winnerId?: string | null, runnerId?: string | null, isDivision = false) => {
-      if (!winnerId) return;
+    const addLiveV5Title = (competition: string, winnerId?: string | null, runnerId?: string | null, isDivision = false) => {
+      if (archivedV5Keys.has(`${v5SeasonNumber}:${competition}`) || !winnerId) return;
       const winner = resolveIdol(winnerId);
       if (!winner) return;
       const champ = getOrCreate(winner.id, winner.name, winner.girlGroup, winner.photoUrl);
-      if (isDivision) {
-        champ.otherDivisionTitles += 1;
-        champ.totalLeagueTitles += 1;
-        leagueTitlesCount += 1;
-      } else {
-        champ.tournamentCups += 1;
-        cupsCount += 1;
-      }
-      champ.totalMajorTrophies += 1;
+      if (isDivision) { champ.otherDivisionTitles++; champ.totalLeagueTitles++; leagueTitlesCount++; }
+      else { champ.tournamentCups++; cupsCount++; }
+      champ.totalMajorTrophies++;
       champ.honourPoints += isDivision ? 4 : 10;
-      champ.titlesHistory.push({
-        type: isDivision ? 'DIV_OTHER' : 'CUP',
-        label: `V5: ${v5SeasonName} / ${competitionName} Champion`,
-        seasonName: v5SeasonName,
-        seasonNumber: v5SeasonNumber,
-        color: isDivision ? '#10b981' : '#eab308',
-      });
+      const seasonName = leagueState?.seasonName || currentConfig?.seasonName || `Season ${v5SeasonNumber}`;
+      champ.titlesHistory.push({ type: isDivision ? 'DIV_OTHER' : 'CUP', label: `V5: ${seasonName} / ${competition} Champion`, seasonName, seasonNumber: v5SeasonNumber, color: isDivision ? '#10b981' : '#eab308' });
       if (runnerId) {
         const runner = resolveIdol(runnerId);
         if (runner) {
           const record = getOrCreate(runner.id, runner.name, runner.girlGroup, runner.photoUrl);
           if (isDivision) record.honourPoints += 2;
-          else record.tournamentRunnersUp += 1;
-          if (!isDivision) record.honourPoints += 3;
-          record.titlesHistory.push({
-            type: 'RUNNER_UP',
-            label: `V5: ${v5SeasonName} / ${competitionName} Runner-Up`,
-            seasonName: v5SeasonName,
-            seasonNumber: v5SeasonNumber,
-            color: '#94a3b8',
-          });
+          else { record.tournamentRunnersUp++; record.honourPoints += 3; }
+          record.titlesHistory.push({ type: 'RUNNER_UP', label: `V5: ${seasonName} / ${competition} Runner-Up`, seasonName, seasonNumber: v5SeasonNumber, color: '#94a3b8' });
         }
       }
     };
     (v5State?.d2 || []).forEach((league) => {
       if (league.isCompleted && league.championId) {
         const ranked = [...(league.standings || [])].sort((a, b) => a.rank - b.rank);
-        addV5Champion(`Division 2 / ${league.name}`, league.championId, ranked[1]?.idolId, true);
+        addLiveV5Title(`Division 2 / ${league.name}`, league.championId, ranked[1]?.idolId, true);
       }
     });
-    const v5ChampsFinal = v5State?.champsCup?.matches?.find((m) => m.id === 'cc_gf');
-    if (v5ChampsFinal?.completed) addV5Champion('League Champions Cup', v5ChampsFinal.winnerId, v5ChampsFinal.loserId);
-    const v5LeagueCupFinal = v5State?.leagueCup?.rounds?.slice(-1)[0]?.find((m) => m.completed);
-    if (v5State?.leagueCup?.championId) addV5Champion('All-League Knockout Cup', v5State.leagueCup.championId, v5LeagueCupFinal?.loserId);
+    const ccFinal = v5State?.champsCup?.matches?.find((m) => m.id === 'cc_gf');
+    if (ccFinal?.completed) addLiveV5Title('League Champions Cup', ccFinal.winnerId, ccFinal.loserId);
+    const lcFinal = v5State?.leagueCup?.rounds?.slice(-1)[0]?.find((m) => m.completed);
+    if (v5State?.leagueCup?.championId) addLiveV5Title('All-League Knockout Cup', v5State.leagueCup.championId, lcFinal?.loserId);
     Object.entries(v5State?.miniCups || {}).forEach(([leagueId, matches]) => {
-      const finalMatch = matches.find((m) => m.id === `mc${leagueId}_final`);
-      if (finalMatch?.completed) addV5Champion(`Top 16 Mini Cup / League ${leagueId}`, finalMatch.winnerId, finalMatch.loserId);
+      const final = matches.find((m) => m.id === `mc${leagueId}_final`);
+      if (final?.completed) addLiveV5Title(`Top 16 Mini Cup / League ${leagueId}`, final.winnerId, final.loserId);
     });
-    if (v5State?.superA?.completed) addV5Champion('Super Cup A', v5State.superA.winnerId, v5State.superA.loserId);
-    (v5State?.superB || []).forEach((match, index) => {
-      if (match.completed) addV5Champion(`Super Cup B ${index + 1}`, match.winnerId, match.loserId);
-    });
+    if (v5State?.superA?.completed) addLiveV5Title('Super Cup A', v5State.superA.winnerId, v5State.superA.loserId);
+    (v5State?.superB || []).forEach((m, index) => { if (m.completed) addLiveV5Title(`Super Cup B ${index + 1}`, m.winnerId, m.loserId); });
 
     // F. Ingest Match Database to compute actual career match records (played, won, drawn, lost, win rate)
     (matchDatabase || []).forEach((m) => {
@@ -784,7 +798,7 @@ export const HallOfChampionsPanel: React.FC<HallOfChampionsPanelProps> = ({
       totalLeagueTitlesCount: leagueTitlesCount,
       totalTheIdolsTitlesCount: theIdolsTitlesCount,
     };
-  }, [crownedArchives, effectiveLeagueArchives, leagueState, effectiveTheIdolsArchives, theIdolsState, matchDatabase, safeIdolsMap, v5State, leagueState, currentConfig]);
+  }, [crownedArchives, effectiveLeagueArchives, leagueState, effectiveTheIdolsArchives, theIdolsState, matchDatabase, safeIdolsMap, v5State, v5TitleArchives, leagueState, currentConfig]);
 
   // 5. Build filtered & sorted Honours list for the Combined View
   const combinedHonoursList = useMemo(() => {

@@ -14,7 +14,7 @@ import {
 } from '../types';
 import { INITIAL_IDOLS, INITIAL_GIRL_GROUPS } from '../data/initialData';
 import { loadV5State } from './v5/store';
-import type { V5State } from './v5/store';
+import type { V5State, V5TitleArchive } from './v5/store';
 import {
   loadPersonalRankings,
   savePersonalRankings,
@@ -60,7 +60,7 @@ export interface AppState {
   customLeagueBranding?: LeagueBrandingItem[];
   theIdolsState?: TheIdolsSeasonState | null;
   theIdolsArchives?: TheIdolsSeasonArchive[];
-  v5State?: V5State;
+  v5State?: V5State;\n  v5TitleArchives?: V5TitleArchive[];
 }
 
 export const DEFAULT_CONFIG: TournamentConfig = {
@@ -107,7 +107,7 @@ export const createDefaultState = (): AppState => {
     customLeagueBranding: DEFAULT_LEAGUE_DEFS,
     theIdolsState: defaultTheIdols,
     theIdolsArchives: [],
-    v5State: loadV5State(),
+    v5State: loadV5State(),\n    v5TitleArchives: [],
   };
 };
 

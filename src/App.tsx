@@ -1,4 +1,4 @@
-import { loadV5State, saveV5State, V5State } from './utils/v5/store';
+import { loadV5State, saveV5State, V5State, V5TitleArchive } from './utils/v5/store';
 import { loadNames } from './utils/v5/names';
 import { V5CupsPanel } from './components/V5CupsPanel';
 import { getUnfinishedCompetitions } from './utils/seasonGuard';
@@ -115,6 +115,43 @@ export function App() {
       // before a competition can be reset or rebuilt.
       const seasonId = Number(prev.leagueState?.seasonNumber || prev.config.seasonNumber || 1);
       const seasonName = prev.leagueState?.seasonName || prev.config.seasonName || `Season ${seasonId}`;
+      const titleMap = new Map<string, V5TitleArchive>();
+      (prev.v5TitleArchives || []).forEach((title) => titleMap.set(title.id, title));
+      const seasonNumber = Number(prev.leagueState?.seasonNumber || prev.config.seasonNumber || 1);
+      const seasonLabel = prev.leagueState?.seasonName || prev.config.seasonName || `Season ${seasonNumber}`;
+      const addTitle = (competition: string, winnerId?: string | null, runnerUpId?: string | null, isDivision = false) => {
+        if (!winnerId) return;
+        const winner = prev.idols.find((idol) => idol.id === winnerId);
+        if (!winner) return;
+        const runner = runnerUpId ? prev.idols.find((idol) => idol.id === runnerUpId) : undefined;
+        const id = `v5_title_${seasonNumber}_${competition.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`;
+        titleMap.set(id, {
+          id, seasonNumber, seasonName: seasonLabel, competition,
+          winnerId: winner.id, winnerName: winner.name, winnerGroup: winner.girlGroup, winnerPhoto: winner.photoUrl,
+          runnerUpId: runner?.id, runnerUpName: runner?.name, runnerUpGroup: runner?.girlGroup, runnerUpPhoto: runner?.photoUrl,
+          isDivision, archivedAt: new Date().toISOString(),
+        });
+      };
+      const snapshotTitles = (state: V5State) => {
+        (state.d2 || []).forEach((league) => {
+          if (league.isCompleted && league.championId) {
+            const ranked = [...(league.standings || [])].sort((a, b) => a.rank - b.rank);
+            addTitle(`Division 2 / ${league.name}`, league.championId, ranked[1]?.idolId, true);
+          }
+        });
+        const cc = state.champsCup?.matches?.find((m) => m.id === 'cc_gf');
+        if (cc?.completed) addTitle('League Champions Cup', cc.winnerId, cc.loserId);
+        const lc = state.leagueCup?.rounds?.slice(-1)[0]?.find((m) => m.completed);
+        if (state.leagueCup?.championId) addTitle('All-League Knockout Cup', state.leagueCup.championId, lc?.loserId);
+        Object.entries(state.miniCups || {}).forEach(([leagueId, matches]) => {
+          const final = matches.find((m) => m.id === `mc${leagueId}_final`);
+          if (final?.completed) addTitle(`Top 16 Mini Cup / League ${leagueId}`, final.winnerId, final.loserId);
+        });
+        if (state.superA?.completed) addTitle('Super Cup A', state.superA.winnerId, state.superA.loserId);
+        (state.superB || []).forEach((m, index) => { if (m.completed) addTitle(`Super Cup B ${index + 1}`, m.winnerId, m.loserId); });
+      };
+      snapshotTitles(prev.v5State || loadV5State());
+      snapshotTitles(next);
       const archived = new Map<string, ArchivedMatch>();
       (prev.matchDatabase || []).forEach((m) => archived.set(m.matchId, m));
       const add = (competition: string, match: any) => {
@@ -147,7 +184,7 @@ export function App() {
       snapshot(prev.v5State || loadV5State());
       snapshot(next);
       const matchDatabase = Array.from(archived.values());
-      return { ...prev, matchDatabase, v5State: next };
+      return { ...prev, matchDatabase, v5State: next, v5TitleArchives: Array.from(titleMap.values()) };
     });
   };
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
