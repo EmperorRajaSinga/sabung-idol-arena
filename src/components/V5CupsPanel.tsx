@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import type { Idol, LeagueSeasonState, KnockoutMatch } from '../types';
 import { saveV5State, V5State } from '../utils/v5/store';
-import { loadNames } from '../utils/v5/names';
+import { loadNames, type CompetitionNames } from '../utils/v5/names';
 import * as E from '../utils/v5/engine';
 import { rankStandings } from '../utils/swissLogic';
 import { getIdolRating } from '../utils/ratingHelper';
