@@ -652,23 +652,28 @@ export function App() {
   }, [appState, leagueState, leagueArchives, theIdolsState, theIdolsArchives]);
 
   // Fast O(1) map of Idols by ID
+  const safeIdols = useMemo(
+    () => (Array.isArray(appState.idols) ? appState.idols.filter((idol): idol is Idol => Boolean(idol && typeof idol === 'object' && idol.id)) : []),
+    [appState.idols]
+  );
+
   const idolsMap = useMemo(() => {
     const map = new Map<string, Idol>();
-    appState.idols.forEach((i) => map.set(i.id, i));
+    safeIdols.forEach((idol) => map.set(idol.id, idol));
     return map;
-  }, [appState.idols]);
+  }, [safeIdols]);
 
   // Combined match database including all tournament matches + all completed league matches + The Idols matches
   const allCombinedMatchDatabase = useMemo(() => {
     const leagueMatches = syncLeagueMatchesToArchivedMatches(
       leagueState,
-      leagueArchives,
-      appState.idols
+      Array.isArray(leagueArchives) ? leagueArchives.filter((archive) => archive && typeof archive === 'object') : [],
+      safeIdols
     );
     const theIdolsAllMatches = convertTheIdolsMatchesToArchived(
       theIdolsState,
-      appState.idols,
-      theIdolsArchives
+      safeIdols,
+      Array.isArray(theIdolsArchives) ? theIdolsArchives.filter((archive) => archive && typeof archive === 'object') : []
     );
     const v5Matches: ArchivedMatch[] = [];
     const seasonId = Number(leagueState?.seasonNumber || appState.config.seasonNumber || 1);
@@ -691,16 +696,18 @@ export function App() {
         date: match.updatedAt || new Date().toISOString(),
       });
     };
-    (v5State.d2 || []).forEach((league) => (league.matches || []).forEach((match: any) => addV5Match(`Division 2 ${league.name}`, { ...match, roundName: `Matchday ${match.matchday}` })));
+    (Array.isArray(v5State.d2) ? v5State.d2 : []).filter((league) => league && typeof league === 'object').forEach((league) => (Array.isArray(league.matches) ? league.matches : []).forEach((match: any) => addV5Match(`Division 2 ${league.name}`, { ...match, roundName: `Matchday ${match.matchday}` })));
     (v5State.champsCup?.matches || []).forEach((match) => addV5Match('League Champions Cup', match));
     (v5State.leagueCup?.rounds || []).flat().forEach((match) => addV5Match('All-League Knockout Cup', match));
     Object.entries(v5State.miniCups || {}).forEach(([leagueId, matches]) => matches.forEach((match) => addV5Match(`Top 16 Mini Cup League ${leagueId}`, match)));
     if (v5State.superA) addV5Match('Super Cup A', v5State.superA);
     (v5State.superB || []).forEach((match) => addV5Match('Super Cup B', match));
     const map = new Map<string, ArchivedMatch>();
-    appState.matchDatabase.forEach((m) => map.set(m.matchId, m));
-    leagueMatches.forEach((m) => map.set(m.matchId, m));
-    theIdolsAllMatches.forEach((m) => map.set(m.matchId, m));
+    (Array.isArray(appState.matchDatabase) ? appState.matchDatabase : [])
+      .filter((match): match is ArchivedMatch => Boolean(match && typeof match === 'object' && match.matchId))
+      .forEach((match) => map.set(match.matchId, match));
+    (Array.isArray(leagueMatches) ? leagueMatches : []).filter((match) => match && typeof match === 'object' && match.matchId).forEach((match) => map.set(match.matchId, match));
+    (Array.isArray(theIdolsAllMatches) ? theIdolsAllMatches : []).filter((match) => match && typeof match === 'object' && match.matchId).forEach((match) => map.set(match.matchId, match));
     v5Matches.forEach((m) => {
       const legacyMatchId = m.matchId.replace(/^v5_s\d+_/, 'v5_');
       const legacy = map.get(legacyMatchId);
