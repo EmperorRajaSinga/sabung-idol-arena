@@ -328,8 +328,10 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
   const manual = (ms: E.BNode[], id: string, a: number, b: number): string | null => {
     const m = ms.find((x) => x.id === id); if (!m || !m.idolAId || !m.idolBId) return 'Both idols must be known first.';
     const t = m.bestOf === 7 ? 4 : 3; if (Math.max(a, b) !== t || Math.min(a, b) >= t) return `Best of ${m.bestOf} ends when one idol reaches ${t} wins (for example ${t}-0, ${t}-1, ${t}-${t - 1}).`;
+    if (!Number.isInteger(a) || !Number.isInteger(b) || a < 0 || b < 0) return 'Scores must be non-negative whole numbers.';
     m.scoreA = a; m.scoreB = b; m.winnerId = a > b ? m.idolAId : m.idolBId; m.loserId = a > b ? m.idolBId : m.idolAId; m.completed = true;
     E.invalidateDownstream(ms, id);
+    E.advanceBracket(ms);
     return null;
   };
   /* ---------- actions */
@@ -400,8 +402,12 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
         : 'Manage the two Super Cup competitions and their championship matches.';
   return (
     <div className="w-full min-w-0 max-w-none p-4 text-amber-100 sm:p-6 xl:p-8">
-      <h1 className="text-3xl font-black text-amber-300 mb-1">{panelTitle}</h1>
-      <p className="text-sm text-amber-100/60 mb-4">{panelDescription}</p>
+      {section !== 'crown' && (
+        <>
+          <h1 className="text-3xl font-black text-amber-300 mb-1">{panelTitle}</h1>
+          <p className="text-sm text-amber-100/60 mb-4">{panelDescription}</p>
+        </>
+      )}
       {msg && <div role="status" className="mb-4 rounded-xl border-2 border-black bg-black/50 p-3 text-sm text-amber-200">{msg} <button className="underline ml-2" onClick={() => setMsg('')}>close</button></div>}
 
       {section === 'crown' && (
