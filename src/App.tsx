@@ -3079,6 +3079,7 @@ export function App() {
               leagueArchives={leagueArchives}
               theIdolsState={theIdolsState}
               theIdolsArchives={theIdolsArchives}
+              v5TitleArchives={appState.v5TitleArchives || []}
               archives={appState.archives}
             />
           )}
