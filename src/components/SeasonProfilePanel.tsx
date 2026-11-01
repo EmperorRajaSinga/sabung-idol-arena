@@ -271,6 +271,9 @@ export const SeasonProfilePanel: React.FC<SeasonProfilePanelProps> = ({
   // state is intentionally reset after archiving, so historical profiles must not
   // depend on the current roster workspace.
   const selectedD2Leagues = useMemo(() => {
+    if (Number(leagueState?.seasonNumber || 0) === Number(selectedLeagueSeasonNum) && (v5State?.d2 || []).length) {
+      return v5State.d2;
+    }
     const grouped = new Map<string, ArchivedMatch[]>();
     selectedV5Matches.forEach((match) => {
       const stage = String(match.stage || '');
@@ -295,7 +298,7 @@ export const SeasonProfilePanel: React.FC<SeasonProfilePanelProps> = ({
       const standings = calculateLeagueStandings(leagueId, memberIds, matches, idols);
       return { id: leagueId, parentLeagueId: leagueId - 100, name, memberIds, matches, standings };
     });
-  }, [selectedV5Matches, idols]);
+  }, [selectedV5Matches, idols, leagueState?.seasonNumber, selectedLeagueSeasonNum, v5State]);
   const d2Stats = useMemo(() => selectedD2Leagues.reduce((a,l) => {
     a.leagues++;
     a.idols += l.memberIds?.length || 0;
@@ -965,7 +968,7 @@ export const SeasonProfilePanel: React.FC<SeasonProfilePanelProps> = ({
       {activeTab === 'division_two' && <div className="space-y-5">
         <div className="rounded-2xl border-2 border-black bg-[#1e1510] p-4"><h3 className="font-poster-title text-amber-300">Division 2 Season Profile</h3><p className="mt-1 text-xs text-amber-100/60">Second tier standings and match history. Division 1 remains unchanged in its existing section.</p><select className="mt-3 rounded-lg border border-black bg-[#120d09] p-2 text-xs text-amber-200" value={selectedLeagueSeasonNum} onChange={e=>setSelectedLeagueSeasonNum(Number(e.target.value))}>{allLeagueSeasons.map(x=><option key={x.seasonNumber} value={x.seasonNumber}>{x.seasonName}</option>)}</select></div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{[['Leagues',d2Stats.leagues],['Idols',d2Stats.idols],['Completed Matches',d2Stats.completed],['Total Fixtures',d2Stats.matches]].map(([k,v])=><div key={String(k)} className="rounded-xl border-2 border-black bg-[#1b130e] p-4 text-center"><div className="text-[10px] font-black uppercase text-amber-300/70">{k}</div><div className="mt-1 text-2xl font-black text-amber-300">{v}</div></div>)}</div>
-        {selectedD2Leagues.length ? selectedD2Leagues.map(l=><section key={l.id} className="space-y-4 rounded-2xl border-2 border-black bg-[#1b130e] p-5"><div className="flex justify-between border-b border-black pb-3"><div><h4 className="font-poster-title text-amber-300">{l.name}</h4><p className="text-[10px] text-amber-100/50">Division 2 · Parent Division {l.parentLeagueId}</p></div><span className="text-xs text-amber-300">{(l.matches||[]).filter(m=>m.completed).length}/{l.matches?.length||0} Played</span></div>
+        {selectedD2Leagues.length ? selectedD2Leagues.map(l=><section key={l.id} className="space-y-4 rounded-2xl border-2 border-black bg-[#1b130e] p-5"><div className="flex justify-between border-b border-black pb-3"><div><h4 className="font-poster-title text-amber-300">{l.name}</h4><p className="text-[10px] text-amber-100/50">Division 2 · Parent Division {l.parentLeagueId}</p></div><div className="flex flex-col items-end gap-1 text-right"><span className="text-xs text-amber-300">{(l.matches||[]).filter(m=>m.completed).length}/{l.matches?.length||0} Played</span><span className="text-[10px] text-emerald-300">Champion: {l.standings?.[0]?.idolName || 'Not decided'}</span></div></div>
           <div className="overflow-x-auto"><table className="w-full text-xs text-left"><thead className="text-[10px] uppercase text-amber-300 bg-black/30"><tr>{['Pos','Idol','P','W','D','L','GF','GA','GD','PTS'].map(x=><th key={x} className="p-2">{x}</th>)}</tr></thead><tbody>{[...(l.standings||[])].sort((a,b)=>a.rank-b.rank).map((st,i)=><tr key={st.idolId} className="border-t border-black/50 text-amber-100/80"><td className="p-2">{st.rank||i+1}</td><td className="p-2"><div className="flex items-center gap-2">{st.photoUrl&&<img src={st.photoUrl} alt="" className="w-7 h-7 rounded object-cover"/>}<span>{st.idolName}</span></div><span className="text-[9px] text-amber-100/50">{st.girlGroup}</span></td>{[st.played,st.wins,st.draws,st.losses,st.gamesFor,st.gamesAgainst,st.gameDiff,st.points].map((v,i)=><td key={i} className="p-2">{v}</td>)}</tr>)}</tbody></table></div>
           <div><h5 className="mb-2 text-xs font-black uppercase text-amber-300">Division 2 Fixtures &amp; Results</h5><div className="space-y-1">{(l.matches||[]).map(m=><div key={m.id} className="flex justify-between gap-2 rounded-lg border border-black bg-black/20 p-2 text-xs"><span className="text-amber-200/50">MD {m.matchday}</span><span className="font-bold text-white">{idolsMap.get(m.idolAId)?.name||'TBD'} <b className="px-2 text-amber-300">{`${m.scoreA} - ${m.scoreB}`}</b> {idolsMap.get(m.idolBId)?.name||'TBD'}</span><span className="text-emerald-300">Final</span></div>)}</div></div>
         </section>) : <div className="rounded-xl border-2 border-black bg-[#1b130e] p-8 text-center text-xs text-amber-200/60">No Division 2 data available.</div>}
