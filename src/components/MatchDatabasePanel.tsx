@@ -858,8 +858,7 @@ export const MatchDatabasePanel: React.FC<MatchDatabasePanelProps> = ({
       const matchType =
         typeFilter === 'ALL' ||
         (typeFilter === 'TOURNAMENT' && m.type === 'Tournament Cup' && !isV5Record) ||
-        (typeFilter === 'LEAGUE' && m.type === 'League Division' && !isDivision1League && !isDivision2League) ||
-        (typeFilter === 'LEAGUE_DIV_1' && isDivision1League) ||
+        (typeFilter === 'LEAGUE' && isDivision1League) ||
         (typeFilter === 'LEAGUE_DIV_2' && (isDivision2League || isDivision2V5)) ||
         (typeFilter === 'THE_IDOLS' && m.type === 'The Idols Superleague') ||
         (typeFilter === 'CROWN_CUP' && isCrownCup) ||
@@ -968,8 +967,8 @@ export const MatchDatabasePanel: React.FC<MatchDatabasePanelProps> = ({
   const selectedSectionLabel: Record<typeof typeFilter, string> = {
     ALL: 'All Competitions',
     TOURNAMENT: 'Tournament Cups',
-    LEAGUE: 'Other League Stages',
-    LEAGUE_DIV_1: 'Division 1',
+    LEAGUE: 'League',
+    LEAGUE_DIV_1: 'League',
     LEAGUE_DIV_2: 'Division 2',
     THE_IDOLS: 'The Idols Superleague',
     CROWN_CUP: 'Crown Cup',
@@ -1076,7 +1075,7 @@ export const MatchDatabasePanel: React.FC<MatchDatabasePanelProps> = ({
             <span>🛡️ League ({leagueCount})</span>
           </button>
           {([
-            ['LEAGUE_DIV_1', 'Division 1', (m: NormalizedMatch) => m.type === 'League Division' && doesMatchDivisionOrStage(m.stageOrDivision, 'Division 1')],
+            ['LEAGUE', 'League', (m: NormalizedMatch) => m.type === 'League Division' && doesMatchDivisionOrStage(m.stageOrDivision, 'Division 1')],
             ['LEAGUE_DIV_2', 'Division 2', (m: NormalizedMatch) => (m.type === 'League Division' && doesMatchDivisionOrStage(m.stageOrDivision, 'Division 2')) || m.stageOrDivision.toLowerCase().includes('cups & divisions: division 2')],
             ['CROWN_CUP', 'Crown Cup', (m: NormalizedMatch) => m.stageOrDivision.toLowerCase().includes('cups & divisions:') && m.stageOrDivision.toLowerCase().includes('league champions cup')],
             ['OPEN_ARENA_CUP', 'Open Arena Cup', (m: NormalizedMatch) => m.stageOrDivision.toLowerCase().includes('cups & divisions:') && m.stageOrDivision.toLowerCase().includes('all-league knockout cup')],
@@ -1154,8 +1153,7 @@ export const MatchDatabasePanel: React.FC<MatchDatabasePanelProps> = ({
           >
             <option value="ALL">All Competitions (Combined)</option>
             <option value="TOURNAMENT">🏆 Tournament Cup Only</option>
-            <option value="LEAGUE">🛡️ Other League Stages</option>
-            <option value="LEAGUE_DIV_1">Division 1</option>
+            <option value="LEAGUE">🛡️ League (Division 1)</option>
             <option value="LEAGUE_DIV_2">Division 2</option>
             <option value="THE_IDOLS">👑 The Idols Superleague</option>
             <option value="CROWN_CUP">Crown Cup</option>
