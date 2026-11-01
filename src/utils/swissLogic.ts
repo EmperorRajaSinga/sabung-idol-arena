@@ -193,18 +193,20 @@ export function generateSwissPlayIn(
     pool_d: [],
   };
 
-  // If existingPlayIn already has all 64 participants populated, preserve each idol's pool!
-  // A stored Swiss list is stale when it contains a direct qualifier (league rank 1-6) and no Swiss match was played yet.
-  const directIds = new Set<string>();
-  (leagues || []).forEach((l) => rankStandings(l.standings).slice(0, 6).forEach((st) => directIds.add(st.idolId)));
-  const swissStarted = !!existingPlayIn && [
-    ...(existingPlayIn.matches || []),
-    ...(existingPlayIn.lastChanceMatches || []),
-  ].some((m: any) => m && m.completed);
+  // Preserve a saved Swiss draw only when its 64 entrants still exactly match
+  // the current league standings. A completed but stale Swiss bracket is still
+  // invalid: it must not pull direct qualifiers (ranks 1-6) into the play-in.
+  const expectedContenderIds = new Set(contenders.slice(0, 64).map((c) => c.st.idolId));
+  const existingParticipantIds = (existingPlayIn?.participants || []).map((p) => p.idolId);
+  const existingParticipantSet = new Set(existingParticipantIds);
   const existingIsStale =
     !!existingPlayIn &&
-    !swissStarted &&
-    (existingPlayIn.participants || []).some((p) => directIds.has(p.idolId));
+    (
+      existingParticipantIds.length !== 64 ||
+      existingParticipantSet.size !== 64 ||
+      existingParticipantSet.size !== expectedContenderIds.size ||
+      [...expectedContenderIds].some((id) => !existingParticipantSet.has(id))
+    );
 
   if (
     existingPlayIn &&
@@ -285,10 +287,10 @@ export function generateSwissPlayIn(
   });
 
   const existingMatchMap = new Map<string, SwissMatch>();
-  if (!randomizeRound1 && existingPlayIn && Array.isArray(existingPlayIn.matches)) {
+  if (!randomizeRound1 && existingPlayIn && !existingIsStale && Array.isArray(existingPlayIn.matches)) {
     existingPlayIn.matches.forEach((m) => existingMatchMap.set(m.id, m));
   }
-  if (!randomizeRound1 && existingPlayIn && Array.isArray(existingPlayIn.lastChanceMatches)) {
+  if (!randomizeRound1 && existingPlayIn && !existingIsStale && Array.isArray(existingPlayIn.lastChanceMatches)) {
     existingPlayIn.lastChanceMatches.forEach((m) => existingMatchMap.set(m.id, m));
   }
 
@@ -302,7 +304,7 @@ export function generateSwissPlayIn(
     const pairs: [string, string][] = [];
 
     // Check for existing Round 1 matches for this pool to preserve manual or randomized draws
-    const existingR1ForPool = (existingPlayIn?.matches || []).filter(
+    const existingR1ForPool = (existingIsStale ? [] : existingPlayIn?.matches || []).filter(
       (m) => m.poolId === pId && m.roundNumber === 1 && m.idolAId && m.idolBId
     );
 
