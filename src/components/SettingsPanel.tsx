@@ -184,6 +184,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const [dataHistory, setDataHistory] = useState<DataHistoryEntry[]>(() => loadDataHistory());
   const [historySearch, setHistorySearch] = useState('');
   const [historyActionFilter, setHistoryActionFilter] = useState('all');
+  const [historyEntityFilter, setHistoryEntityFilter] = useState('all');
   const [duplicateScan, setDuplicateScan] = useState<string[] | null>(null);
   const runDuplicateScan = () => {
     const findings: string[] = [];
@@ -2208,6 +2209,15 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 <option value="duplicate_blocked">Duplicate blocked</option>
                 <option value="imported">Imported</option>
               </select>
+              <select value={historyEntityFilter} onChange={(event) => setHistoryEntityFilter(event.target.value)} className="rounded-xl border border-slate-700 bg-black px-3 py-2 text-xs text-amber-200">
+                <option value="all">All record types</option>
+                <option value="idol">Idols</option>
+                <option value="girl_group">Girl groups</option>
+                <option value="division_1_roster">Division 1 rosters</option>
+                <option value="division_2_roster">Division 2 rosters</option>
+                <option value="league_branding">League branding</option>
+                <option value="database_import">Database imports</option>
+              </select>
             </div>
             <div className="mt-4 overflow-hidden rounded-2xl border border-black">
               <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 bg-black/70 px-4 py-3 text-[10px] font-black uppercase tracking-wider text-amber-300 sm:grid-cols-[180px_130px_minmax(0,1fr)_minmax(0,1fr)]">
@@ -2217,7 +2227,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 {dataHistory.filter((item) => {
                   const query = historySearch.trim().toLowerCase();
                   const matchesQuery = !query || [item.entityName, item.details, item.source, item.entity].some((value) => value.toLowerCase().includes(query));
-                  return matchesQuery && (historyActionFilter === 'all' || item.action === historyActionFilter);
+                  const matchesAction = historyActionFilter === 'all' || item.action === historyActionFilter;
+                  const matchesEntity = historyEntityFilter === 'all' || item.entity === historyEntityFilter;
+                  return matchesQuery && matchesAction && matchesEntity;
                 }).map((item) => (
                   <div key={item.id} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 bg-[#100c08] px-4 py-3 text-xs sm:grid-cols-[180px_130px_minmax(0,1fr)_minmax(0,1fr)]">
                     <span className="text-[10px] text-slate-400">{new Date(item.timestamp).toLocaleString()}</span>
@@ -2234,7 +2246,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 {dataHistory.length > 0 && !dataHistory.some((item) => {
                   const query = historySearch.trim().toLowerCase();
                   const matchesQuery = !query || [item.entityName, item.details, item.source, item.entity].some((value) => value.toLowerCase().includes(query));
-                  return matchesQuery && (historyActionFilter === 'all' || item.action === historyActionFilter);
+                  const matchesAction = historyActionFilter === 'all' || item.action === historyActionFilter;
+                  const matchesEntity = historyEntityFilter === 'all' || item.entity === historyEntityFilter;
+                  return matchesQuery && matchesAction && matchesEntity;
                 }) && <div className="p-8 text-center text-xs text-slate-500">No history entries match the current filters.</div>}
               </div>
             </div>
