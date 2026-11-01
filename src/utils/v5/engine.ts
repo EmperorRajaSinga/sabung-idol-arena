@@ -184,8 +184,8 @@ export function advanceChampsCup(matches: BNode[], seedOrder: string[] = []) {
     const loserB = semiB.loserId;
     const byeId = seedRank(loserA) <= seedRank(loserB) ? loserA : loserB;
     const playInId = byeId === loserA ? loserB : loserA;
-    lower2.b = { id: playInId };
-    lower3.b = { id: byeId };
+    lower2.b = { lose: playInId === loserA ? 'cc_usf_a' : 'cc_usf_b' };
+    lower3.b = { lose: byeId === loserA ? 'cc_usf_a' : 'cc_usf_b' };
   } else {
     lower2 && (lower2.b = { lose: 'cc_usf_a' });
     lower3 && (lower3.b = { lose: 'cc_usf_b' });
