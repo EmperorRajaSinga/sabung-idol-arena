@@ -363,6 +363,38 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     return map;
   }, [appState.idols]);
 
+  // Rebuild only the fixture list required by a roster change. Keep every completed
+  // head-to-head result whose two participants and home/away order still exist.
+  const rebuildLeagueRosterPreservingResults = (
+    league: LeagueInfo,
+    memberIds: string[],
+    idols: Idol[]
+  ): LeagueInfo => {
+    const oldIds = league.memberIds || [];
+    const sameRoster = oldIds.length === memberIds.length &&
+      oldIds.every((id) => memberIds.includes(id));
+    const previousCompleted = new Map(
+      (league.matches || [])
+        .filter((match) => match.completed)
+        .map((match) => [`${match.idolAId}__${match.idolBId}`, match])
+    );
+    const generatedMatches = sameRoster && league.matches?.length
+      ? league.matches
+      : generateRoundRobinMatches(league.id, memberIds);
+    const matches = sameRoster ? generatedMatches : generatedMatches.map((match) => {
+      const saved = previousCompleted.get(`${match.idolAId}__${match.idolBId}`);
+      return saved ? { ...match, ...saved, matchday: match.matchday } : match;
+    });
+    const standings = calculateLeagueStandings(league.id, memberIds, matches, idols);
+    return {
+      ...league,
+      memberIds: [...memberIds],
+      matches,
+      standings,
+      ...(sameRoster ? {} : { isCompleted: false, championId: undefined, championName: undefined }),
+    };
+  };
+
   // Sync state if config changes externally (e.g., season change)
   React.useEffect(() => {
     const activeNum = config.seasonNumber || config.seasonId || 1;
@@ -706,9 +738,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     const updatedLeagues = leagues.map((league, index) => {
       const memberIds = nextMembers[index];
       if (memberIds.length === (league.memberIds || []).length) return league;
-      const matches = generateRoundRobinMatches(league.id, memberIds);
-      const standings = calculateLeagueStandings(league.id, memberIds, matches, appState.idols);
-      return { ...league, memberIds, matches, standings, isCompleted: false, championId: undefined, championName: undefined };
+      return rebuildLeagueRosterPreservingResults(league, memberIds, appState.idols);
     });
     const nextState: LeagueSeasonState = { ...activeLeagueState, leagues: updatedLeagues };
     onUpdateLeagueState?.(nextState);
@@ -779,15 +809,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         }
       }
 
-      const matches = generateRoundRobinMatches(l.id, newMembers);
-      const standings = calculateLeagueStandings(l.id, newMembers, matches, appState.idols);
-
-      return {
-        ...l,
-        memberIds: newMembers,
-        matches,
-        standings,
-      };
+      return rebuildLeagueRosterPreservingResults(l, newMembers, appState.idols);
     });
 
     const newState: LeagueSeasonState = {
@@ -831,14 +853,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       if (l.id === selectedLeagueTab) {
         newMembers.push(idolId);
       }
-      const matches = generateRoundRobinMatches(l.id, newMembers);
-      const standings = calculateLeagueStandings(l.id, newMembers, matches, appState.idols);
-      return {
-        ...l,
-        memberIds: newMembers,
-        matches,
-        standings,
-      };
+      return rebuildLeagueRosterPreservingResults(l, newMembers, appState.idols);
     });
 
     const newState: LeagueSeasonState = {
@@ -865,14 +880,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     const updatedLeagues = activeLeagueState.leagues.map((l) => {
       if (l.id === leagueId) {
         const newMembers = l.memberIds.filter((id) => id !== idolId);
-        const matches = generateRoundRobinMatches(l.id, newMembers);
-        const standings = calculateLeagueStandings(l.id, newMembers, matches, appState.idols);
-        return {
-          ...l,
-          memberIds: newMembers,
-          matches,
-          standings,
-        };
+        return rebuildLeagueRosterPreservingResults(l, newMembers, appState.idols);
       }
       return l;
     });
@@ -961,19 +969,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
     const updatedLeagues = activeLeagueState.leagues.map((l) => {
       if (l.id === leagueId) {
-        const matches = generateRoundRobinMatches(l.id, newMemberIds);
-        const standings = calculateLeagueStandings(
-          l.id,
-          newMemberIds,
-          matches,
-          allCombinedIdols
-        );
-        return {
-          ...l,
-          memberIds: newMemberIds,
-          matches,
-          standings,
-        };
+        return rebuildLeagueRosterPreservingResults(l, newMemberIds, allCombinedIdols);
       }
       return l;
     });
