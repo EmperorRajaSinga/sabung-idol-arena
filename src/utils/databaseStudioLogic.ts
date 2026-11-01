@@ -1113,6 +1113,8 @@ export function exportFullDatabaseBackup(
     careerStatsOverrides: overrides,
     personalRankings: appState.personalRankings || [],
     customLeagueBranding: appState.customLeagueBranding || [],
+    v5State: appState.v5State || null,
+    v5TitleArchives: appState.v5TitleArchives || [],
   };
 
   return JSON.stringify(exportPayload, null, 2);

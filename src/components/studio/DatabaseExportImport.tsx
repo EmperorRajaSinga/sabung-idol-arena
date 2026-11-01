@@ -37,6 +37,7 @@ import {
 import { saveIdols, saveGirlGroups, saveTournamentArchives, saveMatchDatabase } from '../../utils/storage';
 import { saveLeagueSeasonState, saveLeagueArchives, saveCustomLeagueBranding } from '../../utils/leagueLogic';
 import { saveTheIdolsState, saveTheIdolsArchives } from '../../utils/theIdolsLogic';
+import { saveV5State } from '../../utils/v5/store';
 
 interface DatabaseExportImportProps {
   appState: AppState;
@@ -271,10 +272,12 @@ export const DatabaseExportImport: React.FC<DatabaseExportImportProps> = ({
           onSaveOverrides?.(data.careerStatsOverrides);
         }
 
+        if (data.v5State && typeof data.v5State === 'object') saveV5State(data.v5State);
         onUpdateAppState((prev) => ({
           ...prev,
           idols: Array.isArray(data.idols) && data.idols.length > 0 ? data.idols : prev.idols,
           girlGroups: Array.isArray(data.girlGroups) ? data.girlGroups : prev.girlGroups,
+          config: data.tournamentConfig ? { ...prev.config, ...data.tournamentConfig } : prev.config,
           archives: Array.isArray(data.tournamentArchives || data.archives)
             ? (data.tournamentArchives || data.archives)
             : prev.archives,
@@ -284,6 +287,9 @@ export const DatabaseExportImport: React.FC<DatabaseExportImportProps> = ({
           customLeagueBranding: Array.isArray(data.customLeagueBranding)
             ? data.customLeagueBranding
             : prev.customLeagueBranding,
+          personalRankings: Array.isArray(data.personalRankings) ? data.personalRankings : prev.personalRankings,
+          v5State: data.v5State && typeof data.v5State === 'object' ? data.v5State : prev.v5State,
+          v5TitleArchives: Array.isArray(data.v5TitleArchives) ? data.v5TitleArchives : prev.v5TitleArchives,
         }));
       } else if (format === 'idols_groups') {
         if (Array.isArray(data.idols) && data.idols.length > 0) {
