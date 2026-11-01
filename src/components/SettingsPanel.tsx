@@ -41,7 +41,7 @@ import { compressImage } from '../utils/imageHelper';
 import { LeagueRosterModal } from './LeagueRosterModal';
 import type { V5State } from '../utils/v5/store';
 import * as V5Engine from '../utils/v5/engine';
-import { loadNames, saveNames, type CompetitionNames } from '../utils/v5/names';
+import { DEFAULT_NAMES, loadNames, saveNames, type CompetitionNames } from '../utils/v5/names';
 import { DataMakerPanel } from './DataMakerPanel';
 import { DatabaseExportImport } from './studio/DatabaseExportImport';
 import {
@@ -2056,7 +2056,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                         </span>
                       </div>
                       <div className="truncate font-poster-title text-xs font-black text-white sm:text-sm">{league.name}</div>
-                      <div className="truncate text-[10px] font-bold text-amber-400/70">Challenger Division {index + 1}</div>
+                      <div className="truncate text-[10px] font-bold text-amber-400/70">{competitionNames.division2} {index + 1}</div>
                     </button>
                   );
                 })}
@@ -2095,7 +2095,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                           </span>
                         </h4>
                         <p className="text-xs font-medium text-slate-400">
-                          Transfer idols between Challenger Divisions or add unassigned idols from the database.
+                          Transfer idols between {competitionNames.division2} leagues or add unassigned idols from the database.
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
@@ -2163,7 +2163,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                     if (!targetId) return;
                                     const target = v5State.d2.find((league) => league.id === targetId);
                                     if (!target || target.memberIds.length >= (v5State.perLeague || 20)) {
-                                      showSuccessMsg('The selected Challenger Division is already at capacity.');
+                                      showSuccessMsg(`The selected ${competitionNames.division2} is already at capacity.`);
                                       return;
                                     }
                                     const nextD2 = v5State.d2.map((league) =>
@@ -2303,7 +2303,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     maxLength={48}
                     onChange={(event) => updateCompetitionName(key, event.target.value)}
                     onBlur={() => {
-                      if (!competitionNames[key].trim()) updateCompetitionName(key, loadNames()[key]);
+                      if (!competitionNames[key].trim()) updateCompetitionName(key, DEFAULT_NAMES[key]);
                     }}
                     className="mt-1.5 w-full rounded-xl border-2 border-black bg-black/55 px-3 py-2 text-sm font-semibold text-amber-100 outline-none focus:border-amber-500"
                   />
