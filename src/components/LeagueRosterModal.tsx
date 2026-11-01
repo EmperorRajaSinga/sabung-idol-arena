@@ -453,15 +453,17 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
       const sameRoster = Boolean(previous) &&
         previous!.memberIds.length === memberIds.length &&
         previous!.memberIds.every((id) => memberIds.includes(id));
-      const generatedMatches = sameRoster && previous?.matches?.length
-        ? previous.matches
+      const expectedMatchCount = memberIds.length * Math.max(0, memberIds.length - 1);
+      const canReuseCompleteSchedule = sameRoster && (previous?.matches?.length || 0) >= expectedMatchCount;
+      const generatedMatches = canReuseCompleteSchedule
+        ? previous!.matches
         : generateRoundRobinMatches(leagueId, memberIds);
-      // If a roster changes, retain results only for fixtures whose participants and
-      // matchday remain identical. Never wipe unrelated completed fixtures.
+      // Retain completed results for every fixture whose participants and home/away
+      // order still exist, even if the fixture moves to a different matchday.
       const previousMatches = new Map((previous?.matches || [])
         .filter((match) => match.completed)
         .map((match) => [`${match.idolAId}__${match.idolBId}`, match]));
-      const matches = sameRoster ? generatedMatches : generatedMatches.map((match) => {
+      const matches = canReuseCompleteSchedule ? generatedMatches : generatedMatches.map((match) => {
         const saved = previousMatches.get(`${match.idolAId}__${match.idolBId}`);
         return saved?.completed ? {
           ...match,
