@@ -1550,7 +1550,7 @@ export function computeCareerStats(
         (groupName.includes('division') && !groupName.includes('the idols')) ||
         (groupName.includes('league') && !groupName.includes('the idols') && !groupName.includes('superleague'))
       ));
-    if (isLeagueMatch) return;
+    if (isLeagueMatch || isV5CupMatch) return;
 
     const isTheIdols = matchId.startsWith('the_idols') || stage.includes('the idols') || groupName.includes('the idols');
     if (isTheIdols) return;
