@@ -62,7 +62,8 @@ check('I The Idols phase 1 Bo4 (4 games each, draws allowed)', tm.every((m: any)
 const pm = ti.playoffMatches; pm.forEach((m: any) => allMatchIds.push(m.id));
 check('I playoff: 16 matches, Bo5 except grand final Bo7', pm.length === 16 && pm.filter((m: any) => m.bestOf === 7).length === 1 && pm.filter((m: any) => m.bestOf === 5).length === 15, 'bestOf: ' + dist(pm.map((m: any) => m.bestOf)));
 // global
-check('J total matches simulated = 2966', s.totalMatchesSimulated === 2966, String(s.totalMatchesSimulated));
+const v5MatchesSimulated = (s.updatedV5State?.d2 || []).reduce((sum: number, league: any) => sum + (league.matches || []).filter((m: any) => m.completed).length, 0) + (s.updatedV5State?.champsCup?.matches || []).filter((m: any) => m.completed).length + (s.updatedV5State?.leagueCup?.rounds || []).flat().filter((m: any) => m.completed).length + Object.values(s.updatedV5State?.miniCups || {}).reduce((sum: number, matches: any) => sum + matches.filter((m: any) => m.completed).length, 0) + Number(Boolean(s.updatedV5State?.superA?.completed)) + (s.updatedV5State?.superB || []).filter((m: any) => m.completed).length;
+check('J total matches simulated includes every V5 competition', s.totalMatchesSimulated === 2966 + v5MatchesSimulated, `${s.totalMatchesSimulated} total / ${v5MatchesSimulated} V5`);
 check('J match IDs unique', new Set(allMatchIds).size === allMatchIds.length, `${new Set(allMatchIds).size}/${allMatchIds.length}`);
 const usedAll = new Set<string>([...usedIdolIds, ...sw.participants.map((p: any) => p.idolId), ...ti.memberIds, ...q]);
 check('J no inactive idol anywhere', [...usedAll].every(id => activeIds.has(id)), String([...usedAll].filter(id => !activeIds.has(id)).length));
