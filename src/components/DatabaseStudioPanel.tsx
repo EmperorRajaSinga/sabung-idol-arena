@@ -957,12 +957,20 @@ export const DatabaseStudioPanel: React.FC<DatabaseStudioPanelProps> = ({
             idols: data.idols,
             girlGroups: data.girlGroups,
             matchDatabase: [],
+            archives: [],
+            leagueArchives: [],
+            theIdolsArchives: [],
+            theIdolsState: null,
             groups: [],
             knockoutMatches: [],
             selectedParticipantIds: [],
             config: { ...prev.config, isStarted: false, isGroupStageFinished: false, isKnockoutFinished: false },
           }));
-          showToast(`Idol database imported: ${data.idols.length} idols and ${data.girlGroups.length} groups. Old active match records cleared.`, 'success');
+          onUpdateLeagueArchives([]);
+          onUpdateTheIdolsArchives?.([]);
+          onUpdateTheIdolsState?.(null);
+          saveTheIdolsArchives([]);
+          showToast(`Idol database imported: ${data.idols.length} idols and ${data.girlGroups.length} groups. Previous match and season history cleared for this new setup database.`, 'success');
         } else if (validation.format === 'league_branding_rosters') {
           if (!Array.isArray(data.divisions) || data.divisions.length !== 6) {
             showToast('League database must contain exactly six divisions.', 'error');
@@ -1021,8 +1029,10 @@ export const DatabaseStudioPanel: React.FC<DatabaseStudioPanelProps> = ({
             ...prev,
             customLeagueBranding: leagueDefs,
             matchDatabase: [],
+            leagueArchives: [],
           }));
-          showToast('League branding and six rosters imported. League fixtures and previous match records reset to an unplayed state.', 'success');
+          onUpdateLeagueArchives([]);
+          showToast('League branding and six rosters imported. League fixtures, league archives, and previous match records reset to an unplayed state.', 'success');
         } else {
           if (Array.isArray(data.idols)) {
             onUpdateAppState((prev) => ({
