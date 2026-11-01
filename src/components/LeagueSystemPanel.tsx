@@ -95,6 +95,8 @@ interface LeagueSystemPanelProps {
   setActiveTab: (tab: ActiveTab) => void;
   onUpdateFavoriteIdols?: (favoriteIds: string[]) => void;
   onUpdateIdols?: (idols: Idol[]) => void;
+  persistState?: boolean;
+  divisionLabel?: string;
 }
 
 export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
@@ -109,6 +111,8 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
   setActiveTab,
   onUpdateFavoriteIdols,
   onUpdateIdols,
+  persistState = true,
+  divisionLabel = 'Division 1',
 }) => {
   // Ensure we have a valid state
   const state: LeagueSeasonState = useMemo(() => {
@@ -134,7 +138,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
     return initializeLeagueSeason(idols, girlGroups, 1);
   }, [leagueState, idols, girlGroups]);
 
-  const [activeLeagueId, setActiveLeagueId] = useState<number>(1); // 1 to 6
+  const [activeLeagueId, setActiveLeagueId] = useState<number>(() => state.leagues[0]?.id || 1);
   const [selectedMatchday, setSelectedMatchday] = useState<number>(1);
   const [leagueViewMode, setLeagueViewMode] = useState<'divisions' | 'wildcard'>('divisions');
   const [postseasonFormat, setPostseasonFormat] = useState<PostseasonFormatType>(
@@ -350,7 +354,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
     };
 
     onUpdateLeagueState(newState);
-    saveLeagueSeasonState(newState);
+    if (persistState) saveLeagueSeasonState(newState);
   };
 
   // Quick simulate single match
@@ -411,7 +415,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
     };
 
     onUpdateLeagueState(newState);
-    saveLeagueSeasonState(newState);
+    if (persistState) saveLeagueSeasonState(newState);
     setShowMatchdayLiveSimModal(false);
   };
 
@@ -474,7 +478,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
     };
 
     onUpdateLeagueState(newState);
-    saveLeagueSeasonState(newState);
+    if (persistState) saveLeagueSeasonState(newState);
 
     if (skippedFavoritesCount > 0) {
       setSimAlertMessage(
@@ -570,7 +574,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
     };
 
     onUpdateLeagueState(newState);
-    saveLeagueSeasonState(newState);
+    if (persistState) saveLeagueSeasonState(newState);
 
     if (skippedFavoritesCount > 0) {
       setSimAlertMessage(
@@ -662,7 +666,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
     };
 
     onUpdateLeagueState(newState);
-    saveLeagueSeasonState(newState);
+    if (persistState) saveLeagueSeasonState(newState);
 
     if (totalSkippedFavorites > 0) {
       setSimAlertMessage(
@@ -799,7 +803,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
     const existingArchives = (leagueArchives && leagueArchives.length > 0 ? leagueArchives : loadLeagueArchives())
       .filter((a) => a.seasonNumber !== state.seasonNumber);
     const updatedArchives = [archiveEntry, ...existingArchives];
-    saveLeagueArchives(updatedArchives);
+    if (persistState) saveLeagueArchives(updatedArchives);
     onUpdateLeagueArchives?.(updatedArchives);
 
     // Save Top Qualifiers specifically to storage
@@ -831,7 +835,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="font-poster-title text-2xl sm:text-3xl text-amber-400 tracking-wide">
-                IDOL LEAGUE SYSTEM
+                IDOL {divisionLabel.toUpperCase()} LEAGUE SYSTEM
               </h1>
               <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[10px] font-black uppercase">
                 Season {state.seasonNumber}

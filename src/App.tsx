@@ -2542,7 +2542,7 @@ export function App() {
             />
           )}
 
-          {activeTab === 'division_two' && <DivisionTwoLeaguePanel idols={appState.idols} girlGroups={appState.girlGroups} v5State={v5State} onUpdateV5State={handleUpdateV5State} favoriteIdolIds={appState.config?.favoriteIdolIds || []} />}
+          {activeTab === 'division_two' && <DivisionTwoLeaguePanel idols={appState.idols} girlGroups={appState.girlGroups} config={appState.config} v5State={v5State} onUpdateV5State={handleUpdateV5State} favoriteIdolIds={appState.config?.favoriteIdolIds || []} setActiveTab={setActiveTab} />}
 
           {activeTab === 'v5_cups' && (
             <V5CupsPanel
