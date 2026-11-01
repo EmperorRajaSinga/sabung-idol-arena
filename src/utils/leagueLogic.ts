@@ -2113,7 +2113,7 @@ export function advanceLeagueSeason(
     };
   });
 
-  const freshWildcard = currentState.postseasonFormat === 'grand_cup_64'
+  const freshWildcard = (currentState.postseasonFormat || 'grand_cup_64') === 'grand_cup_64'
     ? undefined
     : generateWildcardPlayIn(updatedLeagues, idols);
   const freshSwiss = generateSwissPlayIn(updatedLeagues, idols);
@@ -2152,7 +2152,7 @@ export function resetLeagueSeasonMatchesOnly(
     };
   });
 
-  const freshWildcard = currentState.postseasonFormat === 'grand_cup_64'
+  const freshWildcard = (currentState.postseasonFormat || 'grand_cup_64') === 'grand_cup_64'
     ? undefined
     : generateWildcardPlayIn(updatedLeagues, idols);
   const freshSwiss = generateSwissPlayIn(updatedLeagues, idols);
