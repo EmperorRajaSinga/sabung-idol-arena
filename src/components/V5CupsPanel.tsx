@@ -28,12 +28,13 @@ const Btn: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ classNam
 
 const Row: React.FC<{ m: E.BNode; idols: Map<string, Idol>; nm: (id: string | null) => string; onSim: () => void; onSave: (a: number, b: number) => string | null }> = ({ m, idols, nm, onSim, onSave }) => {
   const [a, setA] = useState(''), [b, setB] = useState(''), [err, setErr] = useState('');
+  const [scoreModalOpen, setScoreModalOpen] = useState(false);
   const idolA = m.idolAId ? idols.get(m.idolAId) : null;
   const idolB = m.idolBId ? idols.get(m.idolBId) : null;
   const ready = !!idolA && !!idolB;
   const targetWins = m.bestOf === 7 ? 4 : 3;
   const renderCompetitor = (idol: Idol | null, id: string | null, score: number | null, isWinner: boolean) => (
-    <div className={`flex min-w-0 items-center justify-between gap-3 rounded-xl border-2 px-3 py-2.5 transition-all ${
+    <div role={ready ? 'button' : undefined} tabIndex={ready ? 0 : undefined} onClick={() => ready && setScoreModalOpen(true)} onKeyDown={(event) => { if (ready && (event.key === 'Enter' || event.key === ' ')) setScoreModalOpen(true); }} className={`flex min-w-0 cursor-pointer items-center justify-between gap-3 rounded-xl border-2 px-3 py-2.5 transition-all ${
       isWinner
         ? 'border-lime-500/60 bg-lime-950/40 text-lime-200 shadow-[0_0_10px_rgba(163,230,53,0.16)]'
         : 'border-black/60 bg-black/35 text-amber-100'
@@ -92,7 +93,7 @@ const Row: React.FC<{ m: E.BNode; idols: Map<string, Idol>; nm: (id: string | nu
       ) : (
         <div className="mt-3 rounded-xl border border-black/70 bg-black/25 px-3 py-2 text-[11px] font-bold italic text-amber-100/40">Waiting for previous round</div>
       )}
-
+      {ready && <MatchModal isOpen={scoreModalOpen} onClose={() => setScoreModalOpen(false)} idolA={idolA} idolB={idolB} currentScoreA={m.scoreA} currentScoreB={m.scoreB} matchTitle={m.roundName} stageName="Cups & Divisions" isKnockout isGrandFinal={/grand final/i.test(m.roundName)} isCompleted={m.completed} onFinish={(scoreA, scoreB) => { const result = onSave(scoreA, scoreB); if (result) setErr(result); else setScoreModalOpen(false); }} />}
     </div>
   );
 };
