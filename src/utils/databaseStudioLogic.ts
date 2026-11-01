@@ -21,6 +21,8 @@ import {
   initializeLeagueSeason,
 } from './leagueLogic';
 import { convertTheIdolsMatchesToArchived } from './theIdolsLogic';
+import type { V5State } from './v5/store';
+import type { DivisionTwoLeague } from './v5/engine';
 
 export const CAREER_OVERRIDES_KEY = 'sabung_career_stats_overrides_v1';
 
@@ -1144,7 +1146,9 @@ export function exportIdolGroupDatabase(appState: AppState): string {
 export function exportLeagueBrandingAndRosters(
   leagueState: LeagueSeasonState | null,
   idols: Idol[],
-  customLeagueBranding?: LeagueBrandingItem[]
+  customLeagueBranding?: LeagueBrandingItem[],
+  v5State?: V5State | null,
+  girlGroups: import('../types').GirlGroup[] = []
 ): string {
   const effectiveState =
     leagueState && leagueState.leagues && leagueState.leagues.length === 6
@@ -1209,15 +1213,50 @@ export function exportLeagueBrandingAndRosters(
     };
   });
 
+  const division2 = (v5State?.d2 || []).map((league: DivisionTwoLeague) => {
+    const roster = (league.memberIds || []).map((memberId, index) => {
+      const idol = idolsMap.get(memberId);
+      return {
+        memberIndex: index + 1,
+        id: memberId,
+        idolId: memberId,
+        name: idol?.name || 'Unknown Idol',
+        rating: idol?.rating || 80,
+        seed: idol?.seed || 'Unseeded',
+        girlGroup: idol?.girlGroup || 'Solo',
+        nationality: idol?.nationality || 'South Korea',
+        photoUrl: idol?.photoUrl || '',
+      };
+    });
+    return {
+      leagueId: league.id,
+      parentLeagueId: league.parentLeagueId,
+      name: league.name,
+      tierName: league.tierName,
+      color: league.color,
+      logoUrl: league.logoUrl || '',
+      description: league.description || '',
+      memberCount: roster.length,
+      rosterCount: roster.length,
+      memberIds: [...(league.memberIds || [])],
+      roster,
+    };
+  });
+
   const exportPayload = {
-    schemaVersion: 'sabung_league_branding_rosters_v1',
+    schemaVersion: 'sabung_league_branding_rosters_v2',
     format: 'league_branding_rosters',
     exportedAt: new Date().toISOString(),
     seasonNumber: effectiveState?.seasonNumber || 1,
     description: 'Sabung 6-Division League Branding (names, logos, themes) and complete 20-idol rosters for each league',
     totalDivisions: divisions.length,
-    totalRosterIdols: divisions.reduce((acc, d) => acc + d.rosterCount, 0),
+    totalRosterIdols: divisions.reduce((acc, d) => acc + d.rosterCount, 0) + division2.reduce((acc, d) => acc + d.rosterCount, 0),
     divisions,
+    division2,
+    idols,
+    girlGroups,
+    totalGirlGroups: girlGroups.length,
+    totalIdols: idols.length,
     customLeagueBranding: effectiveBranding || [],
   };
 
