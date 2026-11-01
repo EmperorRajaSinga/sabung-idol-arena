@@ -59,5 +59,6 @@ export const DivisionTwoLeaguePanel: React.FC<Props> = ({
     persistState={false}
     divisionLabel="Division 2"
     hidePostseason
+    promotionCount={v5State.promotionCount || 3}
   />;
 };

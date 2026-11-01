@@ -98,6 +98,7 @@ interface LeagueSystemPanelProps {
   persistState?: boolean;
   divisionLabel?: string;
   hidePostseason?: boolean;
+  promotionCount?: number;
 }
 
 export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
@@ -115,6 +116,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
   persistState = true,
   divisionLabel = 'Division 1',
   hidePostseason = false,
+  promotionCount = 3,
 }) => {
   // Ensure we have a valid state
   const state: LeagueSeasonState = useMemo(() => {
@@ -844,9 +846,11 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
               </span>
             </div>
             <p className="text-xs sm:text-sm text-amber-200/80 font-bold">
-              {postseasonFormat === 'grand_cup_64'
-                ? '6 Parallel Divisions • 20 Idols Each • Top 6 Auto + 6 Swiss Pools of 12 Idols (72 Contenders) • Top 64 Grand Cup'
-                : '6 Division Leagues • 20 Idols Per Division • Round Robin • Top 32 Qualify for Champions Tournament'}
+              {hidePostseason
+                ? `Division 2 • Round Robin League • Top ${promotionCount} earn promotion to Division 1`
+                : postseasonFormat === 'grand_cup_64'
+                  ? '6 Parallel Divisions • 20 Idols Each • Top 6 Auto + 6 Swiss Pools of 12 Idols (72 Contenders) • Top 64 Grand Cup'
+                  : '6 Division Leagues • 20 Idols Per Division • Round Robin • Top 32 Qualify for Champions Tournament'}
             </p>
           </div>
         </div>
@@ -1217,12 +1221,13 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
                 <tbody className="divide-y divide-black/60 text-xs">
                   {activeLeague?.standings.map((st) => {
                     const idol = idolsMap.get(st.idolId);
-                    const isGrandCup = postseasonFormat === 'grand_cup_64';
-                    const isChampion = st.rank === 1;
-                    const isDirectQual = isGrandCup ? st.rank <= 6 : st.rank <= 5;
-                    const isGuaranteedSwiss = isGrandCup && st.rank >= 7 && st.rank <= 16;
-                    const isRank17Wildcard = isGrandCup && st.rank === 17 && rank17WildcardIdolIds.has(st.idolId);
-                    const isClassicWildcard = !isGrandCup && st.rank === 6;
+                    const isGrandCup = !hidePostseason && postseasonFormat === 'grand_cup_64';
+                    const isChampion = !hidePostseason && st.rank === 1;
+                    const isPromotionZone = hidePostseason && st.rank <= promotionCount;
+                    const isDirectQual = !hidePostseason && (isGrandCup ? st.rank <= 6 : st.rank <= 5);
+                    const isGuaranteedSwiss = !hidePostseason && isGrandCup && st.rank >= 7 && st.rank <= 16;
+                    const isRank17Wildcard = !hidePostseason && isGrandCup && st.rank === 17 && rank17WildcardIdolIds.has(st.idolId);
+                    const isClassicWildcard = !hidePostseason && !isGrandCup && st.rank === 6;
                     const isPlayIn = isGuaranteedSwiss || isRank17Wildcard || isClassicWildcard;
                     const isFav = favoriteSet.has(st.idolId);
 
@@ -1232,7 +1237,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
                           className={`hover:bg-amber-950/20 transition-colors ${
                             isChampion
                               ? 'bg-amber-500/10'
-                              : isDirectQual
+                              : isPromotionZone || isDirectQual
                               ? 'bg-emerald-950/20'
                               : isGuaranteedSwiss
                               ? 'bg-cyan-950/20'
@@ -1249,7 +1254,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
                               className={`inline-flex items-center justify-center w-6 h-6 rounded-lg font-poster-title text-[11px] font-black border ${
                                 isChampion
                                   ? 'bg-amber-500 text-black border-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.5)]'
-                                  : isDirectQual
+                                  : isPromotionZone || isDirectQual
                                   ? 'bg-emerald-600 text-white border-emerald-400'
                                   : isGuaranteedSwiss
                                   ? 'bg-cyan-600 text-white border-cyan-400'
@@ -1302,27 +1307,28 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
                                       {getCountryFlag(st.nationality)}
                                     </span>
                                   )}
-                                  {isChampion && (
+                                  {!hidePostseason && isChampion && (
                                     <span className="text-[8px] bg-amber-500/20 text-amber-300 font-black px-1.5 py-0.2 rounded border border-amber-500/40 uppercase">
                                       Champion
                                     </span>
                                   )}
-                                  {isDirectQual && !isChampion && (
+                                  {!hidePostseason && isDirectQual && !isChampion && (
                                     <span className="text-[8px] bg-emerald-500/20 text-emerald-300 font-black px-1.5 py-0.2 rounded border border-emerald-500/30 uppercase">
                                       Direct Qual
                                     </span>
                                   )}
-                                  {isGuaranteedSwiss && (
+                                  {!hidePostseason && isGuaranteedSwiss && (
                                     <span className="text-[8px] font-black px-1.5 py-0.2 rounded border uppercase bg-cyan-500/20 text-cyan-300 border-cyan-500/30">
                                       Swiss Play-In
                                     </span>
                                   )}
-                                  {isRank17Wildcard && (
+                                  {!hidePostseason && isRank17Wildcard && (
                                     <span className="text-[8px] font-black px-1.5 py-0.2 rounded border uppercase bg-teal-500/20 text-teal-300 border-teal-500/40">
                                       Swiss Wildcard
                                     </span>
                                   )}
-                                  {isClassicWildcard && (
+                                  {hidePostseason && isPromotionZone && <span className="text-[8px] bg-emerald-500/20 text-emerald-300 font-black px-1.5 py-0.2 rounded border border-emerald-500/30 uppercase">Promotion Zone</span>}
+                                  {!hidePostseason && isClassicWildcard && (
                                     <span className="text-[8px] font-black px-1.5 py-0.2 rounded border uppercase bg-indigo-500/20 text-indigo-300 border-indigo-500/30">
                                       Wildcard Play-In
                                     </span>
@@ -1403,7 +1409,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
                         </tr>
 
                         {/* Grand Cup 64 Threshold Lines */}
-                        {isGrandCup && st.rank === 6 && (
+                        {!hidePostseason && isGrandCup && st.rank === 6 && (
                           <tr className="bg-emerald-950/40 border-y-2 border-emerald-500/60">
                             <td colSpan={11} className="py-1 px-3 text-[9px] font-poster-title font-bold text-emerald-300 tracking-wider text-center">
                               ▼ DIRECT QUALIFICATION CUTOFF (Top 6 Advance to Grand Cup 64 • 36 Total Direct Spots)
@@ -1411,7 +1417,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
                           </tr>
                         )}
 
-                        {isGrandCup && st.rank === 16 && (
+                        {!hidePostseason && isGrandCup && st.rank === 16 && (
                           <tr className="bg-cyan-950/40 border-y-2 border-cyan-500/60">
                             <td colSpan={11} className="py-1 px-3 text-[9px] font-poster-title font-bold text-cyan-300 tracking-wider text-center">
                               ▼ SWISS PLAY-IN GUARANTEED CUTOFF (Ranks 7–16 Advance to 4 Swiss Pools • 60 Total Spots)
@@ -1419,7 +1425,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
                           </tr>
                         )}
 
-                        {isGrandCup && st.rank === 17 && (
+                        {!hidePostseason && isGrandCup && st.rank === 17 && (
                           <tr className="bg-teal-950/40 border-y border-teal-500/40">
                             <td colSpan={11} className="py-1 px-3 text-[9px] font-poster-title font-bold text-teal-300 tracking-wider text-center">
                               ▼ WILDCARD CUTOFF (Top 4 Rank-17s Advance to Swiss Play-In • Others Eliminated)
@@ -1428,7 +1434,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
                         )}
 
                         {/* Classic 32 Threshold Lines */}
-                        {!isGrandCup && st.rank === 5 && (
+                        {!hidePostseason && !isGrandCup && st.rank === 5 && (
                           <tr className="bg-emerald-950/40 border-y-2 border-emerald-500/60">
                             <td colSpan={11} className="py-1 px-3 text-[9px] font-poster-title font-bold text-emerald-300 tracking-wider text-center">
                               ▼ DIRECT CHAMPIONS 32 CUTOFF (Top 5 Advance to Champions Tournament • 30 Direct Spots)
@@ -1436,7 +1442,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
                           </tr>
                         )}
 
-                        {!isGrandCup && st.rank === 6 && (
+                        {!hidePostseason && !isGrandCup && st.rank === 6 && (
                           <tr className="bg-indigo-950/40 border-y-2 border-indigo-500/60">
                             <td colSpan={11} className="py-1 px-3 text-[9px] font-poster-title font-bold text-indigo-300 tracking-wider text-center">
                               ▼ WILDCARD PLAY-IN CUTOFF (Rank 6 Enters Double Elimination Play-In • 2 Spots)
@@ -1450,6 +1456,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
               </table>
             </div>
 
+            {!hidePostseason && <>
             {/* Comprehensive Dynamic Postseason Qualification Legend */}
             <div className="pt-3 border-t-2 border-black/80 space-y-2">
               <div className="flex items-center justify-between text-[11px] font-poster-title font-bold text-amber-300">
@@ -1519,6 +1526,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
                 </div>
               )}
             </div>
+            </>}
           </div>
         </div>
 
