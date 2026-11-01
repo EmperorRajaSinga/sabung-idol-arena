@@ -109,7 +109,7 @@ export const MatchDatabasePanel: React.FC<MatchDatabasePanelProps> = ({
   // Robust division/stage filter matcher that respects custom league branding and aliases
   const doesMatchDivisionOrStage = (stageOrDivision: string, filterValue: string): boolean => {
     if (filterValue === 'ALL') return true;
-    const s = stageOrDivision.toLowerCase();
+    const s = String(stageOrDivision || '').toLowerCase();
     const f = filterValue.toLowerCase();
 
     if (f === 'div_1' || f === 'division 1' || f.includes('premier')) {
@@ -172,23 +172,29 @@ export const MatchDatabasePanel: React.FC<MatchDatabasePanelProps> = ({
     (matchDatabase || []).forEach((m, idx) => {
       if (!m) return;
       const sId = Number(m.seasonId) || 1;
-      const idolA = idolsMap.get(m.idolAId);
-      const idolB = idolsMap.get(m.idolBId);
+      const idolAId = typeof m.idolAId === 'string' ? m.idolAId : '';
+      const idolBId = typeof m.idolBId === 'string' ? m.idolBId : '';
+      const stageText = typeof m.stage === 'string' ? m.stage : '';
+      const groupText = typeof m.groupName === 'string' ? m.groupName : '';
+      const sourceMatchId = typeof m.matchId === 'string' ? m.matchId : '';
+      const idolA = idolsMap.get(idolAId);
+      const idolB = idolsMap.get(idolBId);
 
+      const stageLower = stageText.toLowerCase();
       const isTheIdols =
-        Boolean(m.stage && (m.stage.toLowerCase().includes('the idols') || m.stage.toLowerCase().includes('superleague') || m.stage.toLowerCase().includes('masters playoff'))) ||
-        Boolean(m.matchId && (m.matchId.startsWith('ti_') || m.matchId.includes('the_idols')));
+        Boolean(stageLower.includes('the idols') || stageLower.includes('superleague') || stageLower.includes('masters playoff')) ||
+        Boolean(sourceMatchId.startsWith('ti_') || sourceMatchId.includes('the_idols'));
 
       const isLeague =
         !isTheIdols &&
-        (Boolean(m.stage && (m.stage.toLowerCase().includes('league') || m.stage.toLowerCase().includes('wildcard') || m.stage.toLowerCase().includes('division') || m.stage.toLowerCase().includes('swiss') || m.stage.toLowerCase().includes('last chance') || m.stage.toLowerCase().includes('premier') || m.stage.toLowerCase().includes('championship'))) ||
-          Boolean(m.matchId && (m.matchId.includes('league') || m.matchId.includes('wildcard') || m.matchId.includes('wm_') || m.matchId.includes('swiss') || m.matchId.includes('arch_l_'))) ||
-          Boolean(m.groupName && (m.groupName.includes('Division') || m.groupName.includes('Wildcard') || m.groupName.includes('League') || m.groupName.includes('Pool'))));
+        (Boolean(['league', 'wildcard', 'division', 'swiss', 'last chance', 'premier', 'championship'].some((term) => stageLower.includes(term))) ||
+          Boolean(['league', 'wildcard', 'wm_', 'swiss', 'arch_l_'].some((term) => sourceMatchId.includes(term))) ||
+          Boolean(['Division', 'Wildcard', 'League', 'Pool'].some((term) => groupText.includes(term))));
 
-      const stageName = m.stage || (m.groupName ? `Group ${m.groupName}` : isTheIdols ? 'Superleague Match' : isLeague ? 'League Match' : 'Tournament Match');
+      const stageName = stageText || (groupText ? `Group ${groupText}` : isTheIdols ? 'Superleague Match' : isLeague ? 'League Match' : 'Tournament Match');
       const isCompleted = m.scoreA !== null && m.scoreB !== null && m.scoreA !== undefined && m.scoreB !== undefined;
-      const isDraw = isCompleted && m.scoreA === m.scoreB;
-      const matchKey = m.matchId || `m_${sId}_${isTheIdols ? 'ti' : isLeague ? 'l' : 't'}_${idx}_${m.idolAId}_${m.idolBId}`;
+      const isDraw = isCompleted && Number(m.scoreA) === Number(m.scoreB);
+      const matchKey = sourceMatchId || `m_${sId}_${isTheIdols ? 'ti' : isLeague ? 'l' : 't'}_${idx}_${idolAId}_${idolBId}`;
 
       if (seenMatchIds.has(matchKey)) return;
       seenMatchIds.add(matchKey);
@@ -211,17 +217,17 @@ export const MatchDatabasePanel: React.FC<MatchDatabasePanelProps> = ({
         id: matchKey,
         type: isTheIdols ? 'The Idols Superleague' : isLeague ? 'League Division' : 'Tournament Cup',
         seasonId: sId,
-        seasonName: m.seasonName || `Season ${sId}`,
+        seasonName: String(m.seasonName || `Season ${sId}`),
         stageOrDivision: stageName,
         color,
-        idolAId: m.idolAId,
-        idolAName: m.idolAName || idolA?.name || 'Idol A',
-        idolAGroup: idolA?.girlGroup || (m as any).idolAGroup || 'Solo',
+        idolAId,
+        idolAName: String(m.idolAName || idolA?.name || 'Idol A'),
+        idolAGroup: String(idolA?.girlGroup || (m as any).idolAGroup || 'Solo'),
         idolAPhoto: idolA?.photoUrl,
         idolANationality: idolA?.nationality,
-        idolBId: m.idolBId,
-        idolBName: m.idolBName || idolB?.name || 'Idol B',
-        idolBGroup: idolB?.girlGroup || (m as any).idolBGroup || 'Solo',
+        idolBId,
+        idolBName: String(m.idolBName || idolB?.name || 'Idol B'),
+        idolBGroup: String(idolB?.girlGroup || (m as any).idolBGroup || 'Solo'),
         idolBPhoto: idolB?.photoUrl,
         idolBNationality: idolB?.nationality,
         scoreA: m.scoreA !== undefined ? m.scoreA : null,
@@ -229,7 +235,7 @@ export const MatchDatabasePanel: React.FC<MatchDatabasePanelProps> = ({
         winnerName: isCompleted
           ? isDraw
             ? 'Draw'
-            : m.winnerName || (m.winnerId === m.idolAId ? m.idolAName || idolA?.name : m.idolBName || idolB?.name) || 'Winner'
+            : String(m.winnerName || (m.winnerId === idolAId ? m.idolAName || idolA?.name : m.idolBName || idolB?.name) || 'Winner')
           : 'Pending',
         isCompleted,
         isDraw,
@@ -833,13 +839,13 @@ export const MatchDatabasePanel: React.FC<MatchDatabasePanelProps> = ({
     const filtered = combinedMatchesList.filter((m) => {
       const matchSearch =
         !q ||
-        m.idolAName.toLowerCase().includes(q) ||
-        m.idolBName.toLowerCase().includes(q) ||
-        m.idolAGroup.toLowerCase().includes(q) ||
-        m.idolBGroup.toLowerCase().includes(q) ||
-        m.winnerName.toLowerCase().includes(q) ||
-        m.stageOrDivision.toLowerCase().includes(q) ||
-        m.seasonName.toLowerCase().includes(q);
+        String(m.idolAName || '').toLowerCase().includes(q) ||
+        String(m.idolBName || '').toLowerCase().includes(q) ||
+        String(m.idolAGroup || '').toLowerCase().includes(q) ||
+        String(m.idolBGroup || '').toLowerCase().includes(q) ||
+        String(m.winnerName || '').toLowerCase().includes(q) ||
+        String(m.stageOrDivision || '').toLowerCase().includes(q) ||
+        String(m.seasonName || '').toLowerCase().includes(q);
 
       const matchType =
         typeFilter === 'ALL' ||
