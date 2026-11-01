@@ -23,7 +23,12 @@ activeSwiss.leagueState.swissPlayIn = {
   lastChanceMatches: [],
 };
 const swissBlocked = getUnfinishedCompetitions(activeSwiss);
+const { advanceLeagueSeason, resetLeagueSeasonMatchesOnly } = await import('../src/utils/leagueLogic');
+const nextSeason = advanceLeagueSeason(s.updatedLeagueState, s.updatedAppState.idols, s.updatedAppState.girlGroups);
+const resetSeason = resetLeagueSeasonMatchesOnly(s.updatedLeagueState, s.updatedAppState.idols);
 const ok = full.length === 0 && part.length === 2 && none.length === 0 &&
-  legacyOnly.length === 0 && swissBlocked.some((x) => x.startsWith('Swiss Play-In'));
+  legacyOnly.length === 0 && swissBlocked.some((x) => x.startsWith('Swiss Play-In')) &&
+  !nextSeason.wildcardPlayIn && !resetSeason.wildcardPlayIn &&
+  !!nextSeason.swissPlayIn && !!resetSeason.swissPlayIn;
 console.log(ok ? 'PASS' : 'FAIL', JSON.stringify({ full, part, none, legacyOnly, swissBlocked }));
 process.exit(ok ? 0 : 1);
