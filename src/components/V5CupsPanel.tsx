@@ -18,7 +18,7 @@ interface Props {
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 
 const CROWN_ROUND_ORDER = ['Upper Round 1', 'Upper Semi Final', 'Upper Final', 'Lower Round 1', 'Lower Round 2', 'Lower Round 3', 'Lower Final', 'Grand Final'];
-const createEmptyCrownCup = (): { matches: E.BNode[]; byeIds: string[] } => {
+const createEmptyCrownCup = (): { matches: E.BNode[]; byeIds: string[]; seedOrder: string[] } => {
   const S = (id: string): E.Slot => ({ id });
   const W = (id: string): E.Slot => ({ win: id });
   const L = (id: string): E.Slot => ({ lose: id });
@@ -35,7 +35,7 @@ const createEmptyCrownCup = (): { matches: E.BNode[]; byeIds: string[] } => {
     { id: 'cc_gf', roundName: 'Grand Final', bestOf: 7, a: W('cc_uf'), b: W('cc_lf'), idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
   ];
   E.advanceBracket(matches);
-  return { matches, byeIds: [] };
+  return { matches, byeIds: [], seedOrder: [] };
 };
 const toCrownKnockoutMatches = (matches: E.BNode[]): KnockoutMatch[] => {
   const feedsTo = (sourceId: string, slot: E.Slot) => ('win' in slot && slot.win === sourceId) || ('lose' in slot && slot.lose === sourceId);
@@ -314,6 +314,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
   const crownKnockoutMatches = useMemo(() => toCrownKnockoutMatches(crownCup.matches), [crownCup.matches]);
   const crownPlayableCount = crownCup.matches.filter((m) => !m.completed && m.idolAId && m.idolBId).length;
   const crownChampionId = crownCup.matches.find((m) => m.id === 'cc_gf')?.winnerId || null;
+  const crownSeedOrder = crownCup.seedOrder || crownCup.byeIds || [];
   const crownSimConfig = { favoriteIdolIds: [], groups: [] } as unknown as TournamentConfig;
   const nm = (id: string | null) => (id ? by.get(id)?.name || id : 'TBD');
   const d1 = leagueState?.leagues || [];
@@ -405,13 +406,13 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
       if (changed) resetChangedMatch(target.id);
     });
     if (invalidByeAssignment) return;
-    E.advanceBracket(next);
+    E.advanceChampsCup(next, crownSeedOrder);
     if (JSON.stringify(next) === originalMatches) { setMsg('No Crown Cup bracket changes to save.'); return; }
     const byeIds = ['cc_usf_a', 'cc_usf_b'].flatMap((id) => {
       const match = next.find((m) => m.id === id);
       return match && 'id' in match.a && match.a.id ? [match.a.id] : [];
     });
-    commit({ champsCup: { matches: next, byeIds } });
+    commit({ champsCup: { matches: next, byeIds, seedOrder: crownSeedOrder } });
     setMsg('Manual Crown Cup bracket changes saved.');
   };
   const commitCrownSimulcast = (updatedMatches: KnockoutMatch[]) => {
@@ -425,7 +426,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
       target.loserId = result.winnerId === target.idolAId ? target.idolBId : target.idolAId;
       target.completed = true;
     });
-    E.advanceBracket(next);
+    E.advanceChampsCup(next, crownSeedOrder);
     commit({ champsCup: { ...crownCup, matches: next } });
   };
   const refreshLC = (s: E.LeagueCupState) => { if (s.rounds.length === s.plan.rounds && s.rounds[s.rounds.length - 1].every((m) => m.completed)) s.championId = s.rounds[s.rounds.length - 1][0].winnerId; return s; };
@@ -512,7 +513,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Btn onClick={buildChamps} disabled={!d1Done || !!v5.champsCup} className="border-slate-700 bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-500">Auto Build</Btn>
-                <Btn onClick={() => { const next = clone(crownCup.matches); E.simulateBracket(next, by); commit({ champsCup: { ...crownCup, matches: next } }); }} disabled={!v5.champsCup || crownPlayableCount === 0} className="border-slate-700 bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-500">Simulate All Matches</Btn>
+                <Btn onClick={() => { const next = clone(crownCup.matches); E.simulateChampsCup(next, by, crownSeedOrder); commit({ champsCup: { ...crownCup, matches: next } }); }} disabled={!v5.champsCup || crownPlayableCount === 0} className="border-slate-700 bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-500">Simulate All Matches</Btn>
                 <Btn onClick={() => setIsCrownManualOpen(true)} className="border-slate-700 bg-slate-800 px-4 py-2 text-slate-100 hover:bg-slate-700">Edit Bracket Manually</Btn>
                 <Btn onClick={() => setIsCrownSimulcastOpen(true)} disabled={!v5.champsCup || crownPlayableCount === 0 || !!crownChampionId} className="border-slate-700 bg-fuchsia-700 px-4 py-2 text-white hover:bg-fuchsia-600">Live Simulcast</Btn>
                 <Btn onClick={() => { if (window.confirm('Reset the Crown Cup bracket and clear every match result? The season archive and historical records will remain unchanged.')) commit({ champsCup: null }); }} disabled={!v5.champsCup} className="border-slate-700 bg-rose-700 px-4 py-2 text-white hover:bg-rose-600">Reset Bracket / Matches</Btn>
@@ -527,7 +528,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
             {d1Done && (!grandChamp || !theIdolsChampionId) && <p className="mt-3 text-xs text-slate-400">Unzure Cup or The Idols is not finished yet. Automatic bye seeding will use league points and game difference where higher-priority champion data is unavailable.</p>}
             {crownCup.byeIds.length > 0 && <p className="mt-3 text-xs text-slate-400">Bye recipients: <span className="font-bold text-slate-200">{crownCup.byeIds.map(nm).join(', ')}</span></p>}
           </section>
-          <CrownCupBracket idols={by} nm={nm} sim={simOne} save={manual} ms={crownCup.matches} onChange={(matches) => commit({ champsCup: { ...crownCup, matches } })} />
+          <CrownCupBracket idols={by} nm={nm} sim={simOne} save={manual} ms={crownCup.matches} onChange={(matches) => { E.advanceChampsCup(matches, crownSeedOrder); commit({ champsCup: { ...crownCup, matches } }); }} />
           {isCrownManualOpen && (
             <ManualBracketModal
               isOpen
