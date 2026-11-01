@@ -63,25 +63,25 @@ export const TournamentBracketTree: React.FC<TournamentBracketTreeProps> = ({
       const isLeftToRight = sRect.left < tRect.left;
 
       let x1 = 0;
-      let y1 = sRect.top + sRect.height / 2 - containerRect.top;
+      let y1 = sRect.top + sRect.height / 2 - containerRect.top + container.scrollTop;
       let x2 = 0;
       let y2 = 0;
 
       // Slot A (top half of target) vs Slot B (bottom half of target)
       if (match.feedsIntoSlot === 'A') {
-        y2 = tRect.top + tRect.height * 0.3 - containerRect.top;
+        y2 = tRect.top + tRect.height * 0.3 - containerRect.top + container.scrollTop;
       } else if (match.feedsIntoSlot === 'B') {
-        y2 = tRect.top + tRect.height * 0.7 - containerRect.top;
+        y2 = tRect.top + tRect.height * 0.7 - containerRect.top + container.scrollTop;
       } else {
-        y2 = tRect.top + tRect.height / 2 - containerRect.top;
+        y2 = tRect.top + tRect.height / 2 - containerRect.top + container.scrollTop;
       }
 
       if (isLeftToRight) {
-        x1 = sRect.right - containerRect.left;
-        x2 = tRect.left - containerRect.left;
+        x1 = sRect.right - containerRect.left + container.scrollLeft;
+        x2 = tRect.left - containerRect.left + container.scrollLeft;
       } else {
-        x1 = sRect.left - containerRect.left;
-        x2 = tRect.right - containerRect.left;
+        x1 = sRect.left - containerRect.left + container.scrollLeft;
+        x2 = tRect.right - containerRect.left + container.scrollLeft;
       }
 
       const dx = Math.abs(x2 - x1);
@@ -366,7 +366,7 @@ export const TournamentBracketTree: React.FC<TournamentBracketTreeProps> = ({
         {/* SVG Connector Overlay */}
         <svg
           className="absolute inset-0 pointer-events-none w-full h-full z-10 overflow-visible"
-          style={{ minWidth: '100%' }}
+          style={{ width: `${containerRef.current?.scrollWidth || 0}px`, height: `${containerRef.current?.scrollHeight || 0}px`, minWidth: '100%', maxWidth: 'none' }}
         >
           <defs>
             <filter id="glow-gold" x="-20%" y="-20%" width="140%" height="140%">
