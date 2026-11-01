@@ -232,6 +232,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
   const v5 = v5State;
   const [names, setNames] = useState<CompetitionNames>(() => loadNames());
   const [msg, setMsg] = useState('');
+  const [selectedSpotlightLeague, setSelectedSpotlightLeague] = useState('');
   const by = useMemo(() => new Map(idols.map((i) => [i.id, i])), [idols]);
   const nm = (id: string | null) => (id ? by.get(id)?.name || id : 'TBD');
   const d1 = leagueState?.leagues || [];
@@ -328,23 +329,24 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
       </Card> )}
 
       {(section === 'all' || section === 'spotlight') && (<Card title={names.miniCup} note="Top 16 of each Division 1 final table, seeded 1 vs 16. Single elimination. Best of 5, final Best of 7.">
-        <div className="space-y-3">
-          {d1.map((l) => { const ms = v5.miniCups[l.id]; const champ = champOf(ms, `mc${l.id}_final`); return (
-            <details key={l.id} className="group overflow-hidden rounded-2xl border-2 border-black bg-[#2a190e] open:bg-[#24150c]">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 font-black text-amber-100 hover:bg-amber-900/20 [&::-webkit-details-marker]:hidden">
-                <span className="flex min-w-0 items-center gap-3"><span className="text-amber-400 transition-transform group-open:rotate-90">▸</span><span className="truncate">{l.name}</span></span>
-                <span className="shrink-0 text-xs text-amber-300/70">{champ ? `Champion: ${nm(champ)}` : ms ? `${ms.filter((m) => m.completed).length}/${ms.length} played` : 'Not started'}</span>
-              </summary>
-              <div className="border-t-2 border-black px-4 py-4">
-                <div className="mb-4 flex flex-wrap items-center gap-2">
-                  <Btn onClick={() => buildMini(l.id)} disabled={!!ms || l.memberIds.length < 16 || !l.matches.every((m: any) => m.completed)}>Build</Btn>
-                  <Btn onClick={() => { const next = clone(ms); E.simulateBracket(next, by); commit({ miniCups: { ...v5.miniCups, [l.id]: next } }); }} disabled={!ms || !!champ}>Simulate all</Btn>
-                  <Btn onClick={() => { if (ms && window.confirm(`Reset the ${l.name} Spotlight Cup bracket and remove all results?`)) { const next = { ...v5.miniCups }; delete next[l.id]; commit({ miniCups: next }); } }} disabled={!ms} className="bg-rose-400">Reset Bracket</Btn>
-                </div>
-                {ms ? <Bracket nm={nm} sim={simOne} save={manual} ms={ms} onChange={(n) => commit({ miniCups: { ...v5.miniCups, [l.id]: n } })} /> : <p className="text-xs text-amber-100/50">Build the bracket after the league season finishes.</p>}
-              </div>
-            </details>); })}
+        <div className="mb-4 flex gap-2 overflow-x-auto pb-3 custom-scrollbar">
+          {d1.map((l, index) => { const ms = v5.miniCups[l.id]; const played = ms?.filter((m) => m.completed).length || 0; const total = ms?.length || 0; const selected = (selectedSpotlightLeague || d1[0]?.id) === l.id; const dots = ['bg-blue-500', 'bg-orange-500', 'bg-cyan-500', 'bg-red-500', 'bg-violet-500', 'bg-yellow-500']; return (
+            <button key={l.id} type="button" onClick={() => setSelectedSpotlightLeague(l.id)} className={`flex w-[205px] min-w-[205px] flex-col gap-2 rounded-2xl border-2 px-3 py-3 text-left transition-colors ${selected ? 'border-amber-400 bg-[#302012] shadow-[0_0_0_1px_rgba(251,191,36,0.25)]' : 'border-black bg-[#160f0a] hover:border-amber-800'}`}>
+              <div className="flex items-center justify-between"><span className={`h-2.5 w-2.5 rounded-full ${dots[index % dots.length]}`}></span><span className="font-mono text-[10px] font-black text-amber-500">{played}/{total || l.memberIds.length * 15}</span></div>
+              <span className="truncate text-xs font-black uppercase tracking-wide text-amber-100">{l.name}</span>
+              <span className="text-[10px] font-bold text-amber-500">Challenger Division</span>
+            </button>); })}
         </div>
+        {d1.filter((l) => l.id === (selectedSpotlightLeague || d1[0]?.id)).map((l) => { const ms = v5.miniCups[l.id]; const champ = champOf(ms, `mc${l.id}_final`); return (
+          <div key={l.id} className="rounded-2xl border-2 border-black bg-[#160f0a] p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-black text-amber-200">{l.name}</h3><p className="text-[11px] text-amber-100/50">Spotlight Cup · Top 16 · Single elimination · Best of 5, final Best of 7</p></div>{champ && <span className="text-xs font-black text-emerald-400">Champion: {nm(champ)}</span>}</div>
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <Btn onClick={() => buildMini(l.id)} disabled={!!ms || l.memberIds.length < 16 || !l.matches.every((m: any) => m.completed)}>Build</Btn>
+              <Btn onClick={() => { const next = clone(ms); E.simulateBracket(next, by); commit({ miniCups: { ...v5.miniCups, [l.id]: next } }); }} disabled={!ms || !!champ}>Simulate all</Btn>
+              <Btn onClick={() => { if (ms && window.confirm(`Reset the ${l.name} Spotlight Cup bracket and remove all results?`)) { const next = { ...v5.miniCups }; delete next[l.id]; commit({ miniCups: next }); } }} disabled={!ms} className="bg-rose-400">Reset Bracket</Btn>
+            </div>
+            {ms ? <Bracket nm={nm} sim={simOne} save={manual} ms={ms} onChange={(next) => commit({ miniCups: { ...v5.miniCups, [l.id]: next } })} /> : <p className="text-xs text-amber-100/50">Build the bracket after the league season finishes.</p>}
+          </div>); })}
       </Card> )}
 
       {(section === 'all' || section === 'super') && (<Card title="Super Cups" note={`${names.superCupA}: The Idols champion vs Unzure Cup champion. ${names.superCupB}: league champion vs ${names.miniCup} champion. If one idol wins both, the opponent is the runner-up. Best of 5.`}>
