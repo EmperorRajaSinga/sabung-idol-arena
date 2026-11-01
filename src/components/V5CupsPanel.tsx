@@ -6,7 +6,7 @@ import * as E from '../utils/v5/engine';
 import { rankStandings } from '../utils/swissLogic';
 
 interface Props {
-  idols: Idol[]; girlGroups: GirlGroup[]; leagueState: LeagueSeasonState | null;
+  idols: Idol[]; girlGroups: GirlGroup[]; leagueState: LeagueSeasonState | null; section?: 'all' | 'crown' | 'super' | 'open' | 'spotlight';
   v5State: V5State; onUpdateV5State: (s: V5State) => void;
   onUpdateLeagueState: (s: LeagueSeasonState) => void; theIdolsChampionId: string | null; knockoutMatches: KnockoutMatch[];
 }
@@ -52,7 +52,7 @@ const Bracket: React.FC<{ ms: E.BNode[]; nm: (id: string | null) => string; sim:
   </div>
 );
 
-export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, v5State, onUpdateV5State, onUpdateLeagueState, theIdolsChampionId, knockoutMatches }) => {
+export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, section = 'all', v5State, onUpdateV5State, onUpdateLeagueState, theIdolsChampionId, knockoutMatches }) => {
   const v5 = v5State;
   const [names, setNames] = useState<CompetitionNames>(() => loadNames());
   const [msg, setMsg] = useState('');
@@ -108,7 +108,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, v
       <p className="text-sm text-amber-100/60 mb-4">{names.division2}, promotion and relegation, {names.champsCup}, {names.leagueCup}, {names.miniCup} and the Super Cups. Everything runs after the league season.</p>
       {msg && <div role="status" className="mb-4 rounded-xl border-2 border-black bg-black/50 p-3 text-sm text-amber-200">{msg} <button className="underline ml-2" onClick={() => setMsg('')}>close</button></div>}
 
-      <Card title="Competition names" note="Rename anything. Names are saved on this device.">
+      {section === 'all' && (<Card title="Competition names" note="Rename anything. Names are saved on this device.">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
           {(Object.keys(names) as Array<keyof CompetitionNames>).map((k) => (
             <label key={k} className="text-[11px] font-bold text-amber-100/70">{NAME_LABELS[k]}
@@ -116,9 +116,9 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, v
             </label>
           ))}
         </div>
-      </Card>
+      </Card> )}
 
-      <Card title={names.division2} note="Each Division 1 league has a Division 2 below it. Idols can be added or activated at any time, then press Auto-fill.">
+      {(section === 'all') && (<Card title={names.division2} note="Each Division 1 league has a Division 2 below it. Idols can be added or activated at any time, then press Auto-fill.">
         <div className="flex flex-wrap items-center gap-2 mb-3">
           <label className="text-xs font-bold">Capacity per league
             <input type="number" min={2} max={40} value={v5.perLeague} onChange={(e) => commit({ perLeague: Math.max(2, Number(e.target.value) || 20) })} className="ml-2 w-16 rounded border-2 border-black bg-black/50 px-1 text-center font-mono" /></label>
@@ -138,9 +138,9 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, v
                 <li key={s.idolId} className={`flex justify-between ${i < v5.promotionCount && played === total && total > 0 ? 'text-emerald-400 font-bold' : ''}`}><span>{i + 1}. {nm(s.idolId)}</span><span className="font-mono">{s.points}</span></li>))}</ol>
             </div>); })}
         </div>
-      </Card>
+      </Card> )}
 
-      <Card title="Promotion and relegation" note={`Bottom ${v5.promotionCount} of each Division 1 league go down. Top ${v5.promotionCount} of its Division 2 go up. Lock the review after all leagues finish, then apply it when the new season has started.`}>
+      {(section === 'all') && (<Card title="Promotion and relegation" note={`Bottom ${v5.promotionCount} of each Division 1 league go down. Top ${v5.promotionCount} of its Division 2 go up. Lock the review after all leagues finish, then apply it when the new season has started.`}>
         <div className="flex flex-wrap gap-2 mb-3">
           <Btn onClick={lockMoves} disabled={!d1Done || !d2Done}>Lock review</Btn>
           <Btn onClick={applyMoves} disabled={!v5.pendingMoves || !d1Fresh} title={!d1Fresh ? 'Start the new season first' : ''}>Apply to new season</Btn>
@@ -149,9 +149,9 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, v
         {v5.pendingMoves && <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">{v5.pendingMoves.map((mv) => (
           <div key={mv.leagueId} className="rounded-lg border-2 border-black bg-black/30 p-2"><div className="font-black">League {mv.leagueId}</div>
             <div className="text-rose-300">Down: {mv.relegated.map(nm).join(', ') || 'none'}</div><div className="text-emerald-300">Up: {mv.promoted.map(nm).join(', ') || 'none'}</div></div>))}</div>}
-      </Card>
+      </Card> )}
 
-      <Card title={names.champsCup} note="The 6 league champions, double elimination. Byes: Unzure Cup winner, then The Idols winner, then league points. Best of 5, Lower Final and Grand Final Best of 7.">
+      {(section === 'all' || section === 'crown') && (<Card title={names.champsCup} note="The 6 league champions, double elimination. Byes: Unzure Cup winner, then The Idols winner, then league points. Best of 5, Lower Final and Grand Final Best of 7.">
         <div className="flex gap-2 mb-2">
           <Btn onClick={buildChamps} disabled={!d1Done || !!v5.champsCup}>Build bracket</Btn>
           <Btn onClick={() => { if (v5.champsCup) { const c = clone(v5.champsCup); E.simulateBracket(c.matches, by); commit({ champsCup: c }); } }} disabled={!v5.champsCup}>Simulate all</Btn>
@@ -159,9 +159,9 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, v
         </div>
         {d1Done && (!grandChamp || !theIdolsChampionId) && <p className="text-xs text-amber-200 mb-2">Unzure Cup or The Idols is not finished yet, so byes would use league points only. Finish them first for the full rule.</p>}
         {v5.champsCup && <><p className="text-xs mb-1">Byes: {v5.champsCup.byeIds.map(nm).join(', ')}</p><Bracket nm={nm} sim={simOne} save={manual} ms={v5.champsCup.matches} onChange={(ms) => commit({ champsCup: { ...v5.champsCup!, matches: ms } })} /></>}
-      </Card>
+      </Card> )}
 
-      <Card title={names.leagueCup} note="Every idol of every league. Division 2 starts in round 1. Stronger Division 1 idols (league position, then points) skip rounds. Best of 5, final Best of 7.">
+      {(section === 'all' || section === 'open') && (<Card title={names.leagueCup} note="Every idol of every league. Division 2 starts in round 1. Stronger Division 1 idols (league position, then points) skip rounds. Best of 5, final Best of 7.">
         <div className="flex flex-wrap gap-2 mb-2">
           <Btn onClick={buildLC} disabled={!d1Done || !d2Done || !!lc}>Build bracket</Btn>
           <Btn onClick={lcRound} disabled={!lc || !!lc.championId}>Simulate current round</Btn>
@@ -173,9 +173,9 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, v
           <details key={i} open={i === lc.rounds.length - 1} className="mb-2"><summary className="cursor-pointer text-sm font-black text-amber-300">{r[0]?.roundName} · {r.filter((m) => m.completed).length}/{r.length} played</summary>
             <Bracket nm={nm} sim={simOne} save={manual} ms={r} onChange={(ms) => { const s = clone(lc); s.rounds[i] = ms; commit({ leagueCup: refreshLC(s) }); }} /></details>))}
         {lcMatches.length > 0 && <span className="sr-only">{lcMatches.length} matches</span>}
-      </Card>
+      </Card> )}
 
-      <Card title={names.miniCup} note="Top 16 of each Division 1 final table, seeded 1 vs 16. Single elimination. Best of 5, final Best of 7.">
+      {(section === 'all' || section === 'spotlight') && (<Card title={names.miniCup} note="Top 16 of each Division 1 final table, seeded 1 vs 16. Single elimination. Best of 5, final Best of 7.">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {d1.map((l) => { const ms = v5.miniCups[l.id]; const champ = champOf(ms, `mc${l.id}_final`); return (
             <div key={l.id} className="rounded-xl border-2 border-black bg-black/30 p-3">
@@ -186,14 +186,14 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, v
               {ms && <details><summary className="cursor-pointer text-xs text-amber-300">Show bracket</summary><Bracket nm={nm} sim={simOne} save={manual} ms={ms} onChange={(n) => commit({ miniCups: { ...v5.miniCups, [l.id]: n } })} /></details>}
             </div>); })}
         </div>
-      </Card>
+      </Card> )}
 
-      <Card title="Super Cups" note={`${names.superCupA}: The Idols champion vs Unzure Cup champion. ${names.superCupB}: league champion vs ${names.miniCup} champion. If one idol wins both, the opponent is the runner-up. Best of 5.`}>
+      {(section === 'all' || section === 'super') && (<Card title="Super Cups" note={`${names.superCupA}: The Idols champion vs Unzure Cup champion. ${names.superCupB}: league champion vs ${names.miniCup} champion. If one idol wins both, the opponent is the runner-up. Best of 5.`}>
         <div className="flex gap-2 mb-2"><Btn onClick={buildSuperA} disabled={!!v5.superA}>Build {names.superCupA}</Btn><Btn onClick={buildSuperB} disabled={v5.superB.length > 0}>Build {names.superCupB}</Btn>
           <Btn onClick={() => { const a = v5.superA ? clone(v5.superA) : null; if (a) E.playNode(a, by); const b = clone(v5.superB); b.forEach((m) => { if (!m.completed) E.playNode(m, by); }); commit({ superA: a, superB: b }); }} disabled={!v5.superA && v5.superB.length === 0}>Simulate all</Btn></div>
         {v5.superA && <div><div className="text-xs font-black text-amber-300">{names.superCupA}</div><Bracket nm={nm} sim={simOne} save={manual} ms={[v5.superA]} onChange={(ms) => commit({ superA: ms[0] })} /></div>}
         {v5.superB.length > 0 && <div><div className="text-xs font-black text-amber-300 mt-2">{names.superCupB}</div><Bracket nm={nm} sim={simOne} save={manual} ms={v5.superB} onChange={(ms) => commit({ superB: ms })} /></div>}
-      </Card>
+      </Card> )}
     </div>
   );
 };

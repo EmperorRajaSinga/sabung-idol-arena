@@ -182,6 +182,10 @@ export interface CareerStat {
 export type ActiveTab =
   | 'dashboard'
   | 'v5_cups'
+  | 'v5_crown_cup'
+  | 'v5_super_cup'
+  | 'v5_open_arena_cup'
+  | 'v5_spotlight_cup'
   | 'season_simulator'
   | 'rank_panel'
   | 'settings'

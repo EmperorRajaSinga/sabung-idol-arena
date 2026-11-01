@@ -129,6 +129,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           badge: 'New',
         },
         { id: 'v5_cups' as ActiveTab, label: 'Cups & Divisions', icon: Trophy, badge: 'New' },
+        { id: 'v5_crown_cup' as ActiveTab, label: 'Crown Cup', icon: Crown },
+        { id: 'v5_super_cup' as ActiveTab, label: 'Super Cup', icon: Trophy },
+        { id: 'v5_open_arena_cup' as ActiveTab, label: 'Open Arena Cup', icon: Swords },
+        { id: 'v5_spotlight_cup' as ActiveTab, label: 'Spotlight Cup', icon: Sparkles },
         {
           id: 'the_idols' as ActiveTab,
           label: 'The Idols',

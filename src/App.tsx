@@ -2524,6 +2524,59 @@ export function App() {
               girlGroups={appState.girlGroups}
               leagueState={leagueState}
               v5State={v5State}
+              section="all"
+              onUpdateV5State={handleUpdateV5State}
+              onUpdateLeagueState={handleUpdateLeagueState}
+              theIdolsChampionId={theIdolsState?.championId || null}
+              knockoutMatches={appState.knockoutMatches || []}
+            />
+          )}
+          {activeTab === 'v5_crown_cup' && (
+            <V5CupsPanel
+              idols={appState.idols}
+              girlGroups={appState.girlGroups}
+              leagueState={leagueState}
+              v5State={v5State}
+              section="crown"
+              onUpdateV5State={handleUpdateV5State}
+              onUpdateLeagueState={handleUpdateLeagueState}
+              theIdolsChampionId={theIdolsState?.championId || null}
+              knockoutMatches={appState.knockoutMatches || []}
+            />
+          )}
+          {activeTab === 'v5_super_cup' && (
+            <V5CupsPanel
+              idols={appState.idols}
+              girlGroups={appState.girlGroups}
+              leagueState={leagueState}
+              v5State={v5State}
+              section="super"
+              onUpdateV5State={handleUpdateV5State}
+              onUpdateLeagueState={handleUpdateLeagueState}
+              theIdolsChampionId={theIdolsState?.championId || null}
+              knockoutMatches={appState.knockoutMatches || []}
+            />
+          )}
+          {activeTab === 'v5_open_arena_cup' && (
+            <V5CupsPanel
+              idols={appState.idols}
+              girlGroups={appState.girlGroups}
+              leagueState={leagueState}
+              v5State={v5State}
+              section="open"
+              onUpdateV5State={handleUpdateV5State}
+              onUpdateLeagueState={handleUpdateLeagueState}
+              theIdolsChampionId={theIdolsState?.championId || null}
+              knockoutMatches={appState.knockoutMatches || []}
+            />
+          )}
+          {activeTab === 'v5_spotlight_cup' && (
+            <V5CupsPanel
+              idols={appState.idols}
+              girlGroups={appState.girlGroups}
+              leagueState={leagueState}
+              v5State={v5State}
+              section="spotlight"
               onUpdateV5State={handleUpdateV5State}
               onUpdateLeagueState={handleUpdateLeagueState}
               theIdolsChampionId={theIdolsState?.championId || null}
