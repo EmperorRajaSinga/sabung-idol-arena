@@ -211,6 +211,34 @@ class HallOfChampionsCrashBoundary extends React.Component<{ children: React.Rea
   }
 }
 
+function chooseLeagueStateDuringHydration(
+  localState: LeagueSeasonState | null | undefined,
+  indexedDbState: LeagueSeasonState | null | undefined
+): LeagueSeasonState | null {
+  if (!localState) return indexedDbState || null;
+  if (!indexedDbState) return localState;
+
+  const localSeason = Number(localState.seasonNumber || 0);
+  const indexedDbSeason = Number(indexedDbState.seasonNumber || 0);
+  if (indexedDbSeason > localSeason) return indexedDbState;
+  if (localSeason > indexedDbSeason) return localState;
+
+  // The dedicated synchronous roster store is authoritative when it has a
+  // revision. Match counts are not a safe proxy for roster freshness.
+  const localRevision = Number((localState as any).updatedAt || 0);
+  const indexedDbRevision = Number((indexedDbState as any).updatedAt || 0);
+  if (localRevision || indexedDbRevision) {
+    return indexedDbRevision > localRevision ? indexedDbState : localState;
+  }
+
+  // Legacy snapshots have no revision. Only accept the IndexedDB copy when it
+  // demonstrably contains more roster assignments; never replace equal-sized
+  // rosters merely because an old snapshot has more completed matches.
+  const countMembers = (state: LeagueSeasonState) =>
+    (state.leagues || []).reduce((total, league) => total + (league.memberIds || []).length, 0);
+  return countMembers(indexedDbState) > countMembers(localState) ? indexedDbState : localState;
+}
+
 class GirlGroupStatsCrashBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
   state = { error: null as Error | null };
   static getDerivedStateFromError(error: Error) { return { error }; }
@@ -657,24 +685,11 @@ export function App() {
               merged.customLeagueBranding = idbState.customLeagueBranding;
             }
 
-            // League State: keep whichever has higher seasonNumber or more matches
-            const prevLSeason = Number(prev.leagueState?.seasonNumber || 0);
-            const idbLSeason = Number(idbState.leagueState?.seasonNumber || 0);
-            if (idbLSeason > prevLSeason) {
-              merged.leagueState = idbState.leagueState;
-            } else if (idbLSeason === prevLSeason && idbState.leagueState) {
-              const prevLMatches = (prev.leagueState?.leagues || []).reduce(
-                (acc, l) => acc + (l.matches || []).filter((m: any) => m.completed).length,
-                0
-              );
-              const idbLMatches = (idbState.leagueState?.leagues || []).reduce(
-                (acc, l) => acc + (l.matches || []).filter((m: any) => m.completed).length,
-                0
-              );
-              if (idbLMatches >= prevLMatches) {
-                merged.leagueState = idbState.leagueState;
-              }
-            }
+            // League State: compare explicit roster revisions before considering
+            // legacy fallback data. A stale IndexedDB snapshot must never roll back
+            // a roster that was saved moments before refresh.
+            const localLeagueSnapshot = loadLeagueSeasonState() || prev.leagueState || null;
+            merged.leagueState = chooseLeagueStateDuringHydration(localLeagueSnapshot, idbState.leagueState);
 
             // The Idols State: keep whichever has higher seasonNumber
             const prevTSeason = Number(prev.theIdolsState?.seasonNumber || 0);
@@ -735,10 +750,9 @@ export function App() {
 
           if (idbState.leagueState) {
             setLeagueState((prev) => {
-              const prevS = Number(prev?.seasonNumber || 0);
-              const idbS = Number(idbState.leagueState?.seasonNumber || 0);
-              const chosen = idbS >= prevS ? idbState.leagueState! : prev;
-              saveLeagueSeasonState(chosen);
+              const localSnapshot = loadLeagueSeasonState() || prev;
+              const chosen = chooseLeagueStateDuringHydration(localSnapshot, idbState.leagueState);
+              if (chosen) saveLeagueSeasonState(chosen);
               return chosen;
             });
           }
