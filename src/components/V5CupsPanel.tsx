@@ -16,6 +16,17 @@ interface Props {
   theIdolsChampionId: string | null; knockoutMatches: KnockoutMatch[];
 }
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
+const createEmptySuperFinal = (id: string, label: string, idolAId: string | null = null, idolBId: string | null = null): E.BNode => ({
+  id, roundName: 'Super Cup', bestOf: 5,
+  a: { id: idolAId || '' }, b: { id: idolBId || '' },
+  idolAId, idolBId, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false,
+});
+const toSuperKnockoutMatches = (matches: E.BNode[]): KnockoutMatch[] => matches.map((m, index) => ({
+  id: m.id, roundIndex: 0, roundName: 'Super Cup Grand Final', matchNumber: index + 1,
+  bestOf: m.bestOf, idolAId: m.idolAId || null, idolBId: m.idolBId || null,
+  scoreA: m.scoreA, scoreB: m.scoreB, winnerId: m.winnerId, completed: m.completed,
+}));
+
 
 const CROWN_ROUND_ORDER = ['Upper Round 1', 'Upper Semi Final', 'Upper Final', 'Lower Round 1', 'Lower Final', 'Grand Final'];
 const createEmptyCrownCup = (): { matches: E.BNode[]; byeIds: string[]; seedOrder: string[] } => {
@@ -320,6 +331,8 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
   const [simulatingOpenCup, setSimulatingOpenCup] = useState(false);
   const [isCrownManualOpen, setIsCrownManualOpen] = useState(false);
   const [isCrownSimulcastOpen, setIsCrownSimulcastOpen] = useState(false);
+  const [superEditor, setSuperEditor] = useState<'a' | 'b' | null>(null);
+  const [superSimulcast, setSuperSimulcast] = useState<'a' | 'b' | null>(null);
   const emptyCrownCup = useMemo(() => createEmptyCrownCup(), []);
   const [selectedSpotlightLeague, setSelectedSpotlightLeague] = useState('');
   const [selectedOpenRound, setSelectedOpenRound] = useState('');
@@ -332,6 +345,14 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
   const crownSimConfig = { favoriteIdolIds: [], groups: [] } as unknown as TournamentConfig;
   const nm = (id: string | null) => (id ? by.get(id)?.name || id : 'TBD');
   const d1 = leagueState?.leagues || [];
+  const superAView = v5.superA || createEmptySuperFinal('sc_a', 'Super Cup A');
+  const superBView = d1.length
+    ? d1.map((league) => v5.superB.find((match) => match.id === `sc_b${league.id}`) || createEmptySuperFinal(`sc_b${league.id}`, `${league.name} Super Cup`))
+        .concat(v5.superB.filter((match) => !d1.some((league) => match.id === `sc_b${league.id}`)))
+    : (v5.superB.length ? v5.superB : [createEmptySuperFinal('sc_b0', 'Super Cup B')]);
+  const superAPlayable = !!superAView.idolAId && !!superAView.idolBId && !superAView.completed;
+  const superBPlayable = superBView.filter((match) => !!match.idolAId && !!match.idolBId && !match.completed).length;
+  const superConfig = { favoriteIdolIds: [], groups: [] } as unknown as TournamentConfig;
   const commit = (patch: Partial<V5State>) => { const n = { ...v5, ...patch }; onUpdateV5State(n); if (!saveV5State(n)) setMsg('Storage is full: this change is not saved. Export a backup and clear old data.'); };
   useEffect(() => {
     if (!v5.champsCup?.matches.some((match) => match.id === 'cc_lr2' || match.id === 'cc_lr3')) return;
@@ -496,10 +517,71 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
     } catch (error) { setMsg(error instanceof Error ? `Spotlight Cup build failed: ${error.message}` : 'Spotlight Cup build failed. Check the league standings and try again.'); }
   };
   const champOf = (ms?: E.BNode[], id?: string) => { const f = ms?.find((m) => m.id === id); return f?.completed ? f.winnerId : null; };
-  const buildSuperA = () => { if (!theIdolsChampionId || !grandChamp) { setMsg('Super Cup A needs The Idols champion and the Unzure Cup champion.'); return; } commit({ superA: E.buildSuperCup('sc_a', theIdolsChampionId, grandChamp, grandRunner) }); };
+  const buildSuperA = () => {
+    const first = theIdolsChampionId || null;
+    const second = grandChamp || null;
+    const opponent = first && first === second ? grandRunner || null : second;
+    const next = createEmptySuperFinal('sc_a', 'Super Cup A', first, opponent);
+    commit({ superA: next });
+    setMsg(first && opponent ? 'Super Cup A Grand Final is ready.' : 'Super Cup A bracket created. Missing champion slots can be assigned manually.');
+  };
   const buildSuperB = () => {
-    const ms = d1.flatMap((l) => { const mini = champOf(v5.miniCups[l.id], `mc${l.id}_final`); if (!mini) return []; const r = rankStandings(l.standings); return [E.buildSuperCup(`sc_b${l.id}`, r[0].idolId, mini, r[1]?.idolId || null)]; });
-    if (ms.length === 0) { setMsg('Finish at least one Mini Cup first.'); return; } commit({ superB: ms });
+    if (d1.length === 0) { setMsg('Division 1 league data is not available.'); return; }
+    const ms = d1.map((league) => {
+      const mini = champOf(v5.miniCups[league.id], `mc${league.id}_final`);
+      const standings = rankStandings(league.standings);
+      const leagueChampion = standings[0]?.idolId || null;
+      const runnerUp = standings[1]?.idolId || null;
+      const opponent = leagueChampion && leagueChampion === mini ? runnerUp : mini;
+      return createEmptySuperFinal(`sc_b${league.id}`, `${league.name} Super Cup`, leagueChampion, opponent);
+    });
+    commit({ superB: ms });
+    const ready = ms.filter((match) => match.idolAId && match.idolBId).length;
+    setMsg(`Super Cup B created: ${ready} of ${ms.length} Grand Finals have both qualified participants.`);
+  };
+  const saveSuperManualBracket = (kind: 'a' | 'b', updated: KnockoutMatch[]) => {
+    const current = kind === 'a' ? [superAView] : superBView;
+    const next = clone(current);
+    updated.forEach((edited) => {
+      const target = next.find((match) => match.id === edited.id);
+      if (!target) return;
+      const nextA = edited.idolAId || '';
+      const nextB = edited.idolBId || '';
+      if ((target.idolAId || '') !== nextA || (target.idolBId || '') !== nextB) {
+        target.a = { id: nextA };
+        target.b = { id: nextB };
+        target.idolAId = nextA || null;
+        target.idolBId = nextB || null;
+        target.scoreA = null;
+        target.scoreB = null;
+        target.winnerId = null;
+        target.loserId = null;
+        target.completed = false;
+      }
+    });
+    if (kind === 'a') commit({ superA: next[0] });
+    else commit({ superB: next });
+    setMsg(`${kind === 'a' ? names.superCupA : names.superCupB} manual bracket changes saved.`);
+  };
+  const commitSuperSimulcast = (kind: 'a' | 'b', updated: KnockoutMatch[]) => {
+    const next = clone(kind === 'a' ? [superAView] : superBView);
+    updated.forEach((result) => {
+      const target = next.find((match) => match.id === result.id);
+      if (!target || target.completed || !result.completed || result.scoreA === null || result.scoreB === null || !result.winnerId) return;
+      target.scoreA = result.scoreA;
+      target.scoreB = result.scoreB;
+      target.winnerId = result.winnerId;
+      target.loserId = result.winnerId === target.idolAId ? target.idolBId : target.idolAId;
+      target.completed = true;
+    });
+    if (kind === 'a') commit({ superA: next[0] });
+    else commit({ superB: next });
+  };
+  const simulateSuperAll = (kind: 'a' | 'b') => {
+    const next = clone(kind === 'a' ? [superAView] : superBView);
+    E.simulateBracket(next, by);
+    if (kind === 'a') commit({ superA: next[0] });
+    else commit({ superB: next });
   };
 
   const lc = v5.leagueCup, lcMatches = lc ? lc.rounds.flat() : [];
@@ -618,13 +700,126 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
           </div>); })}
       </Card> )}
 
-      {section === 'super' && (<Card title="Super Cups" note={`${names.superCupA}: The Idols champion vs Unzure Cup champion. ${names.superCupB}: league champion vs ${names.miniCup} champion. If one idol wins both, the opponent is the runner-up. Best of 5.`}>
-        <div className="flex gap-2 mb-2"><Btn onClick={buildSuperA} disabled={!!v5.superA}>Build {names.superCupA}</Btn><Btn onClick={buildSuperB} disabled={v5.superB.length > 0}>Build {names.superCupB}</Btn>
-          <Btn onClick={() => { const a = v5.superA ? clone(v5.superA) : null; if (a) E.playNode(a, by); const b = clone(v5.superB); b.forEach((m) => { if (!m.completed) E.playNode(m, by); }); commit({ superA: a, superB: b }); }} disabled={!v5.superA && v5.superB.length === 0}>Simulate all</Btn>
-          <Btn onClick={() => { if ((v5.superA || v5.superB.length) && window.confirm("Reset all Super Cup matches and results?")) commit({ superA: null, superB: [] }); }} disabled={!v5.superA && v5.superB.length === 0} className="bg-rose-400">Reset Competitions</Btn></div>
-        {v5.superA && <div><div className="text-xs font-black text-amber-300">{names.superCupA}</div><Bracket nm={nm} sim={simOne} save={manual} ms={[v5.superA]} onChange={(ms) => commit({ superA: ms[0] })} /></div>}
-        {v5.superB.length > 0 && <div><div className="text-xs font-black text-amber-300 mt-2">{names.superCupB}</div><Bracket nm={nm} sim={simOne} save={manual} ms={v5.superB} onChange={(ms) => commit({ superB: ms })} /></div>}
-      </Card> )}
+      {section === 'super' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <section className="overflow-hidden rounded-2xl border border-amber-500/25 bg-gradient-to-br from-[#17101f] via-slate-950 to-[#24150d] shadow-2xl">
+            <div className="relative border-b border-amber-500/20 px-5 py-6 sm:px-7">
+              <div className="pointer-events-none absolute -right-8 -top-12 h-48 w-48 rounded-full bg-amber-400/10 blur-3xl" />
+              <div className="relative flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.28em] text-indigo-300">Championship Showcase · Main Event</p>
+                  <h2 className="mt-2 text-3xl font-black uppercase tracking-tight text-white">{names.superCupA}</h2>
+                  <p className="mt-2 max-w-2xl text-xs leading-relaxed text-slate-300">The Idols champion faces the Unzure Cup champion. If one idol wins both competitions, the runner-up takes the opposing slot. Best of 5.</p>
+                </div>
+                <div className="text-right text-[10px] font-bold uppercase tracking-wider text-slate-500">{leagueState?.seasonName || `Season ${leagueState?.seasonNumber || 1}`}</div>
+              </div>
+            </div>
+            <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center sm:p-7">
+              <div className="rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-4 text-center">
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-200">The Idols Champion</div>
+                <div className="mt-2 text-lg font-black text-white">{nm(superAView.idolAId)}</div>
+              </div>
+              <div className="flex flex-col items-center gap-1 py-2">
+                <div className="text-[10px] font-black uppercase tracking-[0.35em] text-amber-300">Grand Final</div>
+                <div className="text-4xl font-black text-amber-300 drop-shadow-[0_0_18px_rgba(251,191,36,0.3)]">VS</div>
+                <div className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-[10px] font-black text-amber-200">BO5</div>
+              </div>
+              <div className="rounded-2xl border border-fuchsia-400/20 bg-fuchsia-500/10 p-4 text-center">
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-fuchsia-200">Unzure Cup Champion</div>
+                <div className="mt-2 text-lg font-black text-white">{nm(superAView.idolBId)}</div>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 border-t border-white/10 bg-black/20 px-4 py-4 sm:px-7">
+              <Btn onClick={buildSuperA} className="border-indigo-400/30 bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-500">Build / Refresh Final</Btn>
+              <Btn onClick={() => simulateSuperAll('a')} disabled={!superAPlayable} className="border-emerald-500/30 bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-500">Simulate All Matches</Btn>
+              <Btn onClick={() => setSuperEditor('a')} className="border-slate-600 bg-slate-800 px-4 py-2 text-white hover:bg-slate-700">Edit Bracket Manually</Btn>
+              <Btn onClick={() => setSuperSimulcast('a')} disabled={!superAPlayable} className="border-fuchsia-500/30 bg-fuchsia-700 px-4 py-2 text-white hover:bg-fuchsia-600">Live Simulcast</Btn>
+              <Btn onClick={() => { if (window.confirm(`Reset ${names.superCupA} bracket and match result?`)) commit({ superA: null }); }} disabled={!v5.superA} className="border-rose-500/30 bg-rose-700 px-4 py-2 text-white hover:bg-rose-600">Reset Bracket / Matches</Btn>
+              {superAView.completed && <span className="ml-auto text-xs font-black uppercase tracking-wider text-emerald-300">Champion: {nm(superAView.winnerId)}</span>}
+            </div>
+            <div className="px-4 pb-5 sm:px-7">
+              <div className="mx-auto max-w-3xl rounded-2xl border border-amber-500/25 bg-black/25 p-3 sm:p-5">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <span className="text-xs font-black uppercase tracking-[0.2em] text-amber-200">Official Grand Final Match</span>
+                  <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] font-black text-amber-200">BO5 · FIRST TO 3</span>
+                </div>
+                <div className="flex justify-center"><Row m={superAView} idols={by} nm={nm} onSim={() => simulateSuperAll('a')} onSave={(a, b) => {
+                  const next = clone(superAView); const error = manual([next], next.id, a, b);
+                  if (!error) commit({ superA: next });
+                  return error;
+                }} /></div>
+              </div>
+            </div>
+          </section>
+
+          <section className="overflow-hidden rounded-2xl border border-fuchsia-500/25 bg-gradient-to-br from-[#1c1023] via-slate-950 to-[#21150f] shadow-2xl">
+            <div className="relative border-b border-fuchsia-500/20 px-5 py-6 sm:px-7">
+              <div className="pointer-events-none absolute -right-8 -top-12 h-48 w-48 rounded-full bg-fuchsia-400/10 blur-3xl" />
+              <div className="relative flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.28em] text-fuchsia-300">League Champions · Spotlight Winners</p>
+                  <h2 className="mt-2 text-3xl font-black uppercase tracking-tight text-white">{names.superCupB}</h2>
+                  <p className="mt-2 max-w-2xl text-xs leading-relaxed text-slate-300">Each Division 1 league champion faces the champion of its corresponding {names.miniCup}. Every league has its own Grand Final. Best of 5.</p>
+                </div>
+                <div className="text-right text-[10px] font-bold uppercase tracking-wider text-slate-500">{leagueState?.seasonName || `Season ${leagueState?.seasonNumber || 1}`}</div>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 border-b border-white/10 bg-black/20 px-4 py-4 sm:px-7">
+              <Btn onClick={buildSuperB} className="border-fuchsia-400/30 bg-fuchsia-700 px-4 py-2 text-white hover:bg-fuchsia-600">Build / Refresh Finals</Btn>
+              <Btn onClick={() => simulateSuperAll('b')} disabled={superBPlayable === 0} className="border-emerald-500/30 bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-500">Simulate All Matches</Btn>
+              <Btn onClick={() => setSuperEditor('b')} className="border-slate-600 bg-slate-800 px-4 py-2 text-white hover:bg-slate-700">Edit Bracket Manually</Btn>
+              <Btn onClick={() => setSuperSimulcast('b')} disabled={superBPlayable === 0} className="border-fuchsia-500/30 bg-fuchsia-700 px-4 py-2 text-white hover:bg-fuchsia-600">Live Simulcast</Btn>
+              <Btn onClick={() => { if (window.confirm(`Reset all ${names.superCupB} brackets and match results?`)) commit({ superB: [] }); }} disabled={v5.superB.length === 0} className="border-rose-500/30 bg-rose-700 px-4 py-2 text-white hover:bg-rose-600">Reset Bracket / Matches</Btn>
+            </div>
+            <div className="grid gap-4 p-4 sm:grid-cols-2 xl:grid-cols-3 sm:p-7">
+              {superBView.map((match) => {
+                const league = d1.find((item) => match.id === `sc_b${item.id}`);
+                const title = league?.name || match.id;
+                return (
+                  <article key={match.id} className="rounded-2xl border border-fuchsia-400/20 bg-black/25 p-4 shadow-lg">
+                    <div className="mb-4 flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="truncate text-xs font-black uppercase tracking-wider text-fuchsia-200">{title}</div>
+                        <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">Grand Final · BO5</div>
+                      </div>
+                      {match.completed && <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[9px] font-black text-emerald-300">COMPLETE</span>}
+                    </div>
+                    <div className="flex justify-center"><Row m={match} idols={by} nm={nm} onSim={() => {
+                      const next = clone(superBView); const target = next.find((item) => item.id === match.id); if (target) E.playNode(target, by); commit({ superB: next });
+                    }} onSave={(a, b) => {
+                      const next = clone(superBView); const target = next.find((item) => item.id === match.id); if (!target) return 'Match not found.';
+                      const error = manual(next, match.id, a, b); if (!error) commit({ superB: next }); return error;
+                    }} /></div>
+                    {match.completed && <div className="mt-3 text-center text-xs font-black uppercase text-emerald-300">Winner: {nm(match.winnerId)}</div>}
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+          {superEditor && (
+            <ManualBracketModal
+              key={superEditor}
+              isOpen
+              onClose={() => setSuperEditor(null)}
+              knockoutMatches={toSuperKnockoutMatches(superEditor === 'a' ? [superAView] : superBView)}
+              idolsMap={by}
+              onSaveKnockoutMatches={(updated) => saveSuperManualBracket(superEditor, updated)}
+              onRegenerateAutoBracket={() => { if (superEditor === 'a') buildSuperA(); else buildSuperB(); }}
+            />
+          )}
+          {superSimulcast && (
+            <KnockoutLiveSimulatorModal
+              key={superSimulcast}
+              isOpen
+              onClose={() => setSuperSimulcast(null)}
+              knockoutMatches={toSuperKnockoutMatches(superSimulcast === 'a' ? [superAView] : superBView)}
+              idolsMap={by}
+              config={superConfig}
+              onCommitMatches={(updated) => commitSuperSimulcast(superSimulcast, updated)}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 };
