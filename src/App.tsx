@@ -1,5 +1,5 @@
 import { loadV5State, saveV5State, hasStoredV5State, V5State, V5TitleArchive } from './utils/v5/store';
-import { loadRosterSnapshot, saveDivisionOneRosterSnapshot, saveDivisionTwoRosterSnapshot, restoreDivisionOneRoster, restoreDivisionTwoRoster } from './utils/rosterPersistence';
+import { loadRosterSnapshot, saveDivisionOneRosterSnapshot, saveDivisionTwoRosterSnapshot, restoreDivisionOneRoster, restoreDivisionTwoRoster, clearRosterSnapshot } from './utils/rosterPersistence';
 import { loadNames } from './utils/v5/names';
 import { auditAppStateDataChanges, normalizeDataName, recordDataHistory } from './utils/dataChangeHistory';
 
@@ -2158,6 +2158,7 @@ export function App() {
           nextSeasonId
         );
         setLeagueState(nextLeagueState);
+        saveDivisionOneRosterSnapshot(nextLeagueState.leagues || []);
         saveLeagueSeasonState(nextLeagueState);
       }
 
@@ -2408,6 +2409,7 @@ export function App() {
   };
 
   const handleResetData = () => {
+    clearRosterSnapshot();
     const result = clearAllAppDataAndStorage();
     setAppState(result.appState);
     setLeagueState(result.leagueState);
