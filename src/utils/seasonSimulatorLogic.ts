@@ -679,6 +679,17 @@ export function simulateEntireSeason(
   const updatedV5State = v5Source
     ? simulateV5Season(v5Source, leagueSeason.leagues, idols, knockoutMatches, theIdolsSeason.championId)
     : undefined;
+  const countV5Completed = (state?: V5State | null) => {
+    if (!state) return 0;
+    return (state.d2 || []).reduce((sum, league) => sum + (league.matches || []).filter((match) => match.completed).length, 0) +
+      (state.champsCup?.matches || []).filter((match) => match.completed).length +
+      (state.leagueCup?.rounds || []).flat().filter((match) => match.completed).length +
+      Object.values(state.miniCups || {}).reduce((sum, matches) => sum + matches.filter((match) => match.completed).length, 0) +
+      Number(Boolean(state.superA?.completed)) +
+      (state.superB || []).filter((match) => match.completed).length;
+  };
+  const v5SimulatedMatchesCount = Math.max(0, countV5Completed(updatedV5State) - countV5Completed(v5Source));
+  totalSimulatedMatchesCount += v5SimulatedMatchesCount;
 
   const championName = (championId && idolsMap.get(championId)?.name) || 'Unknown';
   const runnerUpName = (runnerUpId && idolsMap.get(runnerUpId)?.name) || '';
