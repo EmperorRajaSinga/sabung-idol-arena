@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import type { V5TitleArchive } from '../utils/v5/store';
+import type { V5PromotionHistoryEntry, V5TitleArchive } from '../utils/v5/store';
 import { CareerV5StatsPanel } from './CareerV5StatsPanel';
 import {
   CareerStat,
@@ -35,6 +35,7 @@ interface CareerStatsPanelProps {
   matchDatabase?: ArchivedMatch[];
   archives?: TournamentArchive[];
   v5TitleArchives?: V5TitleArchive[];
+  v5PromotionHistory?: V5PromotionHistoryEntry[];
   onSelectIdolProfile?: (idolId: string) => void;
 }
 
@@ -78,6 +79,7 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
   matchDatabase = [],
   archives = [],
   v5TitleArchives = [],
+  v5PromotionHistory = [],
   onSelectIdolProfile,
 }) => {
   const [activeSystem, setActiveSystem] = useState<'combined' | 'tournament' | 'league' | 'the_idols' | 'crown_cup' | 'open_arena_cup' | 'spotlight_cup' | 'super_cup_a' | 'super_cup_b' | 'division_2'>('combined');
@@ -704,6 +706,7 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
           matchDatabase={matchDatabase}
           idols={idols}
           v5TitleArchives={v5TitleArchives}
+          promotionHistory={v5PromotionHistory}
         />
       )}
 
