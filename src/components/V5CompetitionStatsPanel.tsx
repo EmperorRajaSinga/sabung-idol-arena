@@ -15,12 +15,14 @@ const getCompetition = (match: ArchivedMatch) => {
 export const V5CompetitionStatsPanel: React.FC<{ matchDatabase: ArchivedMatch[]; idols?: Idol[]; compact?: boolean }> = ({ matchDatabase = [], idols = [], compact = false }) => {
   const [activeCompetition, setActiveCompetition] = useState('All Competitions');
   const [search, setSearch] = useState('');
-  const idolMap = useMemo(() => new Map(idols.map((idol) => [idol.id, idol])), [idols]);
+  const safeIdols = Array.isArray(idols) ? idols.filter((idol): idol is Idol => Boolean(idol && idol.id)) : [];
+  const idolMap = useMemo(() => new Map(safeIdols.map((idol) => [idol.id, idol])), [safeIdols]);
   const allRows = useMemo(() => {
     const map = new Map<string, CompetitionRow>();
     (Array.isArray(matchDatabase) ? matchDatabase : []).forEach((match) => {
+      if (!match || typeof match !== 'object') return;
       const competition = getCompetition(match);
-      if (!competition || !match || !match.idolAId || !match.idolBId || match.scoreA == null || match.scoreB == null) return;
+      if (!competition || !match.idolAId || !match.idolBId || match.scoreA == null || match.scoreB == null) return;
       const sides = [
         { id: match.idolAId, name: match.idolAName, group: match.idolAGroup, photo: match.idolAPhoto, score: Number(match.scoreA), against: Number(match.scoreB) },
         { id: match.idolBId, name: match.idolBName, group: match.idolBGroup, photo: match.idolBPhoto, score: Number(match.scoreB), against: Number(match.scoreA) },
@@ -38,7 +40,7 @@ export const V5CompetitionStatsPanel: React.FC<{ matchDatabase: ArchivedMatch[];
     });
     return Array.from(map.entries()).map(([key, row]) => ({ ...row, competition: key.split('::')[0] }));
   }, [matchDatabase, idolMap]);
-  const rows = allRows.filter((row) => (activeCompetition === 'All Competitions' || row.competition === activeCompetition) && (row.idolName + ' ' + row.group).toLowerCase().includes(search.toLowerCase())).sort((a, b) => b.wins - a.wins || b.titles - a.titles || b.matches - a.matches || a.idolName.localeCompare(b.idolName));
+  const rows = allRows.filter((row) => (activeCompetition === 'All Competitions' || row.competition === activeCompetition) && (String(row.idolName || '') + ' ' + String(row.group || '')).toLowerCase().includes(search.toLowerCase())).sort((a, b) => b.wins - a.wins || b.titles - a.titles || b.matches - a.matches || a.idolName.localeCompare(b.idolName));
   const competitionCount = (name: string) => allRows.filter((row) => row.competition === name).length;
   return <section className={compact ? 'space-y-3' : 'space-y-5 rounded-2xl border-2 border-black bg-[#1a120d] p-4'}>
     <div><h3 className="text-lg font-black text-amber-300">V5 Competition Records</h3><p className="text-xs text-amber-100/60">Separate historical records for every newly added cup. Statistics use completed matches saved in the central match database.</p></div>
