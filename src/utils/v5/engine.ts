@@ -1,5 +1,5 @@
 import type { Idol, GirlGroup, LeagueInfo } from '../../types';
-import { generateRoundRobinMatches, calculateLeagueStandings } from '../leagueLogic';
+import { generateRoundRobinMatches, calculateLeagueStandings, repairLeagueFixturesForSimulation } from '../leagueLogic';
 import { getIdolRating, simulateSeriesMatches, simulateLeagueMatchScore } from '../ratingHelper';
 import { rankStandings } from '../swissLogic';
 import { isIdolActive } from '../tournamentLogic';
@@ -163,7 +163,13 @@ export function simulateV5Season<T extends {
   theIdolsChampionId?: string
 ): T {
   const by = new Map(idols.map((idol) => [idol.id, idol]));
-  const d2 = (source.d2 || []).map((league) => simulateLeagueMatches(league, idols));
+  const d2 = (source.d2 || []).map((league) => {
+    const repaired = repairLeagueFixturesForSimulation(league, idols);
+    if (repaired.unresolvedMemberIds.length) {
+      throw new Error(`${league.name}: unresolved Division 2 roster IDs: ${repaired.unresolvedMemberIds.join(', ')}`);
+    }
+    return simulateLeagueMatches(repaired.league, idols);
+  });
   const completedD1 = d1.map((league) => {
     const standings = calculateLeagueStandings(league.id, league.memberIds, league.matches, idols);
     return { ...league, standings };
