@@ -512,6 +512,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       );
     }
 
+    logDataChange({ action: 'updated', entity: 'league_branding', entityName: 'Division 1 league branding', source: 'Settings / League Names & Logos', details: 'Saved league names, tier labels, colors, logos, and descriptions.' });
     setBrandingSavedSuccess(true);
     showSuccessMsg('League names, logos, and branding saved successfully and persisted across refreshes!');
     setTimeout(() => setBrandingSavedSuccess(false), 3000);
@@ -576,6 +577,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       );
     }
 
+    logDataChange({ action: 'updated', entity: 'league_branding', entityName: 'Division 1 league branding', source: 'Settings / League Names & Logos', details: 'Reset all six Division 1 branding records to default values.' });
     showSuccessMsg('Reset all leagues to default branding!');
   };
 
