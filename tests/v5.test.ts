@@ -70,11 +70,18 @@ ck('C4 rank 17 stays in Division 1', rank17Stay);
 
 // champs cup
 const champs = (flags: [number, number] | null) => d1.map((l: any, k: number) => { const t = rankStandings(l.standings)[0]; return { idolId: t.idolId, leagueId: l.id, wonGrandCup: !!flags && flags[0] === k, wonTheIdols: !!flags && flags[1] === k, points: t.points, gameDiff: t.gameDiff || 0 }; });
-const cc = (flags: [number, number] | null) => { const c = champs(flags); const { matches, byeIds } = E.buildChampsCup(c); E.simulateBracket(matches, by); return { c, matches, byeIds }; };
+const cc = (flags: [number, number] | null) => { const c = champs(flags); const { matches, byeIds, seedOrder } = E.buildChampsCup(c); E.simulateChampsCup(matches, by, seedOrder); return { c, matches, byeIds, seedOrder }; };
 const a = cc([3, 1]); const cInfo = a.c;
 ck('D Champs Cup: 10 matches, all complete and valid series', a.matches.length === 10 && a.matches.every(seriesOk));
 ck('D2 formats: Bo7 only Lower Final and Grand Final', a.matches.filter((m) => m.bestOf === 7).map((m) => m.id).sort().join() === 'cc_gf,cc_lf');
 ck('D3 byes = Grand Cup winner and The Idols winner', [...a.byeIds].sort().join() === [cInfo[3].idolId, cInfo[1].idolId].sort().join());
+const upperSemiLosers = ['cc_usf_a', 'cc_usf_b'].map((id) => a.matches.find((m) => m.id === id)!.loserId!);
+const seededByeLoser = [...upperSemiLosers].sort((x, y) => a.seedOrder.indexOf(x) - a.seedOrder.indexOf(y))[0];
+const otherSemiLoser = upperSemiLosers.find((id) => id !== seededByeLoser)!;
+const lowerRound2 = a.matches.find((m) => m.id === 'cc_lr2')!;
+const lowerRound3 = a.matches.find((m) => m.id === 'cc_lr3')!;
+ck('D3a better-seeded Upper Semi Final loser receives Lower Round 3 bye', lowerRound3.idolBId === seededByeLoser);
+ck('D3b other Upper Semi Final loser faces Lower Round 1 winner in Lower Round 2', lowerRound2.idolBId === otherSemiLoser && lowerRound2.idolAId === a.matches.find((m) => m.id === 'cc_lr1')!.winnerId);
 const b = cc(null); const topPts = [...b.c].sort((x, y) => (y.points - x.points) || (y.gameDiff - x.gameDiff)).slice(0, 2).map((x) => x.idolId);
 ck('D4 no trophy winners: byes go to top league points', b.byeIds.every((i) => topPts.includes(i)) || new Set(b.c.map((x) => x.points)).size < 6);
 const c3 = cc([2, 2]); ck('D5 one idol won both: gets one bye, second bye by points', c3.byeIds.includes(champs([2, 2])[2].idolId) && c3.byeIds.length === 2);
