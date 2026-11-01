@@ -77,7 +77,7 @@ export const MatchDatabasePanel: React.FC<MatchDatabasePanelProps> = ({
 }) => {
   // Filter States
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'ALL' | 'TOURNAMENT' | 'LEAGUE' | 'THE_IDOLS'>('ALL');
+  const [typeFilter, setTypeFilter] = useState<'ALL' | 'TOURNAMENT' | 'V5_CUPS' | 'LEAGUE' | 'THE_IDOLS'>('ALL');
   const [divisionFilter, setDivisionFilter] = useState<string>('ALL');
   const [seasonFilter, setSeasonFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -843,9 +843,11 @@ export const MatchDatabasePanel: React.FC<MatchDatabasePanelProps> = ({
         String(m.stageOrDivision || '').toLowerCase().includes(q) ||
         String(m.seasonName || '').toLowerCase().includes(q);
 
+      const isNewV5Cup = String(m.stageOrDivision || '').startsWith('Cups & Divisions:') && !String(m.stageOrDivision || '').startsWith('Cups & Divisions: Division 2');
       const matchType =
         typeFilter === 'ALL' ||
-        (typeFilter === 'TOURNAMENT' && m.type === 'Tournament Cup') ||
+        (typeFilter === 'TOURNAMENT' && m.type === 'Tournament Cup' && !isNewV5Cup) ||
+        (typeFilter === 'V5_CUPS' && isNewV5Cup) ||
         (typeFilter === 'LEAGUE' && m.type === 'League Division') ||
         (typeFilter === 'THE_IDOLS' && m.type === 'The Idols Superleague');
 
@@ -1026,6 +1028,9 @@ export const MatchDatabasePanel: React.FC<MatchDatabasePanelProps> = ({
           >
             <Shield className="w-3 h-3" />
             <span>🛡️ League ({leagueCount})</span>
+          </button>
+          <button type="button" onClick={() => { setTypeFilter('V5_CUPS'); setDivisionFilter('ALL'); setCurrentPage(1); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${typeFilter === 'V5_CUPS' ? 'bg-amber-500 text-slate-950 font-black shadow' : 'text-amber-300/70 hover:text-white'}`}>
+            <Trophy className="w-3 h-3" /><span>New V5 Cups ({combinedMatchesList.filter((m) => String(m.stageOrDivision || '').startsWith('Cups & Divisions:') && !String(m.stageOrDivision || '').startsWith('Cups & Divisions: Division 2')).length})</span>
           </button>
           <button
             type="button"
