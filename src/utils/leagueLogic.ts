@@ -947,11 +947,27 @@ export function getLeagueWinners(
 /**
  * LocalStorage Helpers for League System
  */
+const LEAGUE_STORAGE_BACKUP_KEY = 'sabung_league_season_state_backup_v1';
+
+function parseLeagueSeasonState(raw: string | null): LeagueSeasonState | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.leagues)) return null;
+    return parsed as LeagueSeasonState;
+  } catch {
+    return null;
+  }
+}
+
 export function loadLeagueSeasonState(): LeagueSeasonState | null {
   try {
-    const raw = localStorage.getItem(LEAGUE_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed: LeagueSeasonState = JSON.parse(raw);
+    const primary = parseLeagueSeasonState(localStorage.getItem(LEAGUE_STORAGE_KEY));
+    const parsed = primary || parseLeagueSeasonState(localStorage.getItem(LEAGUE_STORAGE_BACKUP_KEY));
+    if (!parsed) return null;
+    if (!primary) {
+      try { localStorage.setItem(LEAGUE_STORAGE_KEY, JSON.stringify(parsed)); } catch { /* backup remains intact */ }
+    }
 
     // Merge latest custom league branding onto loaded state if available
     if (parsed && Array.isArray(parsed.leagues)) {
@@ -1046,25 +1062,52 @@ export function loadLeagueSeasonState(): LeagueSeasonState | null {
 }
 
 export function saveLeagueSeasonState(state: LeagueSeasonState): void {
+  // Persist an explicit revision so IndexedDB hydration cannot replace a newer roster
+  // with an older snapshot that happens to contain the same number of played matches.
+  const persistedState = { ...state, updatedAt: Date.now() };
+  const serialized = JSON.stringify(persistedState);
+  let primarySaved = false;
+  let backupSaved = false;
   try {
-    localStorage.setItem(LEAGUE_STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(LEAGUE_STORAGE_KEY, serialized);
+    primarySaved = true;
   } catch {
     try {
-      // Strip large photos from standings if quota exceeded in localStorage
       const compactState = {
-        ...state,
-        leagues: (state.leagues || []).map((l) => ({
+        ...persistedState,
+        leagues: (persistedState.leagues || []).map((l) => ({
           ...l,
-          standings: (l.standings || []).map((s) => ({
-            ...s,
-            photoUrl: s.photoUrl && s.photoUrl.length > 400 ? '' : s.photoUrl,
+          standings: (l.standings || []).map((standing) => ({
+            ...standing,
+            photoUrl: standing.photoUrl && standing.photoUrl.length > 400 ? '' : standing.photoUrl,
           })),
         })),
       };
       localStorage.setItem(LEAGUE_STORAGE_KEY, JSON.stringify(compactState));
-    } catch {
-      console.warn('LocalStorage quota reached for league state; IndexedDB handles persistence.');
-    }
+      primarySaved = true;
+    } catch { /* try the independent recovery copy below */ }
+  }
+  try {
+    localStorage.setItem(LEAGUE_STORAGE_BACKUP_KEY, serialized);
+    backupSaved = true;
+  } catch {
+    try {
+      const compactBackup = {
+        ...persistedState,
+        leagues: (persistedState.leagues || []).map((l) => ({
+          ...l,
+          standings: (l.standings || []).map((standing) => ({
+            ...standing,
+            photoUrl: standing.photoUrl && standing.photoUrl.length > 400 ? '' : standing.photoUrl,
+          })),
+        })),
+      };
+      localStorage.setItem(LEAGUE_STORAGE_BACKUP_KEY, JSON.stringify(compactBackup));
+      backupSaved = true;
+    } catch { /* report below */ }
+  }
+  if (!primarySaved || !backupSaved) {
+    console.error('[Persistence] League roster save incomplete. At least one storage copy could not be written.');
   }
 }
 
