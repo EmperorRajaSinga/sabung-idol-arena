@@ -182,6 +182,10 @@ export const DashboardPanel: React.FC<DashboardPanelProps> = ({
   }, [allSeasonArchives]);
 
   const latestCupArchive = crownedArchives.length > 0 ? crownedArchives[crownedArchives.length - 1] : undefined;
+  const latestV5Title = useMemo(() => {
+    if (!v5TitleArchives?.length) return undefined;
+    return [...v5TitleArchives].sort((a, b) => new Date(b.archivedAt || 0).getTime() - new Date(a.archivedAt || 0).getTime())[0];
+  }, [v5TitleArchives]);
 
   // Latest The Idols Masters champion
   const latestTheIdolsChampion = useMemo(() => {
@@ -327,8 +331,12 @@ export const DashboardPanel: React.FC<DashboardPanelProps> = ({
       const s = Number(a?.seasonNumber || 0);
       if (s > 0) set.add(s);
     });
+    (v5TitleArchives || []).forEach((title) => {
+      const s = Number(title?.seasonNumber || 0);
+      if (s > 0) set.add(s);
+    });
     return set.size;
-  }, [safeArchives, leagueArchives, theIdolsArchives]);
+  }, [safeArchives, leagueArchives, theIdolsArchives, v5TitleArchives]);
 
   // ---------------------------------------------------------------------------
   // PINNACLE RECORDS & ALL-TIME HONORS ENGINE (The 7 Pillars Requested by User)
@@ -414,6 +422,23 @@ export const DashboardPanel: React.FC<DashboardPanelProps> = ({
         winRate: 0,
         gameDiff: 0,
       });
+    });
+
+    // V5 title archive is the authoritative source for Division 2 and the
+    // newer cup circuit. Count each archived title once by its stable archive id.
+    const processedV5TitleIds = new Set<string>();
+    (v5TitleArchives || []).forEach((title) => {
+      if (!title?.id || processedV5TitleIds.has(title.id)) return;
+      processedV5TitleIds.add(title.id);
+      const winner = map.get(title.winnerId);
+      if (winner) {
+        if (title.isDivision) winner.leagueTitles += 1;
+        else winner.cupTitles += 1;
+      }
+      if (!title.isDivision && title.runnerUpId) {
+        const runnerUp = map.get(title.runnerUpId);
+        if (runnerUp) runnerUp.cupRunnerUps += 1;
+      }
     });
 
     // 1. Process Cup stats from careerStats
@@ -740,6 +765,7 @@ export const DashboardPanel: React.FC<DashboardPanelProps> = ({
     theIdolsState,
     hasPendingArchival,
     championIdol,
+    v5TitleArchives,
   ]);
 
   // Record categories definition array
@@ -2186,6 +2212,19 @@ export const DashboardPanel: React.FC<DashboardPanelProps> = ({
             )}
 
             {/* Masters Champion (if exists) */}
+            {latestV5Title && (
+              <div className="pt-3 border-t border-black/60">
+                <div className="flex items-center gap-2 mb-2">
+                  <Medal className="h-4 w-4 text-emerald-400" />
+                  <span className="text-xs font-poster-title text-emerald-300">Latest Cup Circuit / Division Champion: {latestV5Title.winnerName}</span>
+                </div>
+                <div className="text-[11px] text-slate-400 flex items-center justify-between gap-2 bg-[#120e0b] p-2 rounded-xl border border-black">
+                  <span className="truncate">{latestV5Title.competition}</span>
+                  <span className="shrink-0">Season {latestV5Title.seasonNumber}</span>
+                </div>
+              </div>
+            )}
+
             {latestTheIdolsChampion && (
               <div className="pt-3">
                 <div className="flex items-center gap-2 mb-2">
