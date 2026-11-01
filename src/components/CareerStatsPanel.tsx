@@ -549,7 +549,8 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
 
       const goalDiff = (t?.gameDiff || 0) + (l?.goalDiff || 0) + (ti?.goalDiff || 0) + v5GF - v5GA;
       const winRate = matches > 0 ? Math.round((wins / matches) * 100) : 0;
-      const podiums =
+      const v5Podiums = v5TitleArchives.filter((title) => title.winnerId === id || title.runnerUpId === id).length;
+      const podiums = v5Podiums +
         (t?.championships || 0) +
         (t?.runnerUps || 0) +
         (t?.thirdPlaces || 0) +
