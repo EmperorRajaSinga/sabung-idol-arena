@@ -118,6 +118,7 @@ export const TournamentBracketTree: React.FC<TournamentBracketTreeProps> = ({
     const observer = new ResizeObserver(() => updateSvgLines());
     if (containerRef.current) {
       observer.observe(containerRef.current);
+      containerRef.current.querySelectorAll<HTMLElement>('[data-match-card-id]').forEach((card) => observer.observe(card));
     }
 
     // Delayed trigger for dynamic layout rendering / font loading
