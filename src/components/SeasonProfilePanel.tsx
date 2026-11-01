@@ -13,7 +13,7 @@ import {
 } from '../types';
 import { TournamentBracketTree } from './TournamentBracketTree';
 import { Trophy, Crown, Swords, Shield, Medal, Award, Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Flame, Layers, Sparkles } from 'lucide-react';
-import { DEFAULT_LEAGUE_DEFS } from '../utils/leagueLogic';
+import { DEFAULT_LEAGUE_DEFS, calculateLeagueStandings } from '../utils/leagueLogic';
 import { getAllSeasonArchives } from '../utils/tournamentLogic';
 import type { V5State, V5TitleArchive } from '../utils/v5/store';
 
@@ -263,8 +263,42 @@ export const SeasonProfilePanel: React.FC<SeasonProfilePanelProps> = ({
       return { ...d, matches, completed: done.length, pending: matches.length-done.length, participants: participants.size, wins, draws, losses: Math.max(0,done.length-wins-draws), titles, champion: titles.find((t)=>t.winnerId), runnerUp: titles.find((t)=>t.runnerUpId), goalsFor: done.reduce((n,m)=>n+Number(m.scoreA||0),0), goalsAgainst: done.reduce((n,m)=>n+Number(m.scoreB||0),0) };
     });
   }, [selectedV5Matches, v5TitleArchives, selectedLeagueSeasonNum]);
-  const selectedD2Leagues = useMemo(() => (v5State?.d2 || []), [v5State]);
-  const d2Stats = useMemo(() => selectedD2Leagues.reduce((a,l) => { a.leagues++; a.idols += l.memberIds?.length || 0; a.matches += l.matches?.length || 0; a.completed += (l.matches || []).filter(m=>m.completed).length; return a; }, {leagues:0,idols:0,matches:0,completed:0}), [selectedD2Leagues]);
+  // Reconstruct Division 2 season tables from permanent match records. Active V5
+  // state is intentionally reset after archiving, so historical profiles must not
+  // depend on the current roster workspace.
+  const selectedD2Leagues = useMemo(() => {
+    const grouped = new Map<string, ArchivedMatch[]>();
+    selectedV5Matches.forEach((match) => {
+      const stage = String(match.stage || '');
+      if (!stage.toLowerCase().startsWith('cups & divisions: division 2')) return;
+      const label = stage.split(' / ')[0].replace(/^Cups & Divisions:\\s*/i, '').trim();
+      if (!grouped.has(label)) grouped.set(label, []);
+      grouped.get(label)!.push(match);
+    });
+    return [...grouped.entries()].map(([name, archived], index) => {
+      const leagueId = 101 + index;
+      const matches = archived.map((match, matchIndex) => {
+        const round = String(match.stage || '').split(' / ').slice(1).join(' / ');
+        const matchday = Number(round.match(/\\d+/)?.[0] || matchIndex + 1);
+        return {
+          id: match.matchId, leagueId, matchday,
+          idolAId: match.idolAId, idolBId: match.idolBId,
+          scoreA: Number(match.scoreA), scoreB: Number(match.scoreB),
+          winnerId: match.winnerId || null, completed: true,
+        };
+      });
+      const memberIds = [...new Set(matches.flatMap((match) => [match.idolAId, match.idolBId]))];
+      const standings = calculateLeagueStandings(leagueId, memberIds, matches, idols);
+      return { id: leagueId, parentLeagueId: leagueId - 100, name, memberIds, matches, standings };
+    });
+  }, [selectedV5Matches, idols]);
+  const d2Stats = useMemo(() => selectedD2Leagues.reduce((a,l) => {
+    a.leagues++;
+    a.idols += l.memberIds?.length || 0;
+    a.matches += l.matches?.length || 0;
+    a.completed += (l.matches || []).filter(m=>m.completed).length;
+    return a;
+  }, {leagues:0,idols:0,matches:0,completed:0}), [selectedD2Leagues]);
   const selectedLeagueSeason =
     allLeagueSeasons.find((s) => s.seasonNumber === selectedLeagueSeasonNum) ||
     allLeagueSeasons[0];
