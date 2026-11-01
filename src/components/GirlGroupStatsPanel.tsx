@@ -55,6 +55,15 @@ export interface GirlGroupStat {
   }>;
   theIdolsPlayoffTitles: number;
   competitionTitles: Record<string, number>;
+  competitionWinners: Record<string, Array<{
+    id: string;
+    seasonNumber: number;
+    seasonName: string;
+    competitionName: string;
+    championId: string;
+    championName: string;
+    championPhoto?: string;
+  }>>;
   totalTitles: number;
   theIdolsPlayoffWinners: Array<{
     seasonNumber: number;
@@ -182,7 +191,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
             leagueName: winner.leagueName || `Division ${winner.leagueId}`,
             championId: winner.championId,
             championName: winner.championName || champIdol?.name || 'Unknown',
-            championPhoto: champIdol?.photoUrl,
+            championPhoto: winner.championPhoto || champIdol?.photoUrl,
           });
         }
       });
@@ -279,7 +288,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
         seasonName: arch.seasonName || `The Idols Season ${arch.seasonNumber}`,
         championId: arch.championId,
         championName: arch.championName || champIdol?.name || 'Playoff Champion',
-        championPhoto: champIdol?.photoUrl,
+        championPhoto: arch.championPhoto || champIdol?.photoUrl,
       });
     }
 
@@ -296,7 +305,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
         seasonName: arch.seasonName || `The Idols Season ${arch.seasonNumber}`,
         championId: leagueWinner.idolId,
         championName: leagueWinner.idolName || champIdol?.name || 'League Winner',
-        championPhoto: champIdol?.photoUrl,
+        championPhoto: leagueWinner.photoUrl || champIdol?.photoUrl,
       });
     }
   });
@@ -317,7 +326,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
           seasonName: theIdolsState.seasonName || `The Idols Season ${theIdolsState.seasonNumber}`,
           championId: theIdolsState.championId,
           championName: theIdolsState.championName || champIdol?.name || 'Playoff Champion',
-          championPhoto: champIdol?.photoUrl,
+          championPhoto: theIdolsState.championPhoto || champIdol?.photoUrl,
         });
       }
     }
@@ -380,8 +389,12 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
     }
   });
 
-  // V5 title records are the authoritative source for cup and Division 2 champions.
-  const v5WinnerByCompetition = new Map<string, Map<string, Set<string>>>();
+  // V5 title archives are the authoritative source for cup and Division 2 champions.
+  // Keep full winner snapshots so every title can show its winner, photo and season.
+  const v5WinnerByCompetition = new Map<string, Map<string, Map<string, {
+    id: string; seasonNumber: number; seasonName: string; competitionName: string;
+    championId: string; championName: string; championPhoto?: string;
+  }>>>();
   const v5CompetitionNames: Array<[string, (name: string) => boolean]> = [
     ['Crown Cup', (name) => name.toLowerCase() === 'league champions cup'],
     ['Open Arena Cup', (name) => name.toLowerCase() === 'all-league knockout cup'],
@@ -392,20 +405,35 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
   ];
   (v5TitleArchives || []).forEach((record) => {
     if (!record?.winnerId) return;
-    const competitionName = String(record.competition || '');
+    const competitionName = String(record.competition || '').trim();
     const competition = record.isDivision
       ? 'Division 2'
       : v5CompetitionNames.find(([label, matches]) => label !== 'Division 2' && matches(competitionName))?.[0];
     if (!competition) return;
-    const groupName = record.winnerGroup || idolsMap.get(record.winnerId)?.girlGroup || 'Solo / Independent';
+    const winnerId = String(record.winnerId);
+    const champIdol = idolsMap.get(winnerId);
+    const groupName = record.winnerGroup || champIdol?.girlGroup || 'Solo / Independent';
+    const seasonNumber = Number(record.seasonNumber || 1);
+    const recordId = String(record.id || `${seasonNumber}::${competitionName}::${winnerId}`);
     if (!v5WinnerByCompetition.has(competition)) v5WinnerByCompetition.set(competition, new Map());
     const groups = v5WinnerByCompetition.get(competition)!;
-    if (!groups.has(groupName)) groups.set(groupName, new Set());
-    groups.get(groupName)!.add(`${Number(record.seasonNumber || 1)}::${competitionName}`);
+    if (!groups.has(groupName)) groups.set(groupName, new Map());
+    const winners = groups.get(groupName)!;
+    if (!winners.has(recordId)) {
+      winners.set(recordId, {
+        id: recordId,
+        seasonNumber,
+        seasonName: record.seasonName || `Season ${seasonNumber}`,
+        competitionName,
+        championId: winnerId,
+        championName: record.winnerName || champIdol?.name || 'Unknown',
+        championPhoto: record.winnerPhoto || champIdol?.photoUrl,
+      });
+    }
   });
 
   // Keep historical group names visible even if the current idol roster has changed.
-  v5WinnerByCompetition.forEach((groups) => groups.forEach((_seasons, groupName) => {
+  v5WinnerByCompetition.forEach((groups) => groups.forEach((_winners, groupName) => {
     if (!groupMembersMap.has(groupName)) groupMembersMap.set(groupName, []);
   }));
 
@@ -424,6 +452,11 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
     const competitionTitles: Record<string, number> = {};
     v5WinnerByCompetition.forEach((groups, competition) => {
       competitionTitles[competition] = groups.get(groupName)?.size || 0;
+    });
+    const competitionWinners: GirlGroupStat['competitionWinners'] = {};
+    v5WinnerByCompetition.forEach((groups, competition) => {
+      competitionWinners[competition] = [...(groups.get(groupName)?.values() || [])]
+        .sort((a, b) => a.seasonNumber - b.seasonNumber || a.competitionName.localeCompare(b.competitionName));
     });
     const totalTitles = totalTournamentTitles + totalLeagueCups + totalTheIdolsLeague + totalTheIdolsPlayoff + Object.values(competitionTitles).reduce((sum, count) => sum + count, 0);
 
@@ -454,16 +487,8 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
       const memberTheIdolsPlayoff = theIdolsPlayoffWinners.filter((w) => w.championId === member.id).length;
       const memberCompetitionTitles: Record<string, number> = {};
       v5WinnerByCompetition.forEach((groups, competition) => {
-        const groupSeasons = groups.get(groupName);
-        memberCompetitionTitles[competition] = groupSeasons
-          ? [...groupSeasons].filter((seasonKey) => {
-              const record = (v5TitleArchives || []).find((entry) =>
-                entry.winnerId === member.id &&
-                `${Number(entry.seasonNumber || 1)}::${String(entry.competition || '')}` === seasonKey
-              );
-              return Boolean(record);
-            }).length
-          : 0;
+        memberCompetitionTitles[competition] = [...(groups.get(groupName)?.values() || [])]
+          .filter((winner) => winner.championId === member.id).length;
       });
 
       groupMatches += st.matches;
@@ -511,6 +536,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
       totalMembers: members.length,
       championships: totalTournamentTitles,
       competitionTitles,
+      competitionWinners,
       totalTitles,
       seasonWinners,
       leagueCupTitles: totalLeagueCups,
@@ -739,7 +765,18 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
                       ))}
                       <section className="rounded-xl border border-black bg-[#1b140f] p-3 sm:col-span-2 xl:col-span-3">
                         <div className="mb-3 flex items-center justify-between"><h6 className="text-xs font-semibold text-amber-100">V5 cups and divisions</h6><span className="text-xs font-bold text-amber-300">{['Crown Cup','Open Arena Cup','Spotlight Cup','Super Cup A','Super Cup B','Division 2'].reduce((sum, name) => sum + (group.competitionTitles[name] || 0), 0)}</span></div>
-                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">{['Crown Cup','Open Arena Cup','Spotlight Cup','Super Cup A','Super Cup B','Division 2'].map((name) => <div key={name} className="rounded-lg bg-[#120e0b] p-3"><p className="text-[10px] text-amber-200/50">{name}</p><p className="mt-1 text-lg font-bold text-white">{group.competitionTitles[name] || 0}</p></div>)}</div>
+                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                          {['Crown Cup','Open Arena Cup','Spotlight Cup','Super Cup A','Super Cup B','Division 2'].map((name) => {
+                            const winners = group.competitionWinners[name] || [];
+                            return <section key={name} className="rounded-lg bg-[#120e0b] p-3">
+                              <div className="mb-2 flex items-center justify-between"><p className="text-[10px] font-semibold text-amber-200/70">{name}</p><span className="text-xs font-bold text-amber-300">{winners.length}</span></div>
+                              {winners.length ? <div className="space-y-2">{winners.map((winner) => <div key={winner.id} className="flex items-center gap-2 rounded-md bg-[#1b140f] p-2">
+                                {winner.championPhoto ? <img src={winner.championPhoto} alt={winner.championName} className="h-8 w-8 shrink-0 rounded-md object-cover" /> : <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#282018] text-xs font-bold text-amber-200/70">{winner.championName.slice(0,1)}</div>}
+                                <div className="min-w-0"><p className="truncate text-xs font-semibold text-white">{winner.championName}</p><p className="truncate text-[10px] text-amber-200/50">{winner.seasonName} · {winner.competitionName}</p></div>
+                              </div>)}</div> : <p className="py-2 text-[10px] text-amber-200/30">No titles recorded.</p>}
+                            </section>;
+                          })}
+                        </div>
                       </section>
                     </div>
 
