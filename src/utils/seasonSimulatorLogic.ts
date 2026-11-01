@@ -55,6 +55,8 @@ import {
   simulateSeriesMatches,
 } from './ratingHelper';
 import { getEffectiveIdolRating } from './formHelper';
+import type { V5State, V5TitleArchive } from './v5/store';
+import { simulateV5Season } from './v5/engine';
 
 export interface SeasonSimulationSummary {
   seasonNumber: number;
@@ -149,6 +151,8 @@ export interface SeasonSimulationSummary {
   updatedLeagueState: LeagueSeasonState;
   updatedTheIdolsState: TheIdolsSeasonState;
   syncedMatchDatabase: ArchivedMatch[];
+  updatedV5State?: V5State;
+  updatedV5TitleArchives?: V5TitleArchive[];
 }
 
 /**
@@ -167,7 +171,9 @@ export function simulateEntireSeason(
   customSeasonName?: string,
   chosenPostseasonFormat?: PostseasonFormatType,
   externalLeagueArchives?: LeagueSeasonArchive[],
-  externalTheIdolsArchives?: TheIdolsSeasonArchive[]
+  externalTheIdolsArchives?: TheIdolsSeasonArchive[],
+  currentV5State?: V5State | null,
+  externalV5TitleArchives?: V5TitleArchive[]
 ): SeasonSimulationSummary {
   const idols = [...currentAppState.idols];
   const girlGroups = [...currentAppState.girlGroups];
@@ -661,6 +667,12 @@ export function simulateEntireSeason(
   // -------------------------------------------------------------
   // BUILD OFFICIAL ARCHIVE RECORDS FOR ALL FORMATS
   // -------------------------------------------------------------
+  // PHASE 6: simulate Division 2 and every configured V5 cup format.
+  const v5Source: V5State | null = currentV5State || currentAppState.v5State || null;
+  const updatedV5State = v5Source
+    ? simulateV5Season(v5Source, leagueSeason.leagues, idols, knockoutMatches, theIdolsSeason.championId)
+    : undefined;
+
   const championName = (championId && idolsMap.get(championId)?.name) || 'Unknown';
   const runnerUpName = (runnerUpId && idolsMap.get(runnerUpId)?.name) || '';
   const thirdPlaceName = (thirdPlaceId && idolsMap.get(thirdPlaceId)?.name) || '';
@@ -907,5 +919,7 @@ export function simulateEntireSeason(
     updatedLeagueState: leagueSeason,
     updatedTheIdolsState: theIdolsSeason,
     syncedMatchDatabase: finalMatchDatabase,
+    updatedV5State,
+    updatedV5TitleArchives: externalV5TitleArchives || currentAppState.v5TitleArchives || [],
   };
 }
