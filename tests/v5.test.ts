@@ -129,7 +129,7 @@ E.simulateBracket([sa], by); ck('G2 Super Cup played as Best of 5', seriesOk(sa)
 const { getUnfinishedCompetitions } = await import('../src/utils/seasonGuard');
 const partial = JSON.parse(JSON.stringify({ champsCup: { matches: a.matches, byeIds: a.byeIds }, d2, leagueCup: lc, miniCups: { 1: minis[0] }, superA: sa, superB: [] }));
 const clean = getUnfinishedCompetitions({ v5: partial, v5Names: {} });
-partial.champsCup.matches[9].completed = false; partial.champsCup.matches[9].winnerId = null; partial.leagueCup.championId = null; partial.d2[0].matches[3].completed = false;
+partial.champsCup.matches[7].completed = false; partial.champsCup.matches[7].winnerId = null; partial.leagueCup.championId = null; partial.d2[0].matches[3].completed = false;
 const dirty = getUnfinishedCompetitions({ v5: partial, v5Names: { champsCup: 'Crown Cup', leagueCup: 'Open Arena Cup' } });
 ck('J archive guard: finished v5 season is clean, unfinished cups and Division 2 are named', clean.length === 0 && dirty.length === 3 && dirty.some((x) => x.startsWith('Crown Cup')) && dirty.some((x) => x.startsWith('Open Arena Cup')), JSON.stringify(dirty));
 // unique ids
