@@ -2231,8 +2231,12 @@ export function App() {
           matchDatabase: fullySyncedDb,
         });
         if (normalized.leagueState) {
+          saveDivisionOneRosterSnapshot(normalized.leagueState.leagues || []);
           setLeagueState(normalized.leagueState);
           saveLeagueSeasonState(normalized.leagueState);
+        }
+        if (normalized.v5State) {
+          saveDivisionTwoRosterSnapshot(normalized.v5State.d2 || []);
         }
         if (normalized.leagueArchives) {
           setLeagueArchives(normalized.leagueArchives);
