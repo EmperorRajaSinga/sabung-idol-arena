@@ -36,6 +36,7 @@ interface MatchModalProps {
   stageName?: string;
   isKnockout?: boolean;
   isGrandFinal?: boolean;
+  bestOf?: 5 | 7;
   isThirdPlace?: boolean;
   isCompleted?: boolean;
   favoriteIdolIds?: string[];
@@ -81,6 +82,7 @@ export const MatchModal: React.FC<MatchModalProps> = ({
   stageName = 'Group Stage',
   isKnockout = false,
   isGrandFinal = false,
+  bestOf,
   isThirdPlace = false,
   isCompleted = false,
   favoriteIdolIds = [],
@@ -107,9 +109,9 @@ export const MatchModal: React.FC<MatchModalProps> = ({
   // league, group stage, LCQ and The Idols phase 1 Bo4 (4 games, draws allowed).
   const isSwissStage = stageName.toLowerCase().includes('swiss');
   const defaultSeriesFormat: SeriesFormat =
-    isGrandFinalMatch || isThirdPlaceMatch
+    bestOf === 7 || isGrandFinalMatch || isThirdPlaceMatch
       ? 'bo7'
-      : isKnockout
+      : bestOf === 5 || isKnockout
       ? 'bo5'
       : isSwissStage
       ? 'bo3'
@@ -189,6 +191,7 @@ export const MatchModal: React.FC<MatchModalProps> = ({
   });
 
   useEffect(() => {
+    setSeriesFormat(defaultSeriesFormat);
     setScoreA(safeScoreA(currentScoreA));
     setScoreB(safeScoreB(currentScoreB));
     setError(null);
@@ -206,7 +209,7 @@ export const MatchModal: React.FC<MatchModalProps> = ({
       setGrandFinalModes(distinct7);
       setGrandFinalRoundIndex(0);
     }
-  }, [isOpen, currentScoreA, currentScoreB, isGrandFinalMatch, isKnockout, isThirdPlaceMatch, hasFavoriteIdol, bothAreFavorites, isFavA, isFavB]);
+  }, [isOpen, currentScoreA, currentScoreB, defaultSeriesFormat, isGrandFinalMatch, isKnockout, isThirdPlaceMatch, hasFavoriteIdol, bothAreFavorites, isFavA, isFavB]);
 
   const handleFinish = () => {
     if (!idolA || !idolB) return;
