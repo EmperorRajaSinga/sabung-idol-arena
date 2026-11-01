@@ -922,7 +922,7 @@ export function App() {
     (Array.isArray(v5State.leagueCup?.rounds) ? v5State.leagueCup.rounds : []).filter(Array.isArray).flat().forEach((match) => addV5Match('All-League Knockout Cup', match));
     Object.entries(v5State.miniCups && typeof v5State.miniCups === 'object' ? v5State.miniCups : {}).forEach(([leagueId, matches]) => (Array.isArray(matches) ? matches : []).forEach((match) => addV5Match(`Top 16 Mini Cup League ${leagueId}`, match)));
     if (v5State.superA) addV5Match('Super Cup A', v5State.superA);
-    (Array.isArray(v5State.superB) ? v5State.superB : []).forEach((match) => addV5Match('Super Cup B', match));
+    (Array.isArray(v5State.superB) ? v5State.superB : []).forEach((match, index) => addV5Match(`Super Cup B ${index + 1}`, match));
     const map = new Map<string, ArchivedMatch>();
     (Array.isArray(appState.matchDatabase) ? appState.matchDatabase : [])
       .filter((match): match is ArchivedMatch => Boolean(match && typeof match === 'object' && match.matchId))
