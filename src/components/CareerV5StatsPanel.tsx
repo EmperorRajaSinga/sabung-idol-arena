@@ -87,12 +87,12 @@ export const CareerV5StatsPanel: React.FC<{
       if (record.winnerId) {
         const row = getRow(record.winnerId, record.winnerName, record.winnerGroup, record.winnerPhoto);
         row.titles += 1;
-        row.events.add(`${Number.isFinite(season) ? season : 'unknown'}:${record.competition}`);
+        if (row.events.size === 0) row.events.add(`${Number.isFinite(season) ? season : 'unknown'}:${record.competition}`);
       }
       if (record.runnerUpId) {
         const row = getRow(record.runnerUpId, record.runnerUpName, record.runnerUpGroup, record.runnerUpPhoto);
         row.runnerUps += 1;
-        row.events.add(`${Number.isFinite(season) ? season : 'unknown'}:${record.competition}`);
+        if (row.events.size === 0) row.events.add(`${Number.isFinite(season) ? season : 'unknown'}:${record.competition}`);
       }
     });
 
@@ -103,12 +103,10 @@ export const CareerV5StatsPanel: React.FC<{
           (move.promoted || []).forEach((id) => {
             const row = getRow(id);
             row.promotions += 1;
-            row.events.add(`${Number.isFinite(season) ? season : 'unknown'}:Division 2`);
           });
           (move.relegated || []).forEach((id) => {
             const row = getRow(id);
             row.relegations += 1;
-            row.events.add(`${Number.isFinite(season) ? season : 'unknown'}:Division 2`);
           });
         });
       });
