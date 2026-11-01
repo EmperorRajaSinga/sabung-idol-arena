@@ -92,8 +92,12 @@ export const CareerV5StatsPanel: React.FC<{
       // Division 2 historical archive records carry the season in each match. Compute each
       // season's table independently so a champion is counted once per completed season.
       const seasonTables = new Map<string, Map<string, { points: number; diff: number; scored: number }>>();
+      const seasonSeen = new Set<string>();
       safeMatches.forEach((match) => {
         if (!match.idolAId || !match.idolBId || match.scoreA == null || match.scoreB == null) return;
+        const seasonMatchKey = String(match.matchId || [match.seasonId, match.idolAId, match.idolBId, match.scoreA, match.scoreB].join('|'));
+        if (seasonSeen.has(seasonMatchKey)) return;
+        seasonSeen.add(seasonMatchKey);
         const season = String(match.seasonId || 1);
         if (!seasonTables.has(season)) seasonTables.set(season, new Map());
         const seasonTable = seasonTables.get(season)!;
