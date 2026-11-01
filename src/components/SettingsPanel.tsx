@@ -405,6 +405,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     }
     saveLeagueSeasonState(newState);
 
+    // Keep each Division 2 league name aligned with its Division 1 parent.
+    if (v5State && onUpdateV5State) {
+      const parentById = new Map(updatedLeagues.map((league) => [league.id, league]));
+      const nextD2 = v5State.d2.map((division) => {
+        const parent = parentById.get(division.parentLeagueId);
+        return parent ? { ...division, name: `${parent.name} ${competitionNames.division2}`.trim() } : division;
+      });
+      onUpdateV5State({ ...v5State, d2: nextD2 });
+    }
+
     if (onImportState) {
       onImportState(
         {
@@ -458,6 +468,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       onUpdateLeagueState(newState);
     }
     saveLeagueSeasonState(newState);
+
+    // Keep each Division 2 league name aligned with its Division 1 parent.
+    if (v5State && onUpdateV5State) {
+      const parentById = new Map(updatedLeagues.map((league) => [league.id, league]));
+      const nextD2 = v5State.d2.map((division) => {
+        const parent = parentById.get(division.parentLeagueId);
+        return parent ? { ...division, name: `${parent.name} ${competitionNames.division2}`.trim() } : division;
+      });
+      onUpdateV5State({ ...v5State, d2: nextD2 });
+    }
 
     if (onImportState) {
       onImportState(
