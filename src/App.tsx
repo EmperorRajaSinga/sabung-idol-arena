@@ -1211,7 +1211,7 @@ export function App() {
       });
 
       const updatedExistingIdols = prev.idols.map((idol) => {
-        const lower = idol.name.trim().toLowerCase();
+        const lower = normalizeDataName(idol.name);
         if (newNamesSet.has(lower)) {
           return { ...idol, girlGroup: groupName };
         } else if (idol.girlGroup === groupName) {
