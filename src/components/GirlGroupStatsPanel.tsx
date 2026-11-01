@@ -77,6 +77,7 @@ export interface GirlGroupStat {
     leagueCupTitles: number;
     theIdolsLeagueTitles: number;
     theIdolsPlayoffTitles: number;
+    competitionTitles: Record<string, number>;
     matches: number;
     wins: number;
     draws: number;
@@ -451,6 +452,19 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
       const memberTheIdolsLeague = theIdolsLeagueWinners.filter((w) => w.championId === member.id).length;
       // Count the idols playoff titles for this member
       const memberTheIdolsPlayoff = theIdolsPlayoffWinners.filter((w) => w.championId === member.id).length;
+      const memberCompetitionTitles: Record<string, number> = {};
+      v5WinnerByCompetition.forEach((groups, competition) => {
+        const groupSeasons = groups.get(groupName);
+        memberCompetitionTitles[competition] = groupSeasons
+          ? [...groupSeasons].filter((seasonKey) => {
+              const record = (v5TitleArchives || []).find((entry) =>
+                entry.winnerId === member.id &&
+                `${Number(entry.seasonNumber || 1)}::${String(entry.competition || '')}` === seasonKey
+              );
+              return Boolean(record);
+            }).length
+          : 0;
+      });
 
       groupMatches += st.matches;
       groupWins += st.wins;
@@ -469,6 +483,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
         leagueCupTitles: memberLeagueCups,
         theIdolsLeagueTitles: memberTheIdolsLeague,
         theIdolsPlayoffTitles: memberTheIdolsPlayoff,
+        competitionTitles: memberCompetitionTitles,
         matches: st.matches,
         wins: st.wins,
         draws: st.draws,
@@ -479,8 +494,10 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
 
     // Sort member stats by total championships + cups + the idols league + playoff, then wins
     memberStats.sort((a, b) => {
-      const totA = calculateUnifiedTotalTitles(a.championships, a.leagueCupTitles, a.theIdolsLeagueTitles, a.theIdolsPlayoffTitles);
-      const totB = calculateUnifiedTotalTitles(b.championships, b.leagueCupTitles, b.theIdolsLeagueTitles, b.theIdolsPlayoffTitles);
+      const v5A = Object.values(a.competitionTitles).reduce((sum, count) => sum + count, 0);
+      const v5B = Object.values(b.competitionTitles).reduce((sum, count) => sum + count, 0);
+      const totA = calculateUnifiedTotalTitles(a.championships, a.leagueCupTitles, a.theIdolsLeagueTitles, a.theIdolsPlayoffTitles) + v5A;
+      const totB = calculateUnifiedTotalTitles(b.championships, b.leagueCupTitles, b.theIdolsLeagueTitles, b.theIdolsPlayoffTitles) + v5B;
       if (totB !== totA) return totB - totA;
       if (b.wins !== a.wins) return b.wins - a.wins;
       return b.winRate - a.winRate;
@@ -730,9 +747,9 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
                       <div className="mb-3"><h5 className="text-sm font-bold text-white">Member performance</h5><p className="mt-1 text-xs text-amber-200/50">Individual match records within this group.</p></div>
                       {group.members.length === 0 ? <p className="rounded-lg bg-[#1b140f] p-4 text-xs text-amber-200/50">No members in this group.</p> : (
                         <div className="overflow-x-auto rounded-xl border border-black">
-                          <table className="w-full min-w-[650px] text-left text-xs">
-                            <thead className="bg-[#1b140f] text-[10px] uppercase tracking-wider text-amber-200/50"><tr><th className="px-3 py-3">Member</th><th className="px-3 py-3 text-center">Tournament</th><th className="px-3 py-3 text-center">League</th><th className="px-3 py-3 text-center">Idols league</th><th className="px-3 py-3 text-center">Playoff</th><th className="px-3 py-3 text-center">Matches</th><th className="px-3 py-3 text-center">W-D-L</th><th className="px-3 py-3 text-center">Win rate</th></tr></thead>
-                            <tbody className="divide-y divide-slate-800 bg-[#120e0b]">{group.members.map((mem) => <tr key={mem.id} className="hover:bg-[#1b140f]/80"><td className="px-3 py-2.5"><div className="flex items-center gap-2">{mem.photoUrl ? <img src={mem.photoUrl} alt={mem.name} className="h-7 w-7 rounded-md object-cover" /> : <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#282018] text-[10px] font-bold text-amber-100">{(mem.name || 'ID').slice(0,1)}</div>}<span className="font-semibold text-amber-100">{mem.name}</span></div></td><td className="px-3 py-2.5 text-center text-amber-300">{mem.championships}</td><td className="px-3 py-2.5 text-center text-teal-300">{mem.leagueCupTitles}</td><td className="px-3 py-2.5 text-center text-sky-300">{mem.theIdolsLeagueTitles}</td><td className="px-3 py-2.5 text-center text-fuchsia-300">{mem.theIdolsPlayoffTitles}</td><td className="px-3 py-2.5 text-center text-amber-100">{mem.matches}</td><td className="px-3 py-2.5 text-center font-semibold text-emerald-300">{mem.wins}-{mem.draws}-{mem.losses}</td><td className="px-3 py-2.5 text-center text-amber-300">{mem.winRate}%</td></tr>)}</tbody>
+                          <table className="w-full min-w-[1050px] text-left text-xs">
+                            <thead className="bg-[#1b140f] text-[10px] uppercase tracking-wider text-amber-200/50"><tr><th className="px-3 py-3">Member</th><th className="px-3 py-3 text-center">Tournament</th><th className="px-3 py-3 text-center">League</th><th className="px-3 py-3 text-center">Idols league</th><th className="px-3 py-3 text-center">Playoff</th>{['Crown Cup','Open Arena Cup','Spotlight Cup','Super Cup A','Super Cup B','Division 2'].map((name) => <th key={name} className="px-3 py-3 text-center">{name}</th>)}<th className="px-3 py-3 text-center">Matches</th><th className="px-3 py-3 text-center">W-D-L</th><th className="px-3 py-3 text-center">Win rate</th></tr></thead>
+                            <tbody className="divide-y divide-slate-800 bg-[#120e0b]">{group.members.map((mem) => <tr key={mem.id} className="hover:bg-[#1b140f]/80"><td className="px-3 py-2.5"><div className="flex items-center gap-2">{mem.photoUrl ? <img src={mem.photoUrl} alt={mem.name} className="h-7 w-7 rounded-md object-cover" /> : <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#282018] text-[10px] font-bold text-amber-100">{(mem.name || 'ID').slice(0,1)}</div>}<span className="font-semibold text-amber-100">{mem.name}</span></div></td><td className="px-3 py-2.5 text-center text-amber-300">{mem.championships}</td><td className="px-3 py-2.5 text-center text-teal-300">{mem.leagueCupTitles}</td><td className="px-3 py-2.5 text-center text-sky-300">{mem.theIdolsLeagueTitles}</td><td className="px-3 py-2.5 text-center text-fuchsia-300">{mem.theIdolsPlayoffTitles}</td>{['Crown Cup','Open Arena Cup','Spotlight Cup','Super Cup A','Super Cup B','Division 2'].map((name) => <td key={name} className="px-3 py-2.5 text-center text-amber-300">{mem.competitionTitles[name] || 0}</td>)}<td className="px-3 py-2.5 text-center text-amber-100">{mem.matches}</td><td className="px-3 py-2.5 text-center font-semibold text-emerald-300">{mem.wins}-{mem.draws}-{mem.losses}</td><td className="px-3 py-2.5 text-center text-amber-300">{mem.winRate}%</td></tr>)}</tbody>
                           </table>
                         </div>
                       )}
