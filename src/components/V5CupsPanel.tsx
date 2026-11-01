@@ -25,32 +25,73 @@ const Btn: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ classNam
 
 const Row: React.FC<{ m: E.BNode; nm: (id: string | null) => string; onSim: () => void; onSave: (a: number, b: number) => string | null }> = ({ m, nm, onSim, onSave }) => {
   const [a, setA] = useState(''), [b, setB] = useState(''), [err, setErr] = useState('');
+  const ready = !!m.idolAId && !!m.idolBId;
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-black/60 py-1.5 text-xs text-amber-100">
-      <span className="w-28 text-amber-300/80 font-bold">{m.roundName}</span>
-      <span className="min-w-[7rem] font-bold">{nm(m.idolAId)}</span>
-      {m.completed ? <span className="font-mono font-black text-amber-300">{m.scoreA} - {m.scoreB}</span> : <span className="font-mono text-amber-100/40">vs</span>}
-      <span className="min-w-[7rem] font-bold">{nm(m.idolBId)}</span>
-      <span className="rounded border border-black bg-black/40 px-1.5 font-mono text-[10px]">BO{m.bestOf}</span>
-      {m.completed ? <span className="text-emerald-400 font-bold">{nm(m.winnerId)} wins</span> : m.idolAId && m.idolBId ? (
-        <>
-          <Btn onClick={onSim}>Sim</Btn>
-          <input value={a} onChange={(e) => setA(e.target.value)} className="w-9 rounded border-2 border-black bg-black/50 px-1 text-center font-mono" inputMode="numeric" aria-label="Score A" />
-          <input value={b} onChange={(e) => setB(e.target.value)} className="w-9 rounded border-2 border-black bg-black/50 px-1 text-center font-mono" inputMode="numeric" aria-label="Score B" />
+    <div className="relative w-64 rounded-xl border-2 border-black bg-[#1c1510] p-2.5 shadow-lg">
+      <div className="mb-2 flex items-center justify-between border-b border-amber-900/70 pb-1.5">
+        <span className="truncate text-[10px] font-black uppercase tracking-wider text-amber-300">{m.roundName}</span>
+        <span className="rounded border border-black bg-black/60 px-1.5 py-0.5 text-[9px] font-black text-amber-100">BO{m.bestOf}</span>
+      </div>
+      {[{ id: m.idolAId, score: m.scoreA }, { id: m.idolBId, score: m.scoreB }].map((p, i) => {
+        const isWinner = m.completed && m.winnerId === p.id;
+        return (
+          <div key={i} className={\`mb-1 flex min-w-0 items-center justify-between rounded-lg border border-black px-2 py-2 \${isWinner ? 'bg-emerald-800 text-white' : 'bg-[#100c09] text-amber-100'}\`}>
+            <span className={\`truncate text-xs font-bold \${!p.id ? 'italic text-amber-100/40' : ''}\`}>{nm(p.id)}</span>
+            <span className="ml-2 min-w-5 rounded bg-black/40 px-1.5 text-center font-mono text-xs font-black text-amber-300">{p.score ?? '-'}</span>
+          </div>
+        );
+      })}
+      {m.completed ? (
+        <div className="mt-2 flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-emerald-300">
+          <span>Match complete</span><span>{nm(m.winnerId)} advances</span>
+        </div>
+      ) : ready ? (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <Btn onClick={onSim}>Simulate</Btn>
+          <input value={a} onChange={(e) => setA(e.target.value)} className="w-9 rounded border-2 border-black bg-black/60 px-1 py-1 text-center font-mono text-xs text-white" inputMode="numeric" aria-label="Score A" placeholder="A" />
+          <input value={b} onChange={(e) => setB(e.target.value)} className="w-9 rounded border-2 border-black bg-black/60 px-1 py-1 text-center font-mono text-xs text-white" inputMode="numeric" aria-label="Score B" placeholder="B" />
           <Btn onClick={() => { const r = onSave(Number(a), Number(b)); setErr(r || ''); }}>Save</Btn>
-          {err && <span className="text-rose-400">{err}</span>}
-        </>
-      ) : <span className="text-amber-100/40">waiting</span>}
+          {err && <span className="w-full text-[10px] text-rose-400">{err}</span>}
+        </div>
+      ) : <div className="mt-2 text-[10px] italic text-amber-100/40">Waiting for previous round</div>}
     </div>
   );
 };
-const Bracket: React.FC<{ ms: E.BNode[]; nm: (id: string | null) => string; sim: (ms: E.BNode[], id: string) => void; save: (ms: E.BNode[], id: string, a: number, b: number) => string | null; onChange: (ms: E.BNode[]) => void }> = ({ ms, nm, sim, save, onChange }) => (
-  <div>
-    {ms.map((m) => (
-      <Row key={m.id} m={m} nm={nm} onSim={() => { const c = clone(ms); sim(c, m.id); onChange(c); }} onSave={(a, b) => { const c = clone(ms); const e = save(c, m.id, a, b); if (!e) onChange(c); return e; }} />
-    ))}
-  </div>
-);
+const Bracket: React.FC<{ ms: E.BNode[]; nm: (id: string | null) => string; sim: (ms: E.BNode[], id: string) => void; save: (ms: E.BNode[], id: string, a: number, b: number) => string | null; onChange: (ms: E.BNode[]) => void }> = ({ ms, nm, sim, save, onChange }) => {
+  const rounds = Array.from(new Set(ms.map((m) => m.roundName)));
+  return (
+    <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/80 p-4 custom-scrollbar">
+      <div className="flex min-w-max items-stretch gap-8 py-2">
+        {rounds.map((round, index) => {
+          const matches = ms.filter((m) => m.roundName === round);
+          return (
+            <React.Fragment key={round}>
+              <div className="flex w-64 flex-shrink-0 flex-col gap-4">
+                <div className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-center text-[10px] font-black uppercase tracking-widest text-indigo-300">
+                  {round}<span className="ml-2 text-slate-500">{matches.filter((m) => m.completed).length}/{matches.length}</span>
+                </div>
+                <div className="flex flex-1 flex-col justify-around gap-5">
+                  {matches.map((m) => (
+                    <Row key={m.id} m={m} nm={nm}
+                      onSim={() => { const c = clone(ms); sim(c, m.id); onChange(c); }}
+                      onSave={(a, b) => { const c = clone(ms); const e = save(c, m.id, a, b); if (!e) onChange(c); return e; }}
+                    />
+                  ))}
+                </div>
+              </div>
+              {index < rounds.length - 1 && <div className="flex w-4 flex-shrink-0 items-center justify-center"><div className="h-3/4 w-px border-l border-dashed border-indigo-500/50" /></div>}
+            </React.Fragment>
+          );
+        })}
+      </div>
+      {ms.some((m) => m.completed && /final/i.test(m.roundName)) && (
+        <div className="mt-3 border-t border-amber-500/20 pt-3 text-center text-xs font-black uppercase tracking-widest text-amber-300">
+          Champion: {nm(ms.find((m) => m.completed && /final/i.test(m.roundName) && m.winnerId)?.winnerId || null)}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, section = 'all', v5State, onUpdateV5State, onUpdateLeagueState, theIdolsChampionId, knockoutMatches }) => {
   const v5 = v5State;
