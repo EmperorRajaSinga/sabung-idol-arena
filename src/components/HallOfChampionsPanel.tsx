@@ -95,6 +95,7 @@ export const HallOfChampionsPanel: React.FC<HallOfChampionsPanelProps> = ({
   theIdolsState,
   theIdolsArchives = [],
   v5State,
+  v5TitleArchives = [],
   onReconcileArchives,
 }) => {
   const [activeTab, setActiveTab] = useState<'tournament' | 'league' | 'the_idols' | 'combined'>('tournament');
