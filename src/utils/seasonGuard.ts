@@ -28,9 +28,6 @@ export function getUnfinishedCompetitions(args: {
     if ((l.memberIds || []).length > 0) line(l.name || `League ${l.id}`, l.matches || []);
   });
 
-  const wildcard = args.leagueState?.wildcardPlayIn;
-  if (wildcard && (wildcard.participants || []).length > 0) line('Wildcard Play-In', wildcard.matches || []);
-
   const sw = args.leagueState?.swissPlayIn;
   if (sw && (sw.participants || []).length > 0) {
     line('Swiss Play-In', sw.matches || []);
