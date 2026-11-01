@@ -963,10 +963,13 @@ function parseLeagueSeasonState(raw: string | null): LeagueSeasonState | null {
 export function loadLeagueSeasonState(): LeagueSeasonState | null {
   try {
     const primary = parseLeagueSeasonState(localStorage.getItem(LEAGUE_STORAGE_KEY));
-    const parsed = primary || parseLeagueSeasonState(localStorage.getItem(LEAGUE_STORAGE_BACKUP_KEY));
+    const backup = parseLeagueSeasonState(localStorage.getItem(LEAGUE_STORAGE_BACKUP_KEY));
+    const primaryRevision = Number((primary as any)?.updatedAt || 0);
+    const backupRevision = Number((backup as any)?.updatedAt || 0);
+    const parsed = backup && (!primary || backupRevision > primaryRevision) ? backup : primary || backup;
     if (!parsed) return null;
-    if (!primary) {
-      try { localStorage.setItem(LEAGUE_STORAGE_KEY, JSON.stringify(parsed)); } catch { /* backup remains intact */ }
+    if (parsed !== primary) {
+      try { localStorage.setItem(LEAGUE_STORAGE_KEY, JSON.stringify(parsed)); } catch { /* recovery copy remains intact */ }
     }
 
     // Merge latest custom league branding onto loaded state if available
