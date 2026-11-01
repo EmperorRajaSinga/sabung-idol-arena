@@ -82,7 +82,7 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const [customPhotoUrl, setCustomPhotoUrl] = useState('');
   const [matchPage, setMatchPage] = useState<number>(1);
-  const [matchFilter, setMatchFilter] = useState<'all' | 'tournament' | 'league' | 'the_idols'>('all');
+  const [matchFilter, setMatchFilter] = useState<'all' | 'tournament' | 'league' | 'the_idols' | 'v5_cups'>('all');
   const [activeCareerScope, setActiveCareerScope] = useState<'combined' | 'tournament' | 'league' | 'the_idols'>('combined');
   const matchesPerPage = 15;
 
@@ -1122,7 +1122,8 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
     if (matchFilter === 'all') return idolMatches;
     if (matchFilter === 'league') return idolMatches.filter(isMatchLeague);
     if (matchFilter === 'the_idols') return idolMatches.filter(isMatchTheIdols);
-    return idolMatches.filter((m) => !isMatchLeague(m) && !isMatchTheIdols(m));
+    if (matchFilter === 'v5_cups') return idolMatches.filter((m) => String(m.stage || '').startsWith('Cups & Divisions:') && !String(m.stage || '').startsWith('Cups & Divisions: Division 2'));
+    return idolMatches.filter((m) => !isMatchLeague(m) && !isMatchTheIdols(m) && !String(m.stage || '').startsWith('Cups & Divisions:'));
   }, [idolMatches, matchFilter]);
 
   const totalMatchPages = Math.ceil(filteredMatches.length / matchesPerPage) || 1;
@@ -2702,6 +2703,9 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
                 }`}
               >
                 🛡️ League ({idolLeagueMatches.length})
+              </button>
+              <button type="button" onClick={() => { setMatchFilter('v5_cups'); setMatchPage(1); }} className={`px-2.5 py-1 rounded-lg text-[11px] font-poster-title font-black transition-all ${matchFilter === 'v5_cups' ? 'bg-amber-500 text-black' : 'text-amber-200/70 hover:text-white'}`}>
+                New V5 Cups ({idolMatches.filter((m) => String(m.stage || '').startsWith('Cups & Divisions:') && !String(m.stage || '').startsWith('Cups & Divisions: Division 2')).length})
               </button>
               <button
                 type="button"
