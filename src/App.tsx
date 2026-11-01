@@ -2161,7 +2161,7 @@ export function App() {
       knockoutMatches: appState.knockoutMatches,
       leagueState,
       theIdolsState,
-      v5: loadV5State(),
+      v5: appState.v5State || loadV5State(),
       v5Names: loadNames(),
     });
     if (unfinished.length > 0) {
