@@ -163,7 +163,11 @@ export function App() {
         const winnerId = match.winnerId || (Number(match.scoreA) > Number(match.scoreB) ? a.id : b.id);
         const winner = winnerId === a.id ? a : b;
         const loser = winnerId === a.id ? b : a;
-        const matchId = `v5_${competition.replace(/[^a-z0-9]+/gi, '_')}_${match.id}`;
+        const legacyMatchId = `v5_${competition.replace(/[^a-z0-9]+/gi, '_')}_${match.id}`;
+        const matchId = `v5_s${seasonId}_${competition.replace(/[^a-z0-9]+/gi, '_')}_${match.id}`;
+        // Migrate the old season-agnostic key without deleting records from earlier seasons.
+        const legacy = archived.get(legacyMatchId);
+        if (legacy && Number(legacy.seasonId) === seasonId) archived.delete(legacyMatchId);
         archived.set(matchId, {
           matchId, seasonId, seasonName,
           stage: `Cups & Divisions: ${competition} / ${match.roundName || 'Match'}`,
@@ -654,7 +658,7 @@ export function App() {
       const winner = winnerId === a.id ? a : b;
       const loser = winnerId === a.id ? b : a;
       v5Matches.push({
-        matchId: `v5_${competition.replace(/[^a-z0-9]+/gi, '_')}_${match.id}`,
+        matchId: `v5_s${seasonId}_${competition.replace(/[^a-z0-9]+/gi, '_')}_${match.id}`,
         seasonId, seasonName, stage: `Cups & Divisions: ${competition} / ${match.roundName || 'Match'}`,
         idolAId: a.id, idolAName: a.name, idolAGroup: a.girlGroup, idolAPhoto: a.photoUrl,
         idolBId: b.id, idolBName: b.name, idolBGroup: b.girlGroup, idolBPhoto: b.photoUrl,
