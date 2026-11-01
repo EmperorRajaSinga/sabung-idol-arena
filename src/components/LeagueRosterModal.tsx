@@ -10,7 +10,7 @@ import {
 } from '../utils/leagueLogic';
 import { generateAvatarUrl } from '../data/initialData';
 import { normalizeDataName } from '../utils/dataChangeHistory';
-import { saveDivisionOneRosterSnapshot } from '../utils/rosterPersistence';
+import { loadRosterSnapshot, restoreDivisionOneRoster, saveDivisionOneRosterSnapshot } from '../utils/rosterPersistence';
 import { getCountryFlag } from '../utils/nationalityHelper';
 import {
   X,
@@ -85,9 +85,13 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
       setLeaguesBranding(freshBranding);
 
       const source = latestLeagueStateRef.current;
+      // The compact synchronous snapshot is the roster source of truth.
+      // Parent state can briefly lag behind it during hydration or rapid updates.
+      const snapshot = loadRosterSnapshot();
+      const restoredLeagues = restoreDivisionOneRoster(source?.leagues, snapshot);
       const map: Record<number, string[]> = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
       for (let d = 1; d <= 6; d++) {
-        const found = source?.leagues?.find((l) => l.id === d);
+        const found = restoredLeagues?.find((l) => l.id === d);
         map[d] = found ? [...(found.memberIds || [])] : [];
       }
       setDivisionMembers(map);
@@ -436,6 +440,9 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
       return;
     }
 
+    const snapshot = loadRosterSnapshot();
+    const restoredLeagues = restoreDivisionOneRoster(leagueState.leagues, snapshot) || leagueState.leagues;
+    const effectiveLeagueState: LeagueSeasonState = { ...leagueState, leagues: restoredLeagues };
     const allKnownIdols = [...idols, ...createdIdolsAccumulator];
     const knownById = new Map(allKnownIdols.map((idol) => [idol.id, idol]));
     const nameCounts = new Map<string, number>();
@@ -456,7 +463,7 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
     const updatedLeagues: LeagueInfo[] = [1, 2, 3, 4, 5, 6].map((leagueId) => {
       const customDef = customDefs.find((c) => c.id === leagueId);
       const def = DEFAULT_LEAGUE_DEFS.find((d) => d.id === leagueId) || DEFAULT_LEAGUE_DEFS[0];
-      const previous = leagueState.leagues.find((league) => league.id === leagueId);
+      const previous = effectiveLeagueState.leagues.find((league) => league.id === leagueId);
       const memberIds = [...(divisionMembers[leagueId] || [])];
       const sameRoster = Boolean(previous) &&
         previous!.memberIds.length === memberIds.length &&
@@ -502,7 +509,7 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
     // Saving roster membership must not reset the active season, matchday,
     // advancement flags, or any other competition progress.
     const newState: LeagueSeasonState = {
-      ...leagueState,
+      ...effectiveLeagueState,
       leagues: updatedLeagues,
     };
 
