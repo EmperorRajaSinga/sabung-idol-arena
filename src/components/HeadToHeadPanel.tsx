@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { SearchableIdolSelect } from './SearchableIdolSelect';
 import { compareMatchesNewestFirst } from '../utils/leagueLogic';
+import { isLeagueDivisionMatch, isTheIdolsMatch } from '../utils/matchClassification';
 import { getIdolRating, getRatingTierInfo } from '../utils/ratingHelper';
 import { computeAllIdolAchievements } from '../utils/achievementEngine';
 import { loadCareerOverrides } from '../utils/databaseStudioLogic';
@@ -189,20 +190,12 @@ export const HeadToHeadPanel: React.FC<HeadToHeadPanelProps> = ({
 
       if (!isPair) return false;
 
-      const st = (m.stage || (m as any).stageOrDivision || m.groupName || '').toLowerCase();
-      const isLeague =
-        st.includes('league') ||
-        st.includes('division') ||
-        st.includes('wildcard') ||
-        st.includes('premier') ||
-        st.includes('championship') ||
-        st.includes('md ') ||
-        st.includes('matchday') ||
-        (m.matchId && (m.matchId.includes('league') || m.matchId.includes('wildcard')));
+      const st = String(m.stage || (m as any).stageOrDivision || m.groupName || '').toLowerCase();
+      const isLeague = isLeagueDivisionMatch(m);
 
       if (stageFilter === 'Group Stage') return st.includes('group') && !isLeague;
       if (stageFilter === 'Knockout') return !st.includes('group') && !isLeague;
-      const isTheIdolsRow = st.startsWith('the idols') || String(m.matchId || '').toLowerCase().startsWith('the_idols');
+      const isTheIdolsRow = isTheIdolsMatch(m);
       if (stageFilter === 'League') return isLeague && !isTheIdolsRow;
       return true;
     });
