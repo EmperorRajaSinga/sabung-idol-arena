@@ -363,14 +363,14 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     }
     if (showRosterConflicts(normalizedNames, { division: 'Division 2', leagueId, leagueName: targetLeague.name })) return;
 
-    const existingByName = new Map(appState.idols.map((idol) => [idol.name.trim().toLowerCase(), idol]));
+    const existingByName = new Map(appState.idols.map((idol) => [normalizeDataName(idol.name), idol]));
 
 
     const createdIdols: Idol[] = [];
     const nextMemberIds: string[] = [];
     const seenIds = new Set<string>();
     for (const name of normalizedNames) {
-      const key = name.toLowerCase();
+      const key = normalizeDataName(name);
       let idol = existingByName.get(key);
       if (!idol) {
         idol = {
@@ -864,14 +864,14 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
     // Map names to idol IDs, creating any new idols if they don't exist
     const existingNamesMap = new Map<string, Idol>();
-    appState.idols.forEach((i) => existingNamesMap.set(i.name.trim().toLowerCase(), i));
+    appState.idols.forEach((i) => existingNamesMap.set(normalizeDataName(i.name), i));
 
     const newMemberIds: string[] = [];
     const createdIdols: Idol[] = [];
     const seenIds = new Set<string>();
 
     rawNames.forEach((name) => {
-      const lower = name.toLowerCase();
+      const lower = normalizeDataName(name);
       let idolId = '';
       if (existingNamesMap.has(lower)) {
         idolId = existingNamesMap.get(lower)!.id;
@@ -974,6 +974,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         appState.leagueArchives
       );
     }
+    const clearedLeague = activeLeagueState.leagues.find((league) => league.id === leagueId);
+    logDataChange({ action: 'roster_updated', entity: 'division_1_roster', entityName: clearedLeague?.name || `Division ${leagueId}`, source: 'Settings / League Roster Manager', details: 'Cleared the entire roster.' });
     showSuccessMsg(`Cleared roster for Division #${leagueId} (0 members)`);
   };
 
