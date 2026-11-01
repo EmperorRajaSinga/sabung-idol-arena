@@ -235,6 +235,82 @@ export function generateRoundRobinMatches(leagueId: number, memberIds: string[])
 }
 
 /**
+ * Repairs legacy/imported league fixtures before simulation.
+ * Old backups can contain participant IDs that no longer exist in the current
+ * idol database even when the same idol names are still present in standings.
+ * Resolve those IDs by normalized name, rebuild the canonical schedule, and
+ * retain completed results whenever the participant pair still matches.
+ */
+export function repairLeagueFixturesForSimulation<T extends LeagueInfo>(
+  league: T,
+  idols: Idol[]
+): { league: T; unresolvedMemberIds: string[]; repairedFixtureCount: number } {
+  const byId = new Map(idols.map((idol) => [idol.id, idol]));
+  const normalizeName = (value: string) => value
+    .normalize('NFKC')
+    .toLocaleLowerCase()
+    .replace(/[\\p{P}\\p{S}]/gu, ' ')
+    .replace(/\\s+/g, ' ')
+    .trim();
+  const byName = new Map<string, Idol>();
+  idols.forEach((idol) => {
+    const key = normalizeName(idol.name || '');
+    if (key && !byName.has(key)) byName.set(key, idol);
+  });
+
+  const standingsById = new Map((league.standings || []).map((standing) => [standing.idolId, standing]));
+  const idRemap = new Map<string, string>();
+  const memberIds: string[] = [];
+  const unresolvedMemberIds: string[] = [];
+  (league.memberIds || []).forEach((oldId) => {
+    const current = byId.get(oldId) || (() => {
+      const standing = standingsById.get(oldId);
+      return standing ? byName.get(normalizeName(standing.idolName || '')) : undefined;
+    })();
+    if (!current) {
+      unresolvedMemberIds.push(oldId);
+      return;
+    }
+    idRemap.set(oldId, current.id);
+    if (!memberIds.includes(current.id)) memberIds.push(current.id);
+  });
+
+  if (unresolvedMemberIds.length > 0 || memberIds.length < 2) {
+    return { league, unresolvedMemberIds, repairedFixtureCount: 0 };
+  }
+
+  const expected = generateRoundRobinMatches(league.id, memberIds);
+  const completedByPair = new Map<string, LeagueMatch>();
+  (league.matches || []).forEach((match) => {
+    const idolAId = idRemap.get(match.idolAId) || (byId.has(match.idolAId) ? match.idolAId : '');
+    const idolBId = idRemap.get(match.idolBId) || (byId.has(match.idolBId) ? match.idolBId : '');
+    if (!match.completed || !idolAId || !idolBId || idolAId === idolBId) return;
+    completedByPair.set(`${idolAId}__${idolBId}`, {
+      ...match,
+      idolAId,
+      idolBId,
+    });
+  });
+
+  const matches = expected.map((fixture) => {
+    const saved = completedByPair.get(`${fixture.idolAId}__${fixture.idolBId}`);
+    return saved && saved.scoreA !== null && saved.scoreB !== null
+      ? { ...fixture, ...saved, id: fixture.id, leagueId: fixture.leagueId, matchday: fixture.matchday }
+      : fixture;
+  });
+  const repairedFixtureCount = matches.reduce((count, match, index) =>
+    count + (league.matches?.[index]?.id === match.id &&
+      league.matches?.[index]?.idolAId === match.idolAId &&
+      league.matches?.[index]?.idolBId === match.idolBId ? 0 : 1), 0);
+  const standings = calculateLeagueStandings(league.id, memberIds, matches, idols);
+  return {
+    league: { ...league, memberIds, matches, standings } as T,
+    unresolvedMemberIds,
+    repairedFixtureCount,
+  };
+}
+
+/**
  * Calculates standings table for a single league
  */
 export function calculateLeagueStandings(
