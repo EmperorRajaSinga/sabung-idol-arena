@@ -138,6 +138,25 @@ class IdolProfileCrashBoundary extends React.Component<{ children: React.ReactNo
   }
 }
 
+class MatchDatabaseCrashBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[MatchDatabasePanel crash]', error, info.componentStack);
+  }
+  render() {
+    if (this.state.error) return (
+      <div className="m-6 rounded-xl border border-red-500 bg-[#1b1111] p-6 text-white">
+        <h2 className="text-xl font-black text-red-400">Match Database runtime error</h2>
+        <p className="mt-2 text-sm font-semibold">{this.state.error.message}</p>
+        <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap text-xs text-red-200">{this.state.error.stack}</pre>
+        <button className="mt-4 rounded-lg bg-amber-500 px-4 py-2 font-bold text-black" onClick={() => this.setState({ error: null })}>Retry Match Database</button>
+      </div>
+    );
+    return this.props.children;
+  }
+}
+
 export function App() {
   const [appState, setAppState] = useState<AppState>(() => loadAppState());
   const v5State = appState.v5State || loadV5State();
@@ -2690,6 +2709,7 @@ export function App() {
           )}
 
           {activeTab === 'match_db' && (
+            <MatchDatabaseCrashBoundary key={activeTab}>
             <MatchDatabasePanel
               matchDatabase={allCombinedMatchDatabase}
               leagueState={leagueState}
@@ -2698,6 +2718,7 @@ export function App() {
               theIdolsArchives={theIdolsArchives}
               idols={appState.idols}
             />
+            </MatchDatabaseCrashBoundary>
           )}
 
           {activeTab === 'career_stats' && (
