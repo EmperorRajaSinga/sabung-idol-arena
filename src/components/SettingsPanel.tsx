@@ -1254,11 +1254,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </button>
           <button
             onClick={() => { refreshDataHistory(); setActiveSettingsTab('history'); }}
-            className={\`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-poster-title transition-all \${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-poster-title transition-all ${
               activeSettingsTab === 'history'
                 ? 'bg-amber-500 text-black font-black shadow-lg'
                 : 'text-amber-300 hover:text-white'
-            }\`}
+            }`}
           >
             <Database className="w-3.5 h-3.5" />
             <span>Data Change History</span>
@@ -2214,11 +2214,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 }).map((item) => (
                   <div key={item.id} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 bg-[#100c08] px-4 py-3 text-xs sm:grid-cols-[180px_130px_minmax(0,1fr)_minmax(0,1fr)]">
                     <span className="text-[10px] text-slate-400">{new Date(item.timestamp).toLocaleString()}</span>
-                    <span className={\`font-black uppercase tracking-wide \${
+                    <span className={`font-black uppercase tracking-wide ${
                       item.action === 'duplicate_blocked' ? 'text-red-400' :
                       item.action === 'created' ? 'text-emerald-400' :
                       item.action === 'deleted' ? 'text-red-300' : 'text-amber-300'
-                    }\`}>{item.action.replace(/_/g, ' ')}</span>
+                    }`}>{item.action.replace(/_/g, ' ')}</span>
                     <span className="min-w-0 break-words font-bold text-white">{item.entityName}<span className="ml-1 text-[9px] font-semibold text-slate-500">{item.entity.replace(/_/g, ' ')}</span></span>
                     <span className="col-span-2 break-words text-[10px] text-slate-400 sm:col-span-1">{item.details}<span className="mt-1 block text-[9px] text-amber-100/35">Source: {item.source}</span></span>
                   </div>
