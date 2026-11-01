@@ -11,6 +11,7 @@ interface Props {
   onUpdateV5State: (s: V5State) => void;
   favoriteIdolIds?: string[];
   setActiveTab: (tab: ActiveTab) => void;
+  onUpdateFavoriteIdols?: (ids: string[]) => void;
 }
 
 /**
@@ -18,7 +19,7 @@ interface Props {
  * Its state is adapted to the shared league panel and written back only to V5 D2 storage.
  */
 export const DivisionTwoLeaguePanel: React.FC<Props> = ({
-  idols, girlGroups, config, v5State, onUpdateV5State, favoriteIdolIds = [], setActiveTab,
+  idols, girlGroups, config, v5State, onUpdateV5State, favoriteIdolIds = [], setActiveTab, onUpdateFavoriteIdols,
 }) => {
   const leagueState = useMemo<LeagueSeasonState>(() => ({
     seasonNumber: Number(config.seasonNumber || 1),
@@ -54,7 +55,7 @@ export const DivisionTwoLeaguePanel: React.FC<Props> = ({
     onUpdateLeagueArchives={() => undefined}
     onAdvanceToChampionsTournament={noAdvance}
     setActiveTab={setActiveTab}
-    onUpdateFavoriteIdols={(ids) => onUpdateV5State({ ...v5State, favoriteIdolIds: ids } as V5State)}
+    onUpdateFavoriteIdols={onUpdateFavoriteIdols}
     persistState={false}
     divisionLabel="Division 2"
   />;
