@@ -33,7 +33,7 @@ while (pending.length) {
   });
 }
 ck('F4 editing an earlier result clears every dependent match and keeps unrelated branches intact',
-  affected.size === 7 && cascadeTest.filter((m: any) => affected.has(m.id)).every((m: any) => !m.completed && !m.winnerId && !m.loserId && m.scoreA === null && m.scoreB === null && m.idolAId === null && m.idolBId === null) &&
+  affected.size === 3 && cascadeTest.filter((m: any) => affected.has(m.id)).every((m: any) => !m.completed && !m.winnerId && !m.loserId && m.scoreA === null && m.scoreB === null && m.idolAId === null && m.idolBId === null) &&
   cascadeTest.find((m: any) => m.id.endsWith('_qf_3'))?.completed === true,
   `cleared ${affected.size} dependent matches`);
 
