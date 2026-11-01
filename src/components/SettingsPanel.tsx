@@ -758,6 +758,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       return;
     }
     const selectedIdol = appState.idols.find((idol) => idol.id === idolId);
+    if (selectedIdol && activeL.memberIds.some((id) => normalizeDataName(appState.idols.find((idol) => idol.id === id)?.name || id) === normalizeDataName(selectedIdol.name))) {
+      showSuccessMsg(`The name "${selectedIdol.name}" is already present in ${activeL.name}.`);
+      logDataChange({ action: 'duplicate_blocked', entity: 'division_1_roster', entityName: activeL.name, source: 'Settings / League Roster Quick Add', details: `Blocked duplicate name: ${selectedIdol.name}.` });
+      return;
+    }
     if (selectedIdol && showRosterConflicts([selectedIdol.name], { division: 'Division 1', leagueId: activeL.id, leagueName: activeL.name })) return;
 
     const updatedLeagues = activeLeagueState.leagues.map((l) => {
@@ -2309,9 +2314,17 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   (idol) => isIdolActive(idol, appState.girlGroups) && !d2Assigned.has(idol.id) && !d1Assigned.has(idol.id)
                 );
                 const updateCurrentRoster = (memberIds: string[]) => {
-                  const candidateNames = memberIds.map((id) => appState.idols.find((idol) => idol.id === id)?.name || id);
-                  if (showRosterConflicts(candidateNames, { division: 'Division 2', leagueId: currentLeague.id, leagueName: currentLeague.name })) return;
                   const beforeIds = currentLeague.memberIds || [];
+                  const addedIds = memberIds.filter((id) => !beforeIds.includes(id));
+                  const addedNames = addedIds.map((id) => appState.idols.find((idol) => idol.id === id)?.name || id);
+                  const currentNames = beforeIds.map((id) => appState.idols.find((idol) => idol.id === id)?.name || id);
+                  const sameLeagueDuplicates = addedNames.filter((name) => currentNames.some((existingName) => normalizeDataName(existingName) === normalizeDataName(name)));
+                  if (sameLeagueDuplicates.length) {
+                    showSuccessMsg(`Duplicate name in ${currentLeague.name}: ${sameLeagueDuplicates.join(', ')}.`);
+                    logDataChange({ action: 'duplicate_blocked', entity: 'division_2_roster', entityName: currentLeague.name, source: 'Settings / Division 2 Quick Editor', details: `Blocked duplicate name(s): ${sameLeagueDuplicates.join(', ')}.` });
+                    return;
+                  }
+                  if (showRosterConflicts(addedNames, { division: 'Division 2', leagueId: currentLeague.id, leagueName: currentLeague.name })) return;
                   const addedNames = memberIds.filter((id) => !beforeIds.includes(id)).map((id) => appState.idols.find((idol) => idol.id === id)?.name || id);
                   const removedNames = beforeIds.filter((id) => !memberIds.includes(id)).map((id) => appState.idols.find((idol) => idol.id === id)?.name || id);
                   onUpdateV5State?.({
@@ -2411,6 +2424,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                       return;
                                     }
                                     const movingIdol = appState.idols.find((idol) => idol.id === idolId);
+                                    if (movingIdol && target.memberIds.some((id) => normalizeDataName(appState.idols.find((idol) => idol.id === id)?.name || id) === normalizeDataName(movingIdol.name))) {
+                                      showSuccessMsg(`The name "${movingIdol.name}" is already present in ${target.name}.`);
+                                      logDataChange({ action: 'duplicate_blocked', entity: 'division_2_roster', entityName: target.name, source: 'Settings / Division 2 Roster Transfer', details: `Blocked duplicate name: ${movingIdol.name}.` });
+                                      return;
+                                    }
                                     if (movingIdol && showRosterConflicts([movingIdol.name], { division: 'Division 2', leagueId: target.id, leagueName: target.name }, { division: 'Division 2', leagueId: currentLeague.id, leagueName: currentLeague.name })) return;
                                     const nextD2 = v5State.d2.map((league) =>
                                       league.id === currentLeague.id
