@@ -48,6 +48,7 @@ const isLeagueDivisionMatch = (match: ArchivedMatch): boolean => {
   if (!match || typeof match !== 'object') return false;
   const stage = String(match.stage || '').trim().toLowerCase();
   const matchId = String(match.matchId || '').trim().toLowerCase();
+  if (/swiss|wildcard|last chance|play-in/.test(stage) || matchId.startsWith('swiss_') || matchId.startsWith('wildcard_')) return false;
   return (
     stage.startsWith('league') ||
     /^division\s*\d+/.test(stage) ||
