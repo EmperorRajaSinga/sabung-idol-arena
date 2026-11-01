@@ -29,6 +29,12 @@ const d2 = Array.from({ length: 6 }, (_, index) => ({
 assert.equal(saveDivisionOneRosterSnapshot(d1), true);
 assert.equal(saveDivisionTwoRosterSnapshot(d2), true);
 
+// Recovery must still work if the primary snapshot is damaged.
+values.set('sabung_roster_membership_v1', '{invalid json');
+assert.deepEqual(loadRosterSnapshot()?.division1, d1);
+values.delete('sabung_roster_membership_v1');
+assert.equal(saveDivisionOneRosterSnapshot(d1), true);
+
 const snapshot = loadRosterSnapshot();
 assert.ok(snapshot);
 assert.deepEqual(
