@@ -249,8 +249,8 @@ export function repairLeagueFixturesForSimulation<T extends LeagueInfo>(
   const normalizeName = (value: string) => value
     .normalize('NFKC')
     .toLocaleLowerCase()
-    .replace(/[\\p{P}\\p{S}]/gu, ' ')
-    .replace(/\\s+/g, ' ')
+    .replace(/[\p{P}\p{S}]/gu, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
   const byName = new Map<string, Idol>();
   idols.forEach((idol) => {
