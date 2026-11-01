@@ -25,7 +25,7 @@ export const KahootPodium: React.FC<KahootPodiumProps> = ({
   if (!first && !second && !third) {
     return (
       <div className="p-8 text-center rounded-2xl bg-[#140e0a] border-2 border-black text-amber-300/60 font-bold text-xs">
-        No tournament or league data available yet for podium calculation.
+        No official tournament, league, or V5 competition data is available yet for podium calculation.
       </div>
     );
   }
