@@ -319,7 +319,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       rawNames.findIndex((candidate) => candidate.toLowerCase() === name.toLowerCase()) === index
     );
     if (normalizedNames.length > capacity) {
-      showSuccessMsg(\`Maximum capacity is \${capacity} idols. Remove \${normalizedNames.length - capacity} name(s) before saving.\`);
+      showSuccessMsg(`Maximum capacity is ${capacity} idols. Remove ${normalizedNames.length - capacity} name(s) before saving.`);
       return;
     }
 
@@ -343,12 +343,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       let idol = existingByName.get(key);
       if (!idol) {
         idol = {
-          id: \`idol-custom-\${Date.now()}-\${Math.random().toString(36).substring(2, 9)}-\${createdIdols.length}\`,
+          id: `idol-custom-${Date.now()}-${Math.random().toString(36).substring(2, 9)}-${createdIdols.length}`,
           name,
           girlGroup: 'Solo / Independent',
           seed: 'Seed 3',
           nationality: 'South Korea',
-          photoUrl: \`https://api.dicebear.com/7.x/avataaars/svg?seed=\${encodeURIComponent(name)}\`,
+          photoUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`,
           createdAt: Date.now(),
         } as Idol;
         createdIdols.push(idol);
@@ -358,7 +358,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       seenIds.add(idol.id);
       const assignedTo = assignedElsewhere.get(idol.id);
       if (assignedTo) {
-        blockedNames.push(\`\${name} (already assigned to \${assignedTo})\`);
+        blockedNames.push(`${name} (already assigned to ${assignedTo})`);
         continue;
       }
       nextMemberIds.push(idol.id);
@@ -388,7 +388,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     }
     onUpdateV5State?.(nextV5State);
     setEditingD2RosterLeagueId(null);
-    showSuccessMsg(\`Division 2 roster saved: \${nextMemberIds.length} idol(s) assigned. \${createdIdols.length} new idol(s) added to the database.\`);
+    showSuccessMsg(`Division 2 roster saved: ${nextMemberIds.length} idol(s) assigned. ${createdIdols.length} new idol(s) added to the database.`);
   };
 
   const showSuccessMsg = (msg: string) => {
