@@ -400,7 +400,8 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
     if (finalMatchSeen.has(dedupeKey)) return;
     finalMatchSeen.add(dedupeKey);
     const winnerId = match.winnerId || (scoreA > scoreB ? match.idolAId : match.idolBId);
-    const groupName = idolsMap.get(winnerId)?.girlGroup || 'Solo / Independent';
+    const historicalWinnerGroup = winnerId === match.idolAId ? match.idolAGroup : match.idolBGroup;
+    const groupName = historicalWinnerGroup || idolsMap.get(winnerId)?.girlGroup || 'Solo / Independent';
     if (!v5WinnerByCompetition.has(competition)) v5WinnerByCompetition.set(competition, new Map());
     const seasons = v5WinnerByCompetition.get(competition)!;
     if (!seasons.has(groupName)) seasons.set(groupName, new Set());
@@ -410,6 +411,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
 
   // Division 2 titles are reconstructed per season from its archived match results.
   const division2Tables = new Map<string, Map<string, { points: number; diff: number; scored: number }>>();
+  const division2Groups = new Map<string, string>();
   const division2Seen = new Set<string>();
   (Array.isArray(matchDatabase) ? matchDatabase : []).forEach((match) => {
     if (!match || !match.idolAId || !match.idolBId || match.scoreA == null || match.scoreB == null) return;
@@ -423,6 +425,8 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
     const season = `${String(match.seasonId || 1)}::${competitionLabel}`;
     if (!division2Tables.has(season)) division2Tables.set(season, new Map());
     const table = division2Tables.get(season)!;
+    if (match.idolAGroup) division2Groups.set(`${season}::${match.idolAId}`, match.idolAGroup);
+    if (match.idolBGroup) division2Groups.set(`${season}::${match.idolBId}`, match.idolBGroup);
     const update = (id: string, scored: number, conceded: number) => {
       const row = table.get(id) || { points: 0, diff: 0, scored: 0 };
       row.points += scored > conceded ? 3 : scored === conceded ? 1 : 0;
@@ -433,7 +437,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
   division2Tables.forEach((table, season) => {
     const championId = [...table.entries()].sort((a, b) => b[1].points - a[1].points || b[1].diff - a[1].diff || b[1].scored - a[1].scored)[0]?.[0];
     if (!championId) return;
-    const groupName = idolsMap.get(championId)?.girlGroup || 'Solo / Independent';
+    const groupName = division2Groups.get(`${season}::${championId}`) || idolsMap.get(championId)?.girlGroup || 'Solo / Independent';
     if (!v5WinnerByCompetition.has('Division 2')) v5WinnerByCompetition.set('Division 2', new Map());
     const seasons = v5WinnerByCompetition.get('Division 2')!;
     if (!seasons.has(groupName)) seasons.set(groupName, new Set());
