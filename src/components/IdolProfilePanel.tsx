@@ -83,6 +83,8 @@ interface IdolProfilePanelProps {
   config?: TournamentConfig;
   groups?: Group[];
   knockoutMatches?: KnockoutMatch[];
+  v5State?: any;
+  v5TitleArchives?: Array<{ id: string; seasonNumber: number; seasonName: string; competition: string; winnerId: string; winnerName: string; runnerUpId?: string; runnerUpName?: string; isDivision: boolean }>;
 }
 
 export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
@@ -100,6 +102,8 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
   config,
   groups = [],
   knockoutMatches = [],
+  v5State,
+  v5TitleArchives = [],
 }) => {
   const [currentIdolId, setCurrentIdolId] = useState<string>(
     selectedIdolId || idols[0]?.id || ''
@@ -108,8 +112,8 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const [customPhotoUrl, setCustomPhotoUrl] = useState('');
   const [matchPage, setMatchPage] = useState<number>(1);
-  const [matchFilter, setMatchFilter] = useState<'all' | 'tournament' | 'league' | 'the_idols' | 'v5_cups'>('all');
-  const [activeCareerScope, setActiveCareerScope] = useState<'combined' | 'tournament' | 'league' | 'the_idols'>('combined');
+  const [matchFilter, setMatchFilter] = useState<'all' | 'tournament' | 'league' | 'the_idols' | 'division_2' | 'crown_cup' | 'open_arena_cup' | 'spotlight_cup' | 'super_cup_a' | 'super_cup_b'>('all');
+  const [activeCareerScope, setActiveCareerScope] = useState<'combined' | 'tournament' | 'league' | 'division_2' | 'the_idols' | 'crown_cup' | 'open_arena_cup' | 'spotlight_cup' | 'super_cup_a' | 'super_cup_b'>('combined');
   const matchesPerPage = 15;
 
   useEffect(() => {
@@ -897,6 +901,72 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
     return [...matches].sort((a, b) => compareMatchesNewestFirst(a, b));
   }, [matchDatabase, idol]);
 
+  const v5CompetitionDefinitions = [
+    { key: 'division_2', label: 'Division 2', match: (stage: string) => stage.startsWith('cups & divisions: division 2'), title: (name: string) => name.toLowerCase().startsWith('division 2') },
+    { key: 'crown_cup', label: 'Crown Cup', match: (stage: string) => stage.includes('cups & divisions:') && stage.includes('league champions cup'), title: (name: string) => name.toLowerCase() === 'league champions cup' },
+    { key: 'open_arena_cup', label: 'Open Arena Cup', match: (stage: string) => stage.includes('cups & divisions:') && stage.includes('all-league knockout cup'), title: (name: string) => name.toLowerCase() === 'all-league knockout cup' },
+    { key: 'spotlight_cup', label: 'Spotlight Cup', match: (stage: string) => stage.includes('cups & divisions:') && stage.includes('top 16 mini cup'), title: (name: string) => name.toLowerCase().startsWith('top 16 mini cup') },
+    { key: 'super_cup_a', label: 'Super Cup A', match: (stage: string) => stage.includes('cups & divisions:') && stage.includes('super cup a'), title: (name: string) => name.toLowerCase() === 'super cup a' },
+    { key: 'super_cup_b', label: 'Super Cup B', match: (stage: string) => stage.includes('cups & divisions:') && stage.includes('super cup b'), title: (name: string) => name.toLowerCase().startsWith('super cup b') },
+  ] as const;
+  const v5CompetitionStats = useMemo(() => {
+    const result: Record<string, any> = {};
+    v5CompetitionDefinitions.forEach((competition) => {
+      const matches = idolMatches.filter((match) => competition.match(String(match.stage || '').toLowerCase()));
+      let wins = 0, draws = 0, losses = 0, goalsFor = 0, goalsAgainst = 0;
+      matches.forEach((match) => {
+        const isA = match.idolAId === idol?.id || String(match.idolAName || '').toLowerCase() === String(idol?.name || '').toLowerCase();
+        const own = Number(isA ? match.scoreA : match.scoreB), against = Number(isA ? match.scoreB : match.scoreA);
+        goalsFor += Number.isFinite(own) ? own : 0; goalsAgainst += Number.isFinite(against) ? against : 0;
+        if (match.winnerId === idol?.id || (match.winnerName && match.winnerName.toLowerCase() === String(idol?.name || '').toLowerCase()) || own > against) wins++;
+        else if (match.isDraw || match.winnerId === 'DRAW' || own === against) draws++;
+        else losses++;
+      });
+      const titleRecords = (v5TitleArchives || []).filter((record) =>
+        (competition.key === 'division_2' ? record.isDivision && competition.title(String(record.competition || '')) : !record.isDivision && competition.title(String(record.competition || ''))) &&
+        (record.winnerId === idol?.id || record.runnerUpId === idol?.id)
+      );
+      const titles = titleRecords.filter((record) => record.winnerId === idol?.id).length;
+      const runnerUps = titleRecords.filter((record) => record.runnerUpId === idol?.id).length;
+      const seasonNumbers = Array.from(new Set(matches.map((match) => Number(match.seasonId || 1)))).sort((a, b) => b - a);
+      const seasons = seasonNumbers.map((seasonNumber) => {
+        const rows = matches.filter((match) => Number(match.seasonId || 1) === seasonNumber);
+        const stages = rows.map((match) => String(match.stage || '').split('/').slice(1).join('/').toLowerCase());
+        const champion = titleRecords.some((record) => Number(record.seasonNumber) === seasonNumber && record.winnerId === idol?.id);
+        const runnerUp = titleRecords.some((record) => Number(record.seasonNumber) === seasonNumber && record.runnerUpId === idol?.id);
+        const bestStage = champion ? 'Champion' : runnerUp ? 'Runner-Up' : stages.some((stage) => stage.includes('semi')) ? 'Semi-Final' : stages.some((stage) => stage.includes('quarter')) ? 'Quarter-Final' : stages.some((stage) => stage.includes('round of 16')) ? 'Round of 16' : stages.some((stage) => stage.includes('round of 32')) ? 'Round of 32' : (stages[0] || 'Participated');
+        const record = rows.reduce((acc, match) => {
+          const isA = match.idolAId === idol?.id;
+          const own = Number(isA ? match.scoreA : match.scoreB), against = Number(isA ? match.scoreB : match.scoreA);
+          if (match.winnerId === idol?.id || own > against) acc.wins++;
+          else if (match.isDraw || own === against) acc.draws++;
+          else acc.losses++;
+          return acc;
+        }, { wins: 0, draws: 0, losses: 0 });
+        return { seasonNumber, matches: rows.length, ...record, bestStage };
+      });
+      const total = wins + draws + losses;
+      result[competition.key] = { key: competition.key, label: competition.label, matches: total, wins, draws, losses, goalsFor, goalsAgainst, goalDiff: goalsFor - goalsAgainst, winRate: total ? Math.round(wins / total * 100) : 0, averageFor: total ? (goalsFor / total).toFixed(2) : '0.00', averageAgainst: total ? (goalsAgainst / total).toFixed(2) : '0.00', titles, runnerUps, seasons };
+    });
+    return result;
+  }, [idolMatches, idol, v5TitleArchives]);
+  const divisionStatus = useMemo(() => {
+    if (!idol) return { tier: 'Unassigned', leagueName: 'Not assigned', rank: null, promotions: 0, relegations: 0, history: [], pending: null };
+    const d1League = (leagueState?.leagues || []).find((league) => (league.memberIds || []).includes(idol.id));
+    const d2League = (v5State?.d2 || []).find((league: any) => (league.memberIds || []).includes(idol.id));
+    const currentLeague: any = d2League || d1League;
+    const standings = [...(currentLeague?.standings || [])].sort((a: any, b: any) => Number(a.rank || 999) - Number(b.rank || 999) || Number(b.points || 0) - Number(a.points || 0) || Number(b.gameDiff || 0) - Number(a.gameDiff || 0));
+    const row: any = standings.find((entry: any) => entry.idolId === idol.id);
+    const history = (v5State?.promotionHistory || []).flatMap((entry: any) => (entry.moves || []).flatMap((move: any) => [
+      ...(move.promoted || []).filter((id: string) => id === idol.id).map(() => ({ seasonNumber: entry.seasonNumber, seasonName: entry.seasonName, direction: 'PROMOTED', leagueId: move.leagueId })),
+      ...(move.relegated || []).filter((id: string) => id === idol.id).map(() => ({ seasonNumber: entry.seasonNumber, seasonName: entry.seasonName, direction: 'RELEGATED', leagueId: move.leagueId })),
+    ])).sort((a: any, b: any) => Number(b.seasonNumber) - Number(a.seasonNumber));
+    const pending = (v5State?.pendingMoves || []).flatMap((move: any) => [
+      ...(move.promoted || []).filter((id: string) => id === idol.id).map(() => ({ direction: 'PROMOTION PENDING', leagueId: move.leagueId })),
+      ...(move.relegated || []).filter((id: string) => id === idol.id).map(() => ({ direction: 'RELEGATION PENDING', leagueId: move.leagueId })),
+    ])[0] || null;
+    return { tier: d2League ? 'Division 2' : d1League ? 'Division 1' : 'Unassigned', leagueName: currentLeague?.name || 'Not assigned', rank: row ? (row.rank || standings.findIndex((entry: any) => entry.idolId === idol.id) + 1) : null, promotions: history.filter((entry: any) => entry.direction === 'PROMOTED').length, relegations: history.filter((entry: any) => entry.direction === 'RELEGATED').length, history, pending };
+  }, [idol, leagueState, v5State]);
   const idolTournamentMatches = useMemo(() => {
     return idolMatches.filter((m) => !isMatchLeague(m) && !isMatchTheIdols(m));
   }, [idolMatches]);
@@ -1143,7 +1213,8 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
   const combinedWins = combinedPerformance.wins;
   const combinedDraws = combinedPerformance.draws;
   const combinedLosses = combinedPerformance.losses;
-  const combinedChampionships = combinedPerformance.totalTitles;
+  const v5CareerTitles = Object.values(v5CompetitionStats).reduce((sum: number, item: any) => sum + Number(item.titles || 0), 0);
+  const combinedChampionships = combinedPerformance.totalTitles + v5CareerTitles;
   const combinedWinRate = combinedPerformance.winRate;
 
   // Filtered match history log
@@ -1151,7 +1222,12 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
     if (matchFilter === 'all') return idolMatches;
     if (matchFilter === 'league') return idolMatches.filter(isMatchLeague);
     if (matchFilter === 'the_idols') return idolMatches.filter(isMatchTheIdols);
-    if (matchFilter === 'v5_cups') return idolMatches.filter((m) => String(m.stage || '').startsWith('Cups & Divisions:') && !String(m.stage || '').startsWith('Cups & Divisions: Division 2'));
+    if (matchFilter === 'division_2') return idolMatches.filter((m) => String(m.stage || '').toLowerCase().startsWith('cups & divisions: division 2'));
+    if (matchFilter === 'crown_cup') return idolMatches.filter((m) => String(m.stage || '').toLowerCase().includes('league champions cup'));
+    if (matchFilter === 'open_arena_cup') return idolMatches.filter((m) => String(m.stage || '').toLowerCase().includes('all-league knockout cup'));
+    if (matchFilter === 'spotlight_cup') return idolMatches.filter((m) => String(m.stage || '').toLowerCase().includes('top 16 mini cup'));
+    if (matchFilter === 'super_cup_a') return idolMatches.filter((m) => String(m.stage || '').toLowerCase().includes('super cup a'));
+    if (matchFilter === 'super_cup_b') return idolMatches.filter((m) => String(m.stage || '').toLowerCase().includes('super cup b'));
     return idolMatches.filter((m) => !isMatchLeague(m) && !isMatchTheIdols(m) && !String(m.stage || '').startsWith('Cups & Divisions:'));
   }, [idolMatches, matchFilter]);
 
@@ -1361,14 +1437,7 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
                 {combinedChampionships} ({stat?.championships || 0} Cup + {leagueData.divisionTitlesCount} League + {(theIdolsData.mastersTitlesCount || 0) + (theIdolsData.regularSeasonTitlesCount || 0)} Superleague)
               </span>
             </span>
-            {leagueData.currentDivision && (
-              <>
-                <span>&bull;</span>
-                <span className="text-teal-300">
-                  Current: <span className="font-black text-white">{leagueData.currentDivision.divisionName}</span> (Rank #{leagueData.currentDivision.rank})
-                </span>
-              </>
-            )}
+            {divisionStatus.tier !== 'Unassigned' && (<><span>&bull;</span><span className="text-teal-300">Current: <span className="font-black text-white">{divisionStatus.tier} · {divisionStatus.leagueName}</span>{divisionStatus.rank ? ` (Rank #${divisionStatus.rank})` : ''}</span></>)}
           </div>
         </div>
       </div>
@@ -1417,9 +1486,21 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
               }`}
             >
               <Shield className="w-3.5 h-3.5 text-teal-300" />
-              <span>6-Division League ({leaguePerformance.matches} Matches)</span>
+              <span>Division 1 League ({leaguePerformance.matches} Matches)</span>
             </button>
 
+            {([
+              ['division_2', 'Division 2', v5CompetitionStats.division_2.matches],
+              ['crown_cup', 'Crown Cup', v5CompetitionStats.crown_cup.matches],
+              ['open_arena_cup', 'Open Arena Cup', v5CompetitionStats.open_arena_cup.matches],
+              ['spotlight_cup', 'Spotlight Cup', v5CompetitionStats.spotlight_cup.matches],
+              ['super_cup_a', 'Super Cup A', v5CompetitionStats.super_cup_a.matches],
+              ['super_cup_b', 'Super Cup B', v5CompetitionStats.super_cup_b.matches],
+            ] as Array<[typeof activeCareerScope, string, number]>).map(([key, label, count]) => (
+              <button key={key} type="button" onClick={() => setActiveCareerScope(key)} className={`px-3 py-1.5 rounded-xl text-xs font-poster-title font-black uppercase transition-all flex items-center gap-1.5 ${activeCareerScope === key ? 'bg-amber-500 text-black shadow-md' : 'bg-black/60 text-amber-200/70 hover:text-white hover:bg-black/80'}`}>
+                <Trophy className="w-3.5 h-3.5 text-amber-300" /><span>{label} ({count} Matches)</span>
+              </button>
+            ))}
             <button
               onClick={() => setActiveCareerScope('the_idols')}
               className={`px-3 py-1.5 rounded-xl text-xs font-poster-title font-black uppercase transition-all flex items-center gap-1.5 ${
@@ -2067,6 +2148,66 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
           </div>
         )}
 
+        {activeCareerScope === 'division_2' && (
+          <div className="space-y-4 animate-in fade-in duration-150">
+            <section className="rounded-2xl border-2 border-black bg-[#1b120c] p-4 poster-shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/60 pb-3">
+                <div><h3 className="font-poster-title text-base font-black text-amber-300">Division Status &amp; Promotion / Relegation</h3><p className="mt-1 text-xs text-amber-100/60">Current tier, league placement and recorded movement between Division 1 and Division 2.</p></div>
+                <span className={`rounded-xl border-2 border-black px-3 py-2 text-sm font-black ${divisionStatus.tier === 'Division 1' ? 'bg-emerald-900/50 text-emerald-300' : divisionStatus.tier === 'Division 2' ? 'bg-amber-900/50 text-amber-300' : 'bg-black/50 text-slate-300'}`}>{divisionStatus.tier}</span>
+              </div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
+                {[
+                  ['Current League', divisionStatus.leagueName], ['Current Position', divisionStatus.rank ? `#${divisionStatus.rank}` : 'Not ranked'],
+                  ['Promotions', divisionStatus.promotions], ['Relegations', divisionStatus.relegations],
+                ].map(([label, value]) => <div key={String(label)} className="rounded-xl border-2 border-black bg-[#24180f] p-3"><div className="text-[10px] uppercase font-black tracking-wider text-amber-200/60">{label}</div><div className="mt-1 text-lg font-black text-amber-300">{value}</div></div>)}
+              </div>
+              {divisionStatus.pending && <div className="mt-3 rounded-xl border border-amber-600/50 bg-amber-950/30 p-3 text-xs font-bold text-amber-200">Pending movement: {divisionStatus.pending.direction} · League {divisionStatus.pending.leagueId}. This move is locked but has not yet been applied.</div>}
+              <div className="mt-4"><h4 className="text-xs font-black uppercase tracking-wider text-amber-300 mb-2">Promotion &amp; Relegation History</h4>
+                {divisionStatus.history.length ? <div className="space-y-2">{divisionStatus.history.map((entry: any, index: number) => <div key={`${entry.seasonNumber}-${entry.leagueId}-${entry.direction}-${index}`} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-black bg-black/25 px-3 py-2 text-xs"><span className="font-bold text-amber-100">{entry.seasonName || `Season ${entry.seasonNumber}`} · League {entry.leagueId}</span><span className={`font-black ${entry.direction === 'PROMOTED' ? 'text-emerald-300' : 'text-rose-300'}`}>{entry.direction}</span></div>)}</div> : <p className="text-xs text-amber-100/50 italic">No promotion or relegation history has been archived for this idol yet.</p>}
+              </div>
+            </section>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {[
+                ['Matches', v5CompetitionStats.division_2.matches], ['Win Rate', `${v5CompetitionStats.division_2.winRate}%`],
+                ['Wins', v5CompetitionStats.division_2.wins], ['Draws', v5CompetitionStats.division_2.draws],
+                ['Losses', v5CompetitionStats.division_2.losses], ['Division 2 Titles', v5CompetitionStats.division_2.titles],
+              ].map(([label, value]) => <div key={String(label)} className="rounded-xl border-2 border-black bg-[#1f150e] p-4 text-center poster-shadow-sm"><div className="text-[10px] uppercase font-black tracking-wider text-amber-300">{label}</div><div className="mt-1 text-2xl font-black font-mono text-amber-400">{value}</div></div>)}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {[
+                ['Record', `${v5CompetitionStats.division_2.wins}W - ${v5CompetitionStats.division_2.draws}D - ${v5CompetitionStats.division_2.losses}L`],
+                ['Points For / Against', `${v5CompetitionStats.division_2.goalsFor} / ${v5CompetitionStats.division_2.goalsAgainst}`],
+                ['Goal Difference', v5CompetitionStats.division_2.goalDiff > 0 ? `+${v5CompetitionStats.division_2.goalDiff}` : v5CompetitionStats.division_2.goalDiff],
+              ].map(([label, value]) => <div key={String(label)} className="rounded-xl border-2 border-black bg-[#1b120c] p-4"><div className="text-[10px] uppercase font-black text-amber-200/60">{label}</div><div className="mt-1 text-xl font-black text-amber-300">{value}</div></div>)}
+            </div>
+            <section className="rounded-2xl border-2 border-black bg-[#1b120c] p-4"><h4 className="mb-3 text-xs font-black uppercase tracking-wider text-amber-300">Division 2 Season Record</h4>
+              {v5CompetitionStats.division_2.seasons.length ? <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead className="text-amber-300/70"><tr><th className="p-2">Season</th><th className="p-2">Matches</th><th className="p-2">W-D-L</th><th className="p-2">Finish</th></tr></thead><tbody>{v5CompetitionStats.division_2.seasons.map((season: any) => <tr key={season.seasonNumber} className="border-t border-black/60"><td className="p-2 font-bold text-amber-100">Season {season.seasonNumber}</td><td className="p-2 text-white">{season.matches}</td><td className="p-2 text-white">{season.wins}-{season.draws}-{season.losses}</td><td className="p-2 text-amber-300">{season.bestStage}</td></tr>)}</tbody></table></div> : <p className="text-xs italic text-amber-100/50">No Division 2 matches recorded for this idol.</p>}
+            </section>
+          </div>
+        )}
+        {(['crown_cup', 'open_arena_cup', 'spotlight_cup', 'super_cup_a', 'super_cup_b'] as const).map((scope) => {
+          if (activeCareerScope !== scope) return null;
+          const data = v5CompetitionStats[scope];
+          return <div key={scope} className="space-y-4 animate-in fade-in duration-150">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {[
+                ['Matches', data.matches], ['Win Rate', `${data.winRate}%`], ['Wins', data.wins], ['Losses', data.losses],
+                ['Championships', data.titles], ['Runner-Up', data.runnerUps],
+              ].map(([label, value]) => <div key={String(label)} className="rounded-xl border-2 border-black bg-[#1f150e] p-4 text-center poster-shadow-sm"><div className="text-[10px] uppercase font-black tracking-wider text-amber-300">{label}</div><div className="mt-1 text-2xl font-black font-mono text-amber-400">{value}</div></div>)}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                ['Wins / Draws / Losses', `${data.wins} / ${data.draws} / ${data.losses}`],
+                ['Points For / Against', `${data.goalsFor} / ${data.goalsAgainst}`],
+                ['Point Difference', data.goalDiff > 0 ? `+${data.goalDiff}` : data.goalDiff],
+                ['Average For / Against', `${data.averageFor} / ${data.averageAgainst}`],
+              ].map(([label, value]) => <div key={String(label)} className="rounded-xl border-2 border-black bg-[#1b120c] p-3"><div className="text-[10px] uppercase font-black text-amber-200/60">{label}</div><div className="mt-1 text-base font-black text-amber-300">{value}</div></div>)}
+            </div>
+            <section className="rounded-2xl border-2 border-black bg-[#1b120c] p-4"><h4 className="mb-3 text-xs font-black uppercase tracking-wider text-amber-300">{data.label} Season History</h4>
+              {data.seasons.length ? <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead className="text-amber-300/70"><tr><th className="p-2">Season</th><th className="p-2">Matches</th><th className="p-2">W-D-L</th><th className="p-2">Best Finish</th></tr></thead><tbody>{data.seasons.map((season: any) => <tr key={season.seasonNumber} className="border-t border-black/60"><td className="p-2 font-bold text-amber-100">Season {season.seasonNumber}</td><td className="p-2 text-white">{season.matches}</td><td className="p-2 text-white">{season.wins}-{season.draws}-{season.losses}</td><td className="p-2 text-amber-300">{season.bestStage}</td></tr>)}</tbody></table></div> : <p className="text-xs italic text-amber-100/50">No {data.label} records for this idol yet.</p>}
+            </section>
+          </div>;
+        })}
         {/* THE IDOLS (SUPERLEAGUE) SCOPE METRICS & DETAILS */}
         {activeCareerScope === 'the_idols' && (
           <div className="space-y-4 animate-in fade-in duration-150">
@@ -2733,9 +2874,10 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
               >
                 🛡️ League ({idolLeagueMatches.length})
               </button>
-              <button type="button" onClick={() => { setMatchFilter('v5_cups'); setMatchPage(1); }} className={`px-2.5 py-1 rounded-lg text-[11px] font-poster-title font-black transition-all ${matchFilter === 'v5_cups' ? 'bg-amber-500 text-black' : 'text-amber-200/70 hover:text-white'}`}>
-                New V5 Cups ({idolMatches.filter((m) => String(m.stage || '').startsWith('Cups & Divisions:') && !String(m.stage || '').startsWith('Cups & Divisions: Division 2')).length})
-              </button>
+              {([
+                ['division_2', 'Division 2'], ['crown_cup', 'Crown Cup'], ['open_arena_cup', 'Open Arena Cup'],
+                ['spotlight_cup', 'Spotlight Cup'], ['super_cup_a', 'Super Cup A'], ['super_cup_b', 'Super Cup B'],
+              ] as Array<[typeof matchFilter, string]>).map(([key, label]) => <button key={key} type="button" onClick={() => { setMatchFilter(key); setMatchPage(1); }} className={`px-2.5 py-1 rounded-lg text-[11px] font-poster-title font-black transition-all ${matchFilter === key ? 'bg-amber-500 text-black' : 'text-amber-200/70 hover:text-white'}`}>{label} ({idolMatches.filter((m) => { const stage = String(m.stage || '').toLowerCase(); return key === 'division_2' ? stage.startsWith('cups & divisions: division 2') : stage.includes('cups & divisions:') && (key === 'crown_cup' ? stage.includes('league champions cup') : key === 'open_arena_cup' ? stage.includes('all-league knockout cup') : key === 'spotlight_cup' ? stage.includes('top 16 mini cup') : stage.includes(key === 'super_cup_a' ? 'super cup a' : 'super cup b')); }).length})</button>)}
               <button
                 type="button"
                 onClick={() => {
