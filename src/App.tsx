@@ -1,5 +1,5 @@
 import { loadV5State, saveV5State, hasStoredV5State, V5State, V5TitleArchive } from './utils/v5/store';
-import { loadRosterSnapshot, saveDivisionOneRosterSnapshot, saveDivisionTwoRosterSnapshot, restoreDivisionOneRoster, restoreDivisionTwoRoster, clearRosterSnapshot } from './utils/rosterPersistence';
+import { loadRosterSnapshot, saveDivisionOneRosterSnapshot, saveDivisionTwoRosterSnapshot, restoreDivisionOneRoster, clearRosterSnapshot } from './utils/rosterPersistence';
 import { loadNames } from './utils/v5/names';
 import { auditAppStateDataChanges, normalizeDataName, recordDataHistory } from './utils/dataChangeHistory';
 
@@ -262,6 +262,35 @@ class GirlGroupStatsCrashBoundary extends React.Component<{ children: React.Reac
 
 
 
+function restoreV5RosterMembership(
+  state: V5State,
+  snapshot: ReturnType<typeof loadRosterSnapshot>,
+  divisionOneState?: LeagueSeasonState | null
+): V5State {
+  if (!snapshot?.division2) return state;
+
+  const existingById = new Map((state.d2 || []).map((league) => [Number(league.id), league]));
+  const restoredD2 = snapshot.division2.map((saved, index) => {
+    const existing = existingById.get(Number(saved.id));
+    if (existing) return { ...existing, memberIds: [...saved.memberIds] };
+
+    const parentLeagueId = Number(saved.id) >= 101 ? Number(saved.id) - 100 : index + 1;
+    const parent = divisionOneState?.leagues?.find((league) => league.id === parentLeagueId);
+    return {
+      id: Number(saved.id),
+      parentLeagueId,
+      name: parent ? `${parent.name} Division 2` : `Division 2 League ${parentLeagueId}`,
+      tierName: 'Division 2',
+      color: parent?.color || '#d97706',
+      memberIds: [...saved.memberIds],
+      matches: [],
+      standings: [],
+    } as V5State['d2'][number];
+  });
+
+  return { ...state, d2: restoredD2 };
+}
+
 export function App() {
   const [appState, setAppState] = useState<AppState>(() => {
     const loaded = loadAppState();
@@ -277,10 +306,7 @@ export function App() {
       leagueState: baseLeagueState
         ? { ...baseLeagueState, leagues: restoreDivisionOneRoster(baseLeagueState.leagues, rosterSnapshot) || baseLeagueState.leagues }
         : baseLeagueState,
-      v5State: {
-        ...loadedV5,
-        d2: restoreDivisionTwoRoster(loadedV5.d2, rosterSnapshot) || loadedV5.d2,
-      },
+      v5State: restoreV5RosterMembership(loadedV5, rosterSnapshot, baseLeagueState),
     };
   });
   const v5State = appState.v5State || loadV5State();
@@ -733,10 +759,7 @@ export function App() {
                 }
               : chosenLeagueState;
             const recoveredV5 = merged.v5State || loadV5State();
-            merged.v5State = {
-              ...recoveredV5,
-              d2: restoreDivisionTwoRoster(recoveredV5.d2, rosterSnapshot) || recoveredV5.d2,
-            };
+            merged.v5State = restoreV5RosterMembership(recoveredV5, rosterSnapshot, merged.leagueState);
 
             // The Idols State: keep whichever has higher seasonNumber
             const prevTSeason = Number(prev.theIdolsState?.seasonNumber || 0);
