@@ -164,7 +164,7 @@ export const KnockoutLiveSimulatorModal: React.FC<KnockoutLiveSimulatorModalProp
           (m.roundName || '').toLowerCase().includes('grand final') ||
           (m.roundName || '').toLowerCase().includes('third');
 
-        const targetWins = isFinal ? 4 : 3; // Best of 7 or Best of 5
+        const targetWins = m.bestOf === 7 || isFinal ? 4 : 3; // Best of 7 or Best of 5
 
         let winsA = 0;
         let winsB = 0;
