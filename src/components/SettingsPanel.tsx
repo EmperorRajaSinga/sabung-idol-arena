@@ -267,27 +267,36 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
   // League State Reference
   const activeLeagueState: LeagueSeasonState = useMemo(() => {
-    if (leagueState && leagueState.leagues && leagueState.leagues.length === 6) {
-      const customDefs = appState.customLeagueBranding || loadCustomLeagueBranding();
-      const mergedLeagues = leagueState.leagues.map((l) => {
-        const c = customDefs.find((item) => item.id === l.id);
-        const def = DEFAULT_LEAGUE_DEFS.find((d) => d.id === l.id) || DEFAULT_LEAGUE_DEFS[0];
-        return {
-          ...l,
-          name: c?.name || l.name || def.name,
-          tierName: c?.tierName || l.tierName || def.tierName,
-          color: c?.color || l.color || def.color,
-          logoUrl: c?.logoUrl !== undefined ? c.logoUrl : (l.logoUrl || def.logoUrl || ''),
-          description: c?.description !== undefined ? c.description : (l.description || def.description || ''),
-        };
-      });
+    // Prefer the dedicated league state, then the app snapshot. Do not silently
+    // replace a saved roster with a freshly initialized roster when one source is partial.
+    const source = leagueState || appState.leagueState || null;
+    const customDefs = appState.customLeagueBranding || loadCustomLeagueBranding();
+    const initialized = source?.leagues?.length
+      ? source
+      : initializeLeagueSeason(appState.idols, appState.girlGroups, 1);
+    const sourceById = new Map((initialized.leagues || []).map((league) => [league.id, league]));
+    const mergedLeagues = [1, 2, 3, 4, 5, 6].map((id) => {
+      const existing = sourceById.get(id);
+      const custom = customDefs.find((item) => item.id === id);
+      const def = DEFAULT_LEAGUE_DEFS.find((item) => item.id === id) || DEFAULT_LEAGUE_DEFS[0];
       return {
-        ...leagueState,
-        leagues: mergedLeagues,
-      };
-    }
-    return initializeLeagueSeason(appState.idols, appState.girlGroups, 1);
-  }, [leagueState, appState.idols, appState.girlGroups, appState.customLeagueBranding]);
+        ...(existing || {
+          id,
+          memberIds: [],
+          matches: [],
+          standings: [],
+          isCompleted: false,
+        }),
+        id,
+        name: custom?.name || existing?.name || def.name,
+        tierName: custom?.tierName || existing?.tierName || def.tierName,
+        color: custom?.color || existing?.color || def.color,
+        logoUrl: custom?.logoUrl !== undefined ? custom.logoUrl : (existing?.logoUrl || def.logoUrl || ''),
+        description: custom?.description !== undefined ? custom.description : (existing?.description || def.description || ''),
+      } as LeagueInfo;
+    });
+    return { ...initialized, leagues: mergedLeagues };
+  }, [leagueState, appState.leagueState, appState.idols, appState.girlGroups, appState.customLeagueBranding]);
 
   // League Branding & Logo Customization State
   const [leaguesBranding, setLeaguesBranding] = useState<
