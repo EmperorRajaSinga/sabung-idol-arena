@@ -29,6 +29,7 @@ import {
   saveTheIdolsArchives,
   saveTheIdolsState,
   convertTheIdolsMatchesToArchived,
+  initializeTheIdolsSeason,
 } from '../utils/theIdolsLogic';
 import { calculateLeagueStandings, generateRoundRobinMatches, saveCustomLeagueBranding, syncLeagueMatchesToArchivedMatches } from '../utils/leagueLogic';
 import { saveLeagueSeasonState } from '../utils/storage';
@@ -968,7 +969,7 @@ export const DatabaseStudioPanel: React.FC<DatabaseStudioPanelProps> = ({
           }));
           onUpdateLeagueArchives([]);
           onUpdateTheIdolsArchives?.([]);
-          onUpdateTheIdolsState?.(null);
+          onUpdateTheIdolsState?.(initializeTheIdolsSeason(data.idols, 1, data.girlGroups));
           saveTheIdolsArchives([]);
           showToast(`Idol database imported: ${data.idols.length} idols and ${data.girlGroups.length} groups. Previous match and season history cleared for this new setup database.`, 'success');
         } else if (validation.format === 'league_branding_rosters') {
