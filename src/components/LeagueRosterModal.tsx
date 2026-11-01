@@ -458,12 +458,19 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
         : generateRoundRobinMatches(leagueId, memberIds);
       // If a roster changes, retain results only for fixtures whose participants and
       // matchday remain identical. Never wipe unrelated completed fixtures.
-      const previousMatches = new Map((previous?.matches || []).map((match) => [
-        `${match.matchday}_${match.idolAId}_${match.idolBId}`, match,
-      ]));
+      const previousMatches = new Map((previous?.matches || [])
+        .filter((match) => match.completed)
+        .map((match) => [`${match.idolAId}__${match.idolBId}`, match]));
       const matches = sameRoster ? generatedMatches : generatedMatches.map((match) => {
-        const saved = previousMatches.get(`${match.matchday}_${match.idolAId}_${match.idolBId}`);
-        return saved?.completed ? { ...match, ...saved } : match;
+        const saved = previousMatches.get(`${match.idolAId}__${match.idolBId}`);
+        return saved?.completed ? {
+          ...match,
+          scoreA: saved.scoreA,
+          scoreB: saved.scoreB,
+          winnerId: saved.winnerId,
+          completed: true,
+          updatedAt: saved.updatedAt,
+        } : match;
       });
       const standings = calculateLeagueStandings(leagueId, memberIds, matches, allKnownIdols);
 
