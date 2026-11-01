@@ -2361,7 +2361,6 @@ export function App() {
               theIdolsState={theIdolsState}
               theIdolsArchives={theIdolsArchives}
             />
-            </GirlGroupStatsCrashBoundary>
           )}
 
           {activeTab === 'settings' && (
@@ -2793,6 +2792,7 @@ export function App() {
               theIdolsState={theIdolsState}
               theIdolsArchives={theIdolsArchives}
             />
+            </GirlGroupStatsCrashBoundary>
           )}
 
           {activeTab === 'season_profile' && (
