@@ -1,6 +1,7 @@
 import { loadV5State, saveV5State, V5State, V5TitleArchive } from './utils/v5/store';
 import { loadNames } from './utils/v5/names';
 import { V5CupsPanel } from './components/V5CupsPanel';
+import { DivisionTwoLeaguePanel } from './components/DivisionTwoLeaguePanel';
 import { getUnfinishedCompetitions } from './utils/seasonGuard';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
@@ -2517,6 +2518,8 @@ export function App() {
               setActiveTab={(tab) => setActiveTab(tab)}
             />
           )}
+
+          {activeTab === 'division_two' && <DivisionTwoLeaguePanel idols={appState.idols} girlGroups={appState.girlGroups} v5State={v5State} onUpdateV5State={handleUpdateV5State} />}
 
           {activeTab === 'v5_cups' && (
             <V5CupsPanel

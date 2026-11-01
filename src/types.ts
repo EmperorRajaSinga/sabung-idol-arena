@@ -181,6 +181,7 @@ export interface CareerStat {
 
 export type ActiveTab =
   | 'dashboard'
+  | 'division_two'
   | 'v5_cups'
   | 'v5_crown_cup'
   | 'v5_super_cup'
