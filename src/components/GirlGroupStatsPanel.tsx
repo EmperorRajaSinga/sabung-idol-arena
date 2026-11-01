@@ -52,6 +52,8 @@ export interface GirlGroupStat {
     championPhoto?: string;
   }>;
   theIdolsPlayoffTitles: number;
+  competitionTitles: Record<string, number>;
+  totalTitles: number;
   theIdolsPlayoffWinners: Array<{
     seasonNumber: number;
     seasonName: string;
@@ -93,7 +95,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
 }) => {
   const [search, setSearch] = useState('');
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
-  const [activeScope, setActiveScope] = useState<'combined' | 'tournament' | 'league' | 'the_idols'>('combined');
+  const [activeScope, setActiveScope] = useState<'combined' | 'tournament' | 'league' | 'the_idols' | 'crown_cup' | 'open_arena_cup' | 'spotlight_cup' | 'super_cup_a' | 'super_cup_b' | 'division_2'>('combined');
 
   // 1. Map all idols to their groups
   const groupMembersMap = new Map<string, Idol[]>();
@@ -374,6 +376,68 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
     }
   });
 
+  // 2e. Calculate V5 cup and Division 2 champions from completed archived matches.
+  const v5WinnerByCompetition = new Map<string, Map<string, Set<string>>>();
+  const competitionStageMap: Array<[string, RegExp]> = [
+    ['Crown Cup', /league champions cup/i],
+    ['Open Arena Cup', /all-league knockout cup/i],
+    ['Spotlight Cup', /top 16 mini cup/i],
+    ['Super Cup A', /super cup a/i],
+    ['Super Cup B', /super cup b/i],
+  ];
+  const finalMatchSeen = new Set<string>();
+  (Array.isArray(matchDatabase) ? matchDatabase : []).forEach((match) => {
+    if (!match || !match.idolAId || !match.idolBId || match.scoreA == null || match.scoreB == null) return;
+    const stage = String(match.stage || '');
+    if (!stage.toLowerCase().startsWith('cups & divisions:')) return;
+    const competition = competitionStageMap.find(([, pattern]) => pattern.test(stage))?.[0];
+    if (!competition) return;
+    const round = stage.split(' / ').slice(1).join(' / ').trim();
+    if (!/^final(?:\\b|\\s|$)/i.test(round)) return;
+    const scoreA = Number(match.scoreA), scoreB = Number(match.scoreB);
+    if (!Number.isFinite(scoreA) || !Number.isFinite(scoreB) || scoreA === scoreB) return;
+    const dedupeKey = String(match.matchId || [match.seasonId, competition, match.idolAId, match.idolBId, scoreA, scoreB].join('|'));
+    if (finalMatchSeen.has(dedupeKey)) return;
+    finalMatchSeen.add(dedupeKey);
+    const winnerId = scoreA > scoreB ? match.idolAId : match.idolBId;
+    const groupName = idolsMap.get(winnerId)?.girlGroup || 'Solo / Independent';
+    if (!v5WinnerByCompetition.has(competition)) v5WinnerByCompetition.set(competition, new Map());
+    const seasons = v5WinnerByCompetition.get(competition)!;
+    if (!seasons.has(groupName)) seasons.set(groupName, new Set());
+    seasons.get(groupName)!.add(String(match.seasonId || 1));
+  });
+
+  // Division 2 titles are reconstructed per season from its archived match results.
+  const division2Tables = new Map<string, Map<string, { points: number; diff: number; scored: number }>>();
+  const division2Seen = new Set<string>();
+  (Array.isArray(matchDatabase) ? matchDatabase : []).forEach((match) => {
+    if (!match || !match.idolAId || !match.idolBId || match.scoreA == null || match.scoreB == null) return;
+    if (!String(match.stage || '').toLowerCase().includes('cups & divisions: division 2')) return;
+    const key = String(match.matchId || [match.seasonId, match.idolAId, match.idolBId, match.scoreA, match.scoreB].join('|'));
+    if (division2Seen.has(key)) return;
+    division2Seen.add(key);
+    const a = Number(match.scoreA), b = Number(match.scoreB);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return;
+    const season = String(match.seasonId || 1);
+    if (!division2Tables.has(season)) division2Tables.set(season, new Map());
+    const table = division2Tables.get(season)!;
+    const update = (id: string, scored: number, conceded: number) => {
+      const row = table.get(id) || { points: 0, diff: 0, scored: 0 };
+      row.points += scored > conceded ? 3 : scored === conceded ? 1 : 0;
+      row.diff += scored - conceded; row.scored += scored; table.set(id, row);
+    };
+    update(match.idolAId, a, b); update(match.idolBId, b, a);
+  });
+  division2Tables.forEach((table, season) => {
+    const championId = [...table.entries()].sort((a, b) => b[1].points - a[1].points || b[1].diff - a[1].diff || b[1].scored - a[1].scored)[0]?.[0];
+    if (!championId) return;
+    const groupName = idolsMap.get(championId)?.girlGroup || 'Solo / Independent';
+    if (!v5WinnerByCompetition.has('Division 2')) v5WinnerByCompetition.set('Division 2', new Map());
+    const seasons = v5WinnerByCompetition.get('Division 2')!;
+    if (!seasons.has(groupName)) seasons.set(groupName, new Set());
+    seasons.get(groupName)!.add(season);
+  });
+
   // 4. Build GirlGroupStat list
   const groupStatsList: GirlGroupStat[] = [];
 
@@ -386,6 +450,11 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
     const totalLeagueCups = leagueCupWinners.length;
     const totalTheIdolsLeague = theIdolsLeagueWinners.length;
     const totalTheIdolsPlayoff = theIdolsPlayoffWinners.length;
+    const competitionTitles: Record<string, number> = {};
+    v5WinnerByCompetition.forEach((groups, competition) => {
+      competitionTitles[competition] = groups.get(groupName)?.size || 0;
+    });
+    const totalTitles = totalTitles + totalLeagueCups + totalTheIdolsLeague + totalTheIdolsPlayoff + Object.values(competitionTitles).reduce((sum, count) => sum + count, 0);
 
     let groupMatches = 0;
     let groupWins = 0;
@@ -454,6 +523,8 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
       groupName,
       totalMembers: members.length,
       championships: totalTitles,
+      competitionTitles,
+      totalTitles,
       seasonWinners,
       leagueCupTitles: totalLeagueCups,
       leagueCupWinners,
