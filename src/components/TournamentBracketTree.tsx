@@ -35,6 +35,32 @@ export const TournamentBracketTree: React.FC<TournamentBracketTreeProps> = ({
     new Set(knockoutMatches.map((m) => m.roundIndex))
   ).sort((a: number, b: number) => a - b);
 
+  // Compute stable vertical positions from the actual match progression graph.
+  // Opening-round matches are evenly spaced. Every later match sits midway
+  // between the matches that feed into it, so the visual tree follows the bracket.
+  const linearPositions = useMemo(() => {
+    const sortedRounds = [...roundIndices];
+    const positions = new Map<string, number>();
+    const firstRound = sortedRounds[0];
+    if (firstRound === undefined) return { positions, height: 0, unit: 148 };
+    const openingMatches = knockoutMatches.filter((m) => m.roundIndex === firstRound);
+    const unit = 148;
+    openingMatches.forEach((match, index) => positions.set(match.id, (index + 0.5) * unit));
+
+    sortedRounds.slice(1).forEach((roundIndex) => {
+      knockoutMatches.filter((m) => m.roundIndex === roundIndex).forEach((match, index) => {
+        const feeders = knockoutMatches.filter((candidate) => candidate.feedsIntoMatchId === match.id);
+        const feederPositions = feeders.map((feeder) => positions.get(feeder.id)).filter((value): value is number => value !== undefined);
+        if (feederPositions.length) {
+          positions.set(match.id, feederPositions.reduce((sum, value) => sum + value, 0) / feederPositions.length);
+        } else {
+          positions.set(match.id, (index + 0.5) * unit * Math.max(1, openingMatches.length / Math.max(1, knockoutMatches.filter((m) => m.roundIndex === roundIndex).length)));
+        }
+      });
+    });
+    return { positions, height: Math.max(unit, openingMatches.length * unit), unit };
+  }, [knockoutMatches, roundIndices]);
+
   // Helper to re-calculate SVG paths whenever container resizes or matches change
   const updateSvgLines = () => {
     if (!containerRef.current) return;
@@ -486,28 +512,25 @@ export const TournamentBracketTree: React.FC<TournamentBracketTreeProps> = ({
           </div>
         ) : (
           /* LINEAR BRACKET LAYOUT (Play-In -> R32 -> R16 -> Quarters -> Semis -> Final) */
-          <div className="flex gap-10 min-w-max py-4 items-center relative z-20">
+          <div className="flex min-w-max items-start gap-10 py-4 relative z-20">
             {roundIndices.map((roundIdx) => {
-              const matchesInRound = knockoutMatches.filter(
-                (m) => m.roundIndex === roundIdx
-              );
-              const roundTitle =
-                matchesInRound[0]?.roundName || `Round ${roundIdx}`;
-
+              const matchesInRound = knockoutMatches.filter((m) => m.roundIndex === roundIdx);
+              const roundTitle = matchesInRound[0]?.roundName || `Round ${roundIdx}`;
               return (
-                <div
-                  key={roundIdx}
-                  className="flex flex-col gap-6 w-56 flex-shrink-0"
-                >
-                  <div className="text-center py-1.5 px-3 rounded-xl bg-slate-900 border border-slate-800 text-[11px] font-extrabold text-indigo-400 tracking-wider uppercase">
+                <div key={roundIdx} className="w-56 flex-shrink-0">
+                  <div className="mb-5 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-center text-[11px] font-extrabold uppercase tracking-wider text-indigo-400">
                     {roundTitle}
+                    <span className="ml-2 text-[9px] font-bold text-slate-500">{matchesInRound.length} MATCHES</span>
                   </div>
-
-                  <div
-                    className="flex flex-col justify-around gap-8 flex-1 py-2"
-                    style={{ minHeight: `${Math.max(1, ...roundIndices.map((idx) => knockoutMatches.filter((match) => match.roundIndex === idx).length)) * 112}px` }}
-                  >
-                    {matchesInRound.map((m) => renderMatchCard(m, 'w-56'))}
+                  <div className="relative" style={{ height: `${linearPositions.height}px` }}>
+                    {matchesInRound.map((m) => {
+                      const center = linearPositions.positions.get(m.id) ?? linearPositions.unit / 2;
+                      return (
+                        <div key={m.id} className="absolute left-0" style={{ top: `${center - 58}px` }}>
+                          {renderMatchCard(m, 'w-56')}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );
