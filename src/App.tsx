@@ -1,5 +1,6 @@
 import { loadV5State, saveV5State, hasStoredV5State, V5State, V5TitleArchive } from './utils/v5/store';
 import { loadNames } from './utils/v5/names';
+import { auditAppStateDataChanges } from './utils/dataChangeHistory';
 
 
 import { getUnfinishedCompetitions } from './utils/seasonGuard';
@@ -339,6 +340,18 @@ export function App() {
   const [theIdolsArchives, setTheIdolsArchives] = useState<TheIdolsSeasonArchive[]>(() => loadTheIdolsArchives());
   const [careerOverrides, setCareerOverrides] = useState<CareerOverridesMap>(() => loadCareerOverrides());
   const isHydratedRef = useRef(false);
+  const dataAuditSnapshotRef = useRef({ idols: appState.idols, girlGroups: appState.girlGroups });
+  useEffect(() => {
+    if (!isHydratedRef.current) {
+      dataAuditSnapshotRef.current = { idols: appState.idols, girlGroups: appState.girlGroups };
+      return;
+    }
+    const previous = dataAuditSnapshotRef.current;
+    if (previous.idols !== appState.idols || previous.girlGroups !== appState.girlGroups) {
+      auditAppStateDataChanges(previous, appState, 'Application data manager / import');
+      dataAuditSnapshotRef.current = { idols: appState.idols, girlGroups: appState.girlGroups };
+    }
+  }, [appState.idols, appState.girlGroups]);
 
   const handleUpdateTheIdolsState = (newState: TheIdolsSeasonState) => {
     setTheIdolsState(newState);
