@@ -51,6 +51,11 @@ type RankRecordWithV5 = CombinedStatsRecord & {
   promotions: number;
   relegations: number;
   currentDivision: string;
+  crownCupTitles: number;
+  openArenaCupTitles: number;
+  spotlightCupTitles: number;
+  superCupATitles: number;
+  superCupBTitles: number;
 };
 
 const makeEmptyRankRecord = (
@@ -76,6 +81,11 @@ const makeEmptyRankRecord = (
   promotions: 0,
   relegations: 0,
   currentDivision: '',
+  crownCupTitles: 0,
+  openArenaCupTitles: 0,
+  spotlightCupTitles: 0,
+  superCupATitles: 0,
+  superCupBTitles: 0,
   totalPoints: 0,
   matches: 0,
   wins: 0,
@@ -111,6 +121,11 @@ function mergeV5RankContributions(
       promotions: 0,
       relegations: 0,
       currentDivision: '',
+      crownCupTitles: 0,
+      openArenaCupTitles: 0,
+      spotlightCupTitles: 0,
+      superCupATitles: 0,
+      superCupBTitles: 0,
     });
   });
   (base.topGroups || []).forEach((record) => {
@@ -123,6 +138,11 @@ function mergeV5RankContributions(
       promotions: 0,
       relegations: 0,
       currentDivision: '',
+      crownCupTitles: 0,
+      openArenaCupTitles: 0,
+      spotlightCupTitles: 0,
+      superCupATitles: 0,
+      superCupBTitles: 0,
     });
   });
 
@@ -154,6 +174,7 @@ function mergeV5RankContributions(
   };
 
 
+  const groupDivisionMap = new Map<string, Set<string>>();
   const assignCurrentDivision = (league: { name: string; memberIds?: string[]; standings?: Array<{ idolId: string; rank?: number }> }, tier: 'D1' | 'D2') => {
     const memberIds = Array.isArray(league.memberIds) ? league.memberIds : [];
     const standings = Array.isArray(league.standings) ? league.standings : [];
@@ -163,6 +184,11 @@ function mergeV5RankContributions(
       const position = Number(standing?.rank || 0);
       const record = ensureIdol(idolId, idol?.name, idol?.girlGroup, idol?.photoUrl);
       record.currentDivision = tier + ' · ' + league.name + (position > 0 ? ' · #' + position : '');
+      const groupName = idol?.girlGroup || '';
+      if (groupName && groupName !== 'Solo' && groupName !== 'Solo / Independent') {
+        if (!groupDivisionMap.has(groupName)) groupDivisionMap.set(groupName, new Set<string>());
+        groupDivisionMap.get(groupName)!.add(tier + ' · ' + league.name);
+      }
     });
   };
 
@@ -171,6 +197,10 @@ function mergeV5RankContributions(
   });
   (Array.isArray(v5State?.d2) ? v5State.d2 : []).forEach((league) => {
     assignCurrentDivision(league, 'D2');
+  });
+  groupDivisionMap.forEach((divisions, groupName) => {
+    const record = groupRecords.get(groupName);
+    if (record) record.currentDivision = Array.from(divisions).sort().join(' / ');
   });
 
   const seenMatches = new Set<string>();
@@ -295,16 +325,38 @@ function mergeV5RankContributions(
     const winner = ensureIdol(title.winnerId, title.winnerName, title.winnerGroup, title.winnerPhoto);
     winner.titles += 1;
     winner.v5Titles += 1;
-    if (title.isDivision) winner.divisionTwoTitles += 1;
-    else winner.v5CupTitles += 1;
+    if (title.isDivision) {
+      winner.divisionTwoTitles += 1;
+    } else {
+      winner.v5CupTitles += 1;
+      const competition = String(title.competition || '').trim().toLowerCase();
+      const category = competition === 'league champions cup' ? 'crownCupTitles'
+        : competition === 'all-league knockout cup' ? 'openArenaCupTitles'
+        : competition.startsWith('top 16 mini cup') ? 'spotlightCupTitles'
+        : competition === 'super cup a' ? 'superCupATitles'
+        : competition.startsWith('super cup b') ? 'superCupBTitles'
+        : null;
+      if (category) winner[category] += 1;
+    }
     winner.totalPoints += 15;
 
     const winnerGroup = ensureGroup(title.winnerGroup || winner.girlGroup || '');
     if (winnerGroup) {
       winnerGroup.titles += 1;
       winnerGroup.v5Titles += 1;
-      if (title.isDivision) winnerGroup.divisionTwoTitles += 1;
-      else winnerGroup.v5CupTitles += 1;
+      if (title.isDivision) {
+        winnerGroup.divisionTwoTitles += 1;
+      } else {
+        winnerGroup.v5CupTitles += 1;
+        const competition = String(title.competition || '').trim().toLowerCase();
+        const category = competition === 'league champions cup' ? 'crownCupTitles'
+          : competition === 'all-league knockout cup' ? 'openArenaCupTitles'
+          : competition.startsWith('top 16 mini cup') ? 'spotlightCupTitles'
+          : competition === 'super cup a' ? 'superCupATitles'
+          : competition.startsWith('super cup b') ? 'superCupBTitles'
+          : null;
+        if (category) winnerGroup[category] += 1;
+      }
       winnerGroup.totalPoints += 15;
     }
 
@@ -566,7 +618,12 @@ export const RankPanel: React.FC<RankPanelProps> = ({
     total: summary.total + record.v5Titles,
     divisionTwo: summary.divisionTwo + record.divisionTwoTitles,
     cups: summary.cups + record.v5CupTitles,
-  }), { total: 0, divisionTwo: 0, cups: 0 }), [topIdols]);
+    crown: summary.crown + record.crownCupTitles,
+    openArena: summary.openArena + record.openArenaCupTitles,
+    spotlight: summary.spotlight + record.spotlightCupTitles,
+    superA: summary.superA + record.superCupATitles,
+    superB: summary.superB + record.superCupBTitles,
+  }), { total: 0, divisionTwo: 0, cups: 0, crown: 0, openArena: 0, spotlight: 0, superA: 0, superB: 0 }), [topIdols]);
   const movementSummary = useMemo(() => topIdols.reduce((summary, record) => ({
     promotions: summary.promotions + record.promotions,
     relegations: summary.relegations + record.relegations,
@@ -648,7 +705,8 @@ export const RankPanel: React.FC<RankPanelProps> = ({
         <div className="rounded-2xl border-2 border-black bg-[#17100b] p-4 poster-shadow">
           <div className="text-[10px] font-black uppercase tracking-wider text-amber-200/55">V5 Titles Counted</div>
           <div className="mt-1 font-poster-title text-2xl text-amber-300">{v5TitleSummary.total}</div>
-          <div className="text-[10px] text-amber-100/55">{v5TitleSummary.divisionTwo} Division 2 · {v5TitleSummary.cups} Cup titles</div>
+          <div className="text-[10px] text-amber-100/55">D2 {v5TitleSummary.divisionTwo} · Crown {v5TitleSummary.crown} · Open {v5TitleSummary.openArena}</div>
+          <div className="text-[10px] text-amber-100/45">Spotlight {v5TitleSummary.spotlight} · Super A {v5TitleSummary.superA} · Super B {v5TitleSummary.superB}</div>
         </div>
         <div className="rounded-2xl border-2 border-black bg-[#17100b] p-4 poster-shadow">
           <div className="text-[10px] font-black uppercase tracking-wider text-emerald-200/55">Promotions</div>
@@ -774,7 +832,8 @@ export const RankPanel: React.FC<RankPanelProps> = ({
                     {/* V5 Titles */}
                     <td className="py-3 px-4 text-center">
                       <span className="font-mono text-xs font-black text-cyan-300">{item.v5Titles}</span>
-                      <div className="mt-1 text-[9px] font-semibold text-cyan-100/45">{item.divisionTwoTitles} D2 · {item.v5CupTitles} Cups</div>
+                      <div className="mt-1 text-[9px] font-semibold text-cyan-100/55">D2 {item.divisionTwoTitles} · Crown {item.crownCupTitles} · Open {item.openArenaCupTitles}</div>
+                      <div className="text-[9px] font-semibold text-cyan-100/40">Spotlight {item.spotlightCupTitles} · Super A {item.superCupATitles} · Super B {item.superCupBTitles}</div>
                     </td>
 
                     {/* Promotion / Relegation */}
