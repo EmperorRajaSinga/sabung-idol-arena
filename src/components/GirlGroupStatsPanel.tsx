@@ -131,7 +131,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
   archives.forEach((arch) => {
     if (arch.championId) {
       const champIdol = idolsMap.get(arch.championId);
-      const groupName = champIdol?.girlGroup || 'Solo / Independent';
+      const groupName = arch.championGroup || champIdol?.girlGroup || 'Solo / Independent';
 
       if (!groupSeasonWinnersMap.has(groupName)) {
         groupSeasonWinnersMap.set(groupName, []);
@@ -141,7 +141,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
         seasonName: arch.seasonName || `Season ${arch.seasonId}`,
         championId: arch.championId,
         championName: arch.championName || champIdol?.name || 'Unknown',
-        championPhoto: champIdol?.photoUrl,
+        championPhoto: arch.championPhoto || champIdol?.photoUrl,
       });
     }
   });
