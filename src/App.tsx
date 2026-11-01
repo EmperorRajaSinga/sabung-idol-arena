@@ -2519,7 +2519,7 @@ export function App() {
             />
           )}
 
-          {activeTab === 'division_two' && <DivisionTwoLeaguePanel idols={appState.idols} girlGroups={appState.girlGroups} v5State={v5State} onUpdateV5State={handleUpdateV5State} />}
+          {activeTab === 'division_two' && <DivisionTwoLeaguePanel idols={appState.idols} girlGroups={appState.girlGroups} v5State={v5State} onUpdateV5State={handleUpdateV5State} favoriteIdolIds={appState.config?.favoriteIdolIds || []} />}
 
           {activeTab === 'v5_cups' && (
             <V5CupsPanel
