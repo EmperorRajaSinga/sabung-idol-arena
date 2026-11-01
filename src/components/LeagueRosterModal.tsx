@@ -485,19 +485,15 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
         memberIds,
         matches,
         standings,
-        isCompleted: sameRoster ? (previous?.isCompleted || false) : false,
+        ...(sameRoster ? {} : { isCompleted: false, championId: undefined, championName: undefined }),
       };
     });
 
+    // Saving roster membership must not reset the active season, matchday,
+    // advancement flags, or any other competition progress.
     const newState: LeagueSeasonState = {
-      seasonNumber: leagueState?.seasonNumber || 1,
-      seasonName: leagueState?.seasonName || `League Season ${leagueState?.seasonNumber || 1}`,
-      isStarted: true,
       ...leagueState,
       leagues: updatedLeagues,
-      isCompleted: false,
-      currentMatchday: 1,
-      championsAdvancementDone: false,
     };
 
     if (createdIdolsAccumulator.length > 0 && onUpdateIdols) {
