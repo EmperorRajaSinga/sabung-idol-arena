@@ -48,6 +48,8 @@ type RankRecordWithV5 = CombinedStatsRecord & {
   v5Titles: number;
   divisionTwoTitles: number;
   v5CupTitles: number;
+  promotions: number;
+  relegations: number;
 };
 
 const makeEmptyRankRecord = (
@@ -70,6 +72,8 @@ const makeEmptyRankRecord = (
   v5Titles: 0,
   divisionTwoTitles: 0,
   v5CupTitles: 0,
+  promotions: 0,
+  relegations: 0,
   totalPoints: 0,
   matches: 0,
   wins: 0,
@@ -102,6 +106,8 @@ function mergeV5RankContributions(
       v5Titles: 0,
       divisionTwoTitles: 0,
       v5CupTitles: 0,
+      promotions: 0,
+      relegations: 0,
     });
   });
   (base.topGroups || []).forEach((record) => {
@@ -111,6 +117,8 @@ function mergeV5RankContributions(
       v5Titles: 0,
       divisionTwoTitles: 0,
       v5CupTitles: 0,
+      promotions: 0,
+      relegations: 0,
     });
   });
 
@@ -282,6 +290,38 @@ function mergeV5RankContributions(
       const runnerGroup = ensureGroup(title.runnerUpGroup || runner.girlGroup || '');
       if (runnerGroup) runnerGroup.totalPoints += 5;
     }
+  });
+
+
+  const seenMovements = new Set<string>();
+  const addMovement = (
+    idolId: string,
+    movement: 'promotion' | 'relegation',
+    seasonNumber: number,
+    leagueId: number
+  ) => {
+    const key = String(seasonNumber) + '::' + String(leagueId) + '::' + movement + '::' + idolId;
+    if (!idolId || seenMovements.has(key)) return;
+    seenMovements.add(key);
+    const idol = idolMap.get(idolId);
+    const record = ensureIdol(idolId, idol?.name, idol?.girlGroup, idol?.photoUrl);
+    const group = ensureGroup(idol?.girlGroup || '');
+    if (movement === 'promotion') {
+      record.promotions += 1;
+      if (group) group.promotions += 1;
+    } else {
+      record.relegations += 1;
+      if (group) group.relegations += 1;
+    }
+  };
+
+  (Array.isArray(v5State?.promotionHistory) ? v5State.promotionHistory : []).forEach((history) => {
+    (Array.isArray(history?.moves) ? history.moves : []).forEach((move) => {
+      const season = Number(history.seasonNumber || 1);
+      const leagueId = Number(move.leagueId || 0);
+      (Array.isArray(move?.promoted) ? move.promoted : []).forEach((idolId) => addMovement(idolId, 'promotion', season, leagueId));
+      (Array.isArray(move?.relegated) ? move.relegated : []).forEach((idolId) => addMovement(idolId, 'relegation', season, leagueId));
+    });
   });
 
   const finalize = (records: RankRecordWithV5[]) => records.map((record) => ({
@@ -503,6 +543,10 @@ export const RankPanel: React.FC<RankPanelProps> = ({
     divisionTwo: summary.divisionTwo + record.divisionTwoTitles,
     cups: summary.cups + record.v5CupTitles,
   }), { total: 0, divisionTwo: 0, cups: 0 }), [topIdols]);
+  const movementSummary = useMemo(() => topIdols.reduce((summary, record) => ({
+    promotions: summary.promotions + record.promotions,
+    relegations: summary.relegations + record.relegations,
+  }), { promotions: 0, relegations: 0 }), [topIdols]);
 
   const tierColors: Record<string, string> = {
     'S+': 'bg-gradient-to-r from-red-600 to-amber-500 text-white border-amber-400',
@@ -561,7 +605,7 @@ export const RankPanel: React.FC<RankPanelProps> = ({
 
       <p className="-mt-5 text-[10px] font-semibold tracking-wide text-amber-100/40">Official order: total titles, combined points, win rate, wins, then matches played. Personal tier rankings remain independent from this official leaderboard.</p>
 
-      <section className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+      <section className="grid grid-cols-2 xl:grid-cols-6 gap-3">
         <div className="rounded-2xl border-2 border-black bg-[#17100b] p-4 poster-shadow">
           <div className="text-[10px] font-black uppercase tracking-wider text-amber-200/55">Ranked Idols</div>
           <div className="mt-1 font-poster-title text-2xl text-amber-300">{topIdols.length}</div>
@@ -581,6 +625,16 @@ export const RankPanel: React.FC<RankPanelProps> = ({
           <div className="text-[10px] font-black uppercase tracking-wider text-amber-200/55">V5 Titles Counted</div>
           <div className="mt-1 font-poster-title text-2xl text-amber-300">{v5TitleSummary.total}</div>
           <div className="text-[10px] text-amber-100/55">{v5TitleSummary.divisionTwo} Division 2 · {v5TitleSummary.cups} Cup titles</div>
+        </div>
+        <div className="rounded-2xl border-2 border-black bg-[#17100b] p-4 poster-shadow">
+          <div className="text-[10px] font-black uppercase tracking-wider text-emerald-200/55">Promotions</div>
+          <div className="mt-1 font-poster-title text-2xl text-emerald-300">{movementSummary.promotions}</div>
+          <div className="text-[10px] text-amber-100/45">Career promotion events</div>
+        </div>
+        <div className="rounded-2xl border-2 border-black bg-[#17100b] p-4 poster-shadow">
+          <div className="text-[10px] font-black uppercase tracking-wider text-rose-200/55">Relegations</div>
+          <div className="mt-1 font-poster-title text-2xl text-rose-300">{movementSummary.relegations}</div>
+          <div className="text-[10px] text-amber-100/45">Career relegation events</div>
         </div>
       </section>
 
@@ -607,13 +661,14 @@ export const RankPanel: React.FC<RankPanelProps> = ({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[880px]">
+          <table className="w-full text-left border-collapse min-w-[1020px]">
             <thead>
               <tr className="border-b border-black/80 bg-black/40 text-[11px] font-poster-title text-amber-400 uppercase tracking-wider">
                 <th className="py-3 px-4 text-center w-16">Rank</th>
                 <th className="py-3 px-4">Participant</th>
                 <th className="py-3 px-4 text-center">Titles Won</th>
                 <th className="py-3 px-4 text-center">V5 Titles</th>
+                <th className="py-3 px-4 text-center">Promotion / Relegation</th>
                 <th className="py-3 px-4 text-center">Combined PTS</th>
                 <th className="py-3 px-4 text-center">Record (W-D-L)</th>
                 <th className="py-3 px-4 text-center">Win Rate</th>
@@ -695,6 +750,14 @@ export const RankPanel: React.FC<RankPanelProps> = ({
                     <td className="py-3 px-4 text-center">
                       <span className="font-mono text-xs font-black text-cyan-300">{item.v5Titles}</span>
                       <div className="mt-1 text-[9px] font-semibold text-cyan-100/45">{item.divisionTwoTitles} D2 · {item.v5CupTitles} Cups</div>
+                    </td>
+
+                    {/* Promotion / Relegation */}
+                    <td className="py-3 px-4 text-center">
+                      <div className="flex items-center justify-center gap-2 font-mono text-[10px] font-black">
+                        <span className="text-emerald-300">↑ {item.promotions}</span>
+                        <span className="text-rose-300">↓ {item.relegations}</span>
+                      </div>
                     </td>
 
                     {/* Combined Points */}
