@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { clearDataHistory, findRosterNameConflicts, loadDataHistory, recordDataHistory, type DataHistoryEntry, type RosterLocation } from '../utils/dataChangeHistory';
 import {
   TournamentConfig,
   LeagueSeasonState,
@@ -142,7 +143,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onUpdateV5State,
 }) => {
   const [activeSettingsTab, setActiveSettingsTab] = useState<
-    'general' | 'league_branding' | 'league_roster' | 'division2_roster' | 'competition_names' | 'data_maker' | 'data'
+    'general' | 'league_branding' | 'league_roster' | 'division2_roster' | 'competition_names' | 'data_maker' | 'data' | 'history'
   >('general');
   const [isRosterModalOpen, setIsRosterModalOpen] = useState<boolean>(false);
   const [competitionNames, setCompetitionNames] = useState<CompetitionNames>(() => loadNames());
@@ -180,6 +181,41 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   );
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
+  const [dataHistory, setDataHistory] = useState<DataHistoryEntry[]>(() => loadDataHistory());
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyActionFilter, setHistoryActionFilter] = useState('all');
+  const refreshDataHistory = () => setDataHistory(loadDataHistory());
+  const logDataChange = (entry: Omit<DataHistoryEntry, 'id' | 'timestamp'>) => {
+    recordDataHistory(entry);
+    refreshDataHistory();
+  };
+  const getRosterEntries = () => {
+    const entries: Array<{ name: string; location: RosterLocation }> = [];
+    (activeLeagueState.leagues || []).forEach((league) => (league.memberIds || []).forEach((id) => {
+      const idol = appState.idols.find((item) => item.id === id);
+      if (idol?.name) entries.push({ name: idol.name, location: { division: 'Division 1', leagueId: league.id, leagueName: league.name } });
+    }));
+    (v5State?.d2 || []).forEach((league) => (league.memberIds || []).forEach((id) => {
+      const idol = appState.idols.find((item) => item.id === id);
+      if (idol?.name) entries.push({ name: idol.name, location: { division: 'Division 2', leagueId: league.id, leagueName: league.name } });
+    }));
+    return entries;
+  };
+  const showRosterConflicts = (names: string[], target: RosterLocation): boolean => {
+    const conflicts = findRosterNameConflicts(names, target, getRosterEntries());
+    if (!conflicts.length) return false;
+    const message = conflicts.slice(0, 6).map((conflict) => {
+      const where = conflict.locations.map((location) => `${location.division} / ${location.leagueName}`).join(', ');
+      return conflict.reason === 'duplicate_in_input'
+        ? `${conflict.name}: duplicated in the pasted list`
+        : `${conflict.name}: already assigned to ${where}`;
+    });
+    const extra = conflicts.length > 6 ? `\n+${conflicts.length - 6} more conflict(s)` : '';
+    const details = message.join('\n') + extra;
+    logDataChange({ action: 'duplicate_blocked', entity: target.division === 'Division 1' ? 'division_1_roster' : 'division_2_roster', entityName: target.leagueName, source: 'League Roster Manager', details });
+    showSuccessMsg(`Roster blocked. Duplicate names were found:\n${details}`);
+    return true;
+  };
 
   // League State Reference
   const activeLeagueState: LeagueSeasonState = useMemo(() => {
