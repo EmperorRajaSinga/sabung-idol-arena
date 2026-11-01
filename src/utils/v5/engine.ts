@@ -192,10 +192,7 @@ export function migrateChampsCup(matches: BNode[]): BNode[] {
   advanceBracket(next);
   return next;
 }
-/** Crown Cup uses a fixed lower bracket: both Upper Semi Final losers meet in Lower Round 1. */
-export function advanceChampsCup(matches: BNode[], _seedOrder: string[] = []) {
-  advanceBracket(matches);
-}
+
 
 /* ------------------------------------------------------------------ League Cup (all idols, tiered entry) */
 export interface LeagueCupPlan { entrants: number[]; sizes: number[]; rounds: number; }
