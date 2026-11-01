@@ -2594,6 +2594,7 @@ export function App() {
               leagueArchives={leagueArchives}
               theIdolsState={theIdolsState}
               theIdolsArchives={theIdolsArchives}
+              v5State={v5State}
               onReconcileArchives={handleReconcileArchives}
             />
           )}
