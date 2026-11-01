@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AppState } from '../utils/storage';
+import { Idol } from '../types';
 import {
   DivisionSystemState,
   DivisionTable,
