@@ -103,7 +103,7 @@ const Bracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (id: stri
             const matches = ms.filter((m) => m.roundName === round);
             return (
               <React.Fragment key={round}>
-                <div className="flex w-[320px] shrink-0 flex-col gap-4 sm:w-[340px]">
+                <div className="flex w-[320px] shrink-0 flex-col gap-3">
                   <div className="rounded-xl border-2 border-slate-700 bg-[#1b1b2b] px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-indigo-200 shadow">
                     <div>{round}</div>
                     <div className="mt-1 font-mono text-[10px] text-slate-400">{matches.filter((m) => m.completed).length} / {matches.length} completed</div>
@@ -155,7 +155,7 @@ const CrownCupBracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (
   ];
   const renderLane = (rounds: { name: string; label: string }[], tone: 'upper' | 'lower') => (
     <div className="overflow-x-auto pb-4 custom-scrollbar">
-      <div className="flex min-w-max items-start gap-5">
+      <div className="flex min-w-max items-start gap-3" style={{ zoom: 0.82 }}>
         {rounds.map((round) => {
           const matches = ms.filter((m) => m.roundName === round.name);
           return (
@@ -186,8 +186,8 @@ const CrownCupBracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (
   const grandFinal = ms.find((m) => m.roundName === 'Grand Final');
   const champion = grandFinal?.completed ? grandFinal.winnerId : null;
   return (
-    <div className="w-full min-w-0 space-y-6">
-      <section className="rounded-2xl border-2 border-emerald-900/70 bg-[#17130f] p-4 sm:p-5">
+    <div className="w-full min-w-0 space-y-4">
+      <section className="rounded-xl border border-emerald-900/70 bg-[#17130f] p-3">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-emerald-900/60 pb-3">
           <div>
             <h3 className="text-base font-black uppercase tracking-wider text-emerald-300">Upper Bracket</h3>
@@ -198,7 +198,7 @@ const CrownCupBracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (
         {renderLane(upperRounds, 'upper')}
       </section>
 
-      <section className="rounded-2xl border-2 border-purple-900/70 bg-[#17110f] p-4 sm:p-5">
+      <section className="rounded-xl border border-purple-900/70 bg-[#17110f] p-3">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-purple-900/60 pb-3">
           <div>
             <h3 className="text-base font-black uppercase tracking-wider text-purple-300">Lower Bracket</h3>
@@ -210,7 +210,7 @@ const CrownCupBracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (
       </section>
 
       {grandFinal && (
-        <section className="rounded-2xl border-2 border-amber-500/60 bg-gradient-to-br from-[#291a0c] to-[#160d07] p-4 shadow-xl sm:p-6">
+        <section className="rounded-xl border border-amber-500/60 bg-gradient-to-br from-[#291a0c] to-[#160d07] p-3 shadow-lg">
           <div className="mb-4 text-center">
             <h3 className="text-lg font-black uppercase tracking-widest text-amber-300">Grand Final</h3>
             <p className="mt-1 text-xs font-bold text-amber-100/55">Upper Bracket Champion vs Lower Bracket Champion · Best of 7</p>
@@ -309,7 +309,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
         <div className="flex gap-2 mb-2">
           <Btn onClick={buildChamps} disabled={!d1Done || !!v5.champsCup}>Build bracket</Btn>
           <Btn onClick={() => { if (v5.champsCup) { const c = clone(v5.champsCup); E.simulateBracket(c.matches, by); commit({ champsCup: c }); } }} disabled={!v5.champsCup}>Simulate all</Btn>
-          <Btn onClick={() => commit({ champsCup: null })} disabled={!v5.champsCup} className="bg-rose-400">Reset</Btn>
+          <Btn onClick={() => { if (v5.champsCup && window.confirm("Reset the Crown Cup bracket and remove all its match results?")) commit({ champsCup: null }); }} disabled={!v5.champsCup} className="bg-rose-400">Reset Bracket</Btn>
         </div>
         {d1Done && (!grandChamp || !theIdolsChampionId) && <p className="text-xs text-amber-200 mb-2">Unzure Cup or The Idols is not finished yet, so byes would use league points only. Finish them first for the full rule.</p>}
         {v5.champsCup && <><p className="text-xs mb-1">Byes: {v5.champsCup.byeIds.map(nm).join(', ')}</p><CrownCupBracket idols={by} nm={nm} sim={simOne} save={manual} ms={v5.champsCup.matches} onChange={(ms) => commit({ champsCup: { ...v5.champsCup!, matches: ms } })} /></>}
@@ -320,7 +320,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
           <Btn onClick={buildLC} disabled={!d1Done || !d2Done || !!lc}>Build bracket</Btn>
           <Btn onClick={lcRound} disabled={!lc || !!lc.championId}>Simulate current round</Btn>
           <Btn onClick={lcAll} disabled={!lc || !!lc.championId}>Simulate all</Btn>
-          <Btn onClick={() => commit({ leagueCup: null })} disabled={!lc} className="bg-rose-400">Reset</Btn>
+          <Btn onClick={() => { if (lc && window.confirm("Reset this tournament bracket and remove all match results?")) commit({ leagueCup: null }); }} disabled={!lc} className="bg-rose-400">Reset Bracket</Btn>
         </div>
         {lc && <p className="text-xs mb-2 font-mono">{lc.order.length} idols · {lc.plan.rounds} rounds · entering per round: {lc.plan.entrants.join(' / ')}{lc.championId ? ` · Champion: ${nm(lc.championId)}` : ''}</p>}
         {lc && lc.rounds.map((r, i) => (
@@ -336,6 +336,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
               <div className="flex flex-wrap items-center gap-2 mb-1"><span className="font-black text-sm">{l.name}</span>
                 <Btn onClick={() => buildMini(l.id)} disabled={!!ms || l.memberIds.length < 16 || !l.matches.every((m: any) => m.completed)}>Build</Btn>
                 <Btn onClick={() => { const c = clone(ms); E.simulateBracket(c, by); commit({ miniCups: { ...v5.miniCups, [l.id]: c } }); }} disabled={!ms || !!champ}>Simulate all</Btn>
+                <Btn onClick={() => { if (ms && window.confirm(`Reset the ${l.name} Mini Cup bracket and remove all results?`)) { const next = { ...v5.miniCups }; delete next[l.id]; commit({ miniCups: next }); } }} disabled={!ms} className="bg-rose-400">Reset Bracket</Btn>
                 {champ && <span className="text-xs text-emerald-400 font-bold">Champion: {nm(champ)}</span>}</div>
               {ms && <details><summary className="cursor-pointer text-xs text-amber-300">Show bracket</summary><Bracket nm={nm} sim={simOne} save={manual} ms={ms} onChange={(n) => commit({ miniCups: { ...v5.miniCups, [l.id]: n } })} /></details>}
             </div>); })}
@@ -344,7 +345,8 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
 
       {(section === 'all' || section === 'super') && (<Card title="Super Cups" note={`${names.superCupA}: The Idols champion vs Unzure Cup champion. ${names.superCupB}: league champion vs ${names.miniCup} champion. If one idol wins both, the opponent is the runner-up. Best of 5.`}>
         <div className="flex gap-2 mb-2"><Btn onClick={buildSuperA} disabled={!!v5.superA}>Build {names.superCupA}</Btn><Btn onClick={buildSuperB} disabled={v5.superB.length > 0}>Build {names.superCupB}</Btn>
-          <Btn onClick={() => { const a = v5.superA ? clone(v5.superA) : null; if (a) E.playNode(a, by); const b = clone(v5.superB); b.forEach((m) => { if (!m.completed) E.playNode(m, by); }); commit({ superA: a, superB: b }); }} disabled={!v5.superA && v5.superB.length === 0}>Simulate all</Btn></div>
+          <Btn onClick={() => { const a = v5.superA ? clone(v5.superA) : null; if (a) E.playNode(a, by); const b = clone(v5.superB); b.forEach((m) => { if (!m.completed) E.playNode(m, by); }); commit({ superA: a, superB: b }); }} disabled={!v5.superA && v5.superB.length === 0}>Simulate all</Btn>
+          <Btn onClick={() => { if ((v5.superA || v5.superB.length) && window.confirm("Reset all Super Cup matches and results?")) commit({ superA: null, superB: [] }); }} disabled={!v5.superA && v5.superB.length === 0} className="bg-rose-400">Reset Competitions</Btn></div>
         {v5.superA && <div><div className="text-xs font-black text-amber-300">{names.superCupA}</div><Bracket nm={nm} sim={simOne} save={manual} ms={[v5.superA]} onChange={(ms) => commit({ superA: ms[0] })} /></div>}
         {v5.superB.length > 0 && <div><div className="text-xs font-black text-amber-300 mt-2">{names.superCupB}</div><Bracket nm={nm} sim={simOne} save={manual} ms={v5.superB} onChange={(ms) => commit({ superB: ms })} /></div>}
       </Card> )}
