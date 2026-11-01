@@ -1979,7 +1979,7 @@ export function App() {
       knockoutMatches: sourceAppState.knockoutMatches,
       leagueState: sourceLeagueState,
       theIdolsState: sourceTheIdolsState,
-      v5: sourceAppState.v5State || loadV5State(),
+      v5: sourceV5State,
       v5Names: loadNames(),
     });
     if (unfinished.length > 0) {
@@ -2088,8 +2088,7 @@ export function App() {
         ...effectiveLeagueArchives.filter((a) => a.seasonNumber !== sourceLeagueState.seasonNumber),
         leagueArchiveRec,
       ];
-      setLeagueArchives(updatedLeagueArchives);
-      saveLeagueArchives(updatedLeagueArchives);
+      handleUpdateLeagueArchives(updatedLeagueArchives);
 
       const nextLeagueState = advanceLeagueSeason(
         sourceLeagueState,
@@ -2097,8 +2096,7 @@ export function App() {
         sourceAppState.girlGroups,
         nextSeasonId
       );
-      setLeagueState(nextLeagueState);
-      saveLeagueSeasonState(nextLeagueState);
+      handleUpdateLeagueState(nextLeagueState);
     }
 
     // Archive and advance The Idols Superleague & Masters Playoff
@@ -2108,8 +2106,7 @@ export function App() {
         ...effectiveTheIdolsArchives.filter((a) => a.seasonNumber !== sourceTheIdolsState.seasonNumber),
         idolsArchiveRec,
       ];
-      setTheIdolsArchives(updatedTheIdolsArchives);
-      saveTheIdolsArchives(updatedTheIdolsArchives);
+      handleUpdateTheIdolsArchives(updatedTheIdolsArchives);
 
       const nextTheIdolsState = advanceTheIdolsSeason(
         sourceTheIdolsState,
@@ -2117,8 +2114,7 @@ export function App() {
         nextSeasonId,
         sourceAppState.girlGroups
       );
-      setTheIdolsState(nextTheIdolsState);
-      saveTheIdolsState(nextTheIdolsState);
+      handleUpdateTheIdolsState(nextTheIdolsState);
     }
 
     const filteredArchives = effectiveTournamentArchives.filter(
