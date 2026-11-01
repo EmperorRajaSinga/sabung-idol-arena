@@ -87,8 +87,29 @@ export const d2IdFor = (parentId: number) => D2_BASE + parentId;
 
 /** Takes unassigned active idols (best rating first), deals them in snake order across the Division 2 leagues. */
 export function autoFillDivisionTwo(d1: LeagueInfo[], existing: DivisionTwoLeague[], idols: Idol[], groups: GirlGroup[], perLeague: number, namePart: string): DivisionTwoLeague[] {
-  const taken = new Set<string>(); d1.forEach((l) => l.memberIds.forEach((i) => taken.add(i))); existing.forEach((l) => l.memberIds.forEach((i) => taken.add(i)));
-  const free = idols.filter((i) => isIdolActive(i, groups) && !taken.has(i.id)).sort((a, b) => getIdolRating(b) - getIdolRating(a));
+  const taken = new Set<string>();
+  const takenNames = new Set<string>();
+  const normalizeName = (value: string) => String(value || '').normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
+  const idolById = new Map(idols.map((idol) => [idol.id, idol]));
+  d1.forEach((league) => league.memberIds.forEach((id) => {
+    taken.add(id);
+    const name = idolById.get(id)?.name;
+    if (name) takenNames.add(normalizeName(name));
+  }));
+  existing.forEach((league) => league.memberIds.forEach((id) => {
+    taken.add(id);
+    const name = idolById.get(id)?.name;
+    if (name) takenNames.add(normalizeName(name));
+  }));
+  const freeNames = new Set<string>();
+  const free = idols
+    .filter((idol) => {
+      const name = normalizeName(idol.name);
+      if (!isIdolActive(idol, groups) || taken.has(idol.id) || takenNames.has(name) || freeNames.has(name)) return false;
+      freeNames.add(name);
+      return true;
+    })
+    .sort((a, b) => getIdolRating(b) - getIdolRating(a));
   const base: DivisionTwoLeague[] = d1.map((l) => existing.find((e) => e.parentLeagueId === l.id) || ({ id: d2IdFor(l.id), parentLeagueId: l.id, name: `${l.name} ${namePart}`, tierName: namePart, color: l.color, memberIds: [], matches: [], standings: [] } as DivisionTwoLeague));
   let dir = 1, idx = 0;
   for (const idol of free) {
