@@ -304,17 +304,28 @@ export const DashboardPanel: React.FC<DashboardPanelProps> = ({
     + (v5State?.superA?.completed ? 1 : 0)
     + (v5State?.superB || []).filter((match) => match.completed).length;
 
-  // Unified Match Completed Counter
-  const totalMatchesCompletedInActiveTournament =
-    safeGroups.reduce(
-      (acc, g) => acc + (g?.matches ? g.matches.filter((m) => m?.completed).length : 0),
-      0
-    ) + safeKnockoutMatches.filter((km) => km?.completed).length;
+  // Count actual match records only. Career/ranking aggregates are derived
+  // from these same records and league standings, so using them as a second
+  // counter double-counts matches that already exist in the archive.
+  const totalMatchesAll = useMemo(() => {
+    const completedMatchIds = new Set<string>();
 
-  const totalMatchesAll = Math.max(
-    safeMatchDatabase.length + totalMatchesCompletedInActiveTournament,
-    combinedRankings.topIdols.reduce((acc, i) => acc + (i.matches || 0), 0) / 2
-  );
+    safeMatchDatabase.forEach((match) => {
+      if (match?.matchId) completedMatchIds.add(String(match.matchId));
+    });
+
+    safeGroups.forEach((group) => {
+      (group?.matches || []).forEach((match) => {
+        if (match?.completed && match.id) completedMatchIds.add(String(match.id));
+      });
+    });
+
+    safeKnockoutMatches.forEach((match) => {
+      if (match?.completed && match.id) completedMatchIds.add(String(match.id));
+    });
+
+    return completedMatchIds.size;
+  }, [safeMatchDatabase, safeGroups, safeKnockoutMatches]);
 
   // Total Distinct Seasons Completed across all formats
   const totalCompletedSeasons = useMemo(() => {
