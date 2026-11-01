@@ -13,6 +13,30 @@ const idols = db.idols.map((i: any) => ({ ...i, photoUrl: '' }));
 const by = new Map<string, any>(idols.map((i: any) => [i.id, i]));
 const active = idols.filter((i: any) => isIdolActive(i, groups)).sort((a: any, b: any) => getIdolRating(b) - getIdolRating(a));
 const res: Array<[string, boolean, string]> = []; const ck = (n: string, ok: boolean, i = '') => res.push([n, ok, i]);
+const cascadeTest = E.buildMiniCup(999, active.slice(0, 16).map((i: any) => i.id));
+E.simulateBracket(cascadeTest, by);
+const editedRoot = cascadeTest[0];
+const oldWinner = editedRoot.winnerId;
+const newWinner = editedRoot.loserId!;
+editedRoot.winnerId = newWinner; editedRoot.loserId = oldWinner;
+editedRoot.scoreA = editedRoot.winnerId === editedRoot.idolAId ? 3 : 0;
+editedRoot.scoreB = editedRoot.winnerId === editedRoot.idolBId ? 3 : 0;
+E.invalidateDownstream(cascadeTest, editedRoot.id);
+const affected = new Set<string>();
+const pending = [editedRoot.id];
+while (pending.length) {
+  const source = pending.shift()!;
+  cascadeTest.forEach((m: any) => {
+    if (affected.has(m.id) || m.id === editedRoot.id) return;
+    const depends = (('win' in m.a && m.a.win === source) || ('lose' in m.a && m.a.lose === source) || ('win' in m.b && m.b.win === source) || ('lose' in m.b && m.b.lose === source));
+    if (depends) { affected.add(m.id); pending.push(m.id); }
+  });
+}
+ck('F4 editing an earlier result clears every dependent match and keeps unrelated branches intact',
+  affected.size === 7 && cascadeTest.filter((m: any) => affected.has(m.id)).every((m: any) => !m.completed && !m.winnerId && !m.loserId && m.scoreA === null && m.scoreB === null && m.idolAId === null && m.idolBId === null) &&
+  cascadeTest.find((m: any) => m.id.endsWith('_qf_3'))?.completed === true,
+  `cleared ${affected.size} dependent matches`);
+
 const seriesOk = (m: any) => m.completed && (m.bestOf === 7 ? Math.max(m.scoreA, m.scoreB) === 4 && Math.min(m.scoreA, m.scoreB) <= 3 : Math.max(m.scoreA, m.scoreB) === 3 && Math.min(m.scoreA, m.scoreB) <= 2) && m.idolAId !== m.idolBId && m.winnerId && m.loserId;
 
 function freshD1(): any[] {
