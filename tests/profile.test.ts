@@ -15,5 +15,6 @@ for (const l of ls.leagues) for (const id of l.memberIds) {
   });
   checked++; if (map.size !== 38) bad++;
 }
+console.log('DEBUG league records', (s.syncedMatchDatabase || []).filter((m: any) => /league|division/i.test(String(m.stage || ''))).length, 'first league', (s.syncedMatchDatabase || []).find((m: any) => /league|division/i.test(String(m.stage || ''))), 'first standings', ls.leagues[0]?.standings?.slice(0,2));
 console.log(bad === 0 ? 'PASS' : 'FAIL', `idols checked ${checked}, idols not at 38 league matches: ${bad}, of which also in The Idols: ${[...inIdols].length}`);
 process.exit(bad ? 1 : 0);
