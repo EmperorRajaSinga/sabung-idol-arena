@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Idol,
   GirlGroup,
@@ -8,13 +8,16 @@ import {
   PersonalRankingEntry,
   TheIdolsSeasonState,
   TheIdolsSeasonArchive,
+  ArchivedMatch,
 } from '../types';
 import { KahootPodium } from './KahootPodium';
 import {
   computeCombinedTopRankings,
   loadPersonalRankings,
   savePersonalRankings,
+  CombinedStatsRecord,
 } from '../utils/leagueLogic';
+import type { V5State, V5TitleArchive } from '../utils/v5/store';
 import { exportPersonalRankingsToJSON } from '../utils/storage';
 import { getCountryFlag } from '../utils/nationalityHelper';
 import { RatingBadge } from './RatingBadge';
@@ -40,6 +43,263 @@ import {
   Download,
 } from 'lucide-react';
 
+
+type RankRecordWithV5 = CombinedStatsRecord & {
+  v5Titles: number;
+  divisionTwoTitles: number;
+  v5CupTitles: number;
+};
+
+const makeEmptyRankRecord = (
+  id: string,
+  name: string,
+  type: 'idol' | 'group',
+  details: Partial<CombinedStatsRecord> = {}
+): RankRecordWithV5 => ({
+  id,
+  name: name || 'Unknown',
+  type,
+  girlGroup: details.girlGroup || '',
+  photoUrl: details.photoUrl || '',
+  nationality: details.nationality,
+  seed: details.seed,
+  titles: 0,
+  originalTitles: 0,
+  leagueTitles: 0,
+  theIdolsTitles: 0,
+  v5Titles: 0,
+  divisionTwoTitles: 0,
+  v5CupTitles: 0,
+  totalPoints: 0,
+  matches: 0,
+  wins: 0,
+  draws: 0,
+  losses: 0,
+  winRate: 0,
+  gameDiff: 0,
+});
+
+function mergeV5RankContributions(
+  base: { topIdols: CombinedStatsRecord[]; topGroups: CombinedStatsRecord[] },
+  idols: Idol[],
+  girlGroups: GirlGroup[],
+  matchDatabase: ArchivedMatch[],
+  v5State: V5State | null | undefined,
+  v5TitleArchives: V5TitleArchive[],
+  leagueState: LeagueSeasonState | null
+): { topIdols: RankRecordWithV5[]; topGroups: RankRecordWithV5[] } {
+  const idolMap = new Map((Array.isArray(idols) ? idols : []).filter(Boolean).map((idol) => [idol.id, idol]));
+  const groupMeta = new Map((Array.isArray(girlGroups) ? girlGroups : []).filter(Boolean).map((group) => [group.name, group]));
+  const idolRecords = new Map<string, RankRecordWithV5>();
+  const groupRecords = new Map<string, RankRecordWithV5>();
+
+  (base.topIdols || []).forEach((record) => {
+    idolRecords.set(record.id, {
+      ...record,
+      theIdolsTitles: record.theIdolsTitles || 0,
+      v5Titles: 0,
+      divisionTwoTitles: 0,
+      v5CupTitles: 0,
+    });
+  });
+  (base.topGroups || []).forEach((record) => {
+    groupRecords.set(record.name, {
+      ...record,
+      theIdolsTitles: record.theIdolsTitles || 0,
+      v5Titles: 0,
+      divisionTwoTitles: 0,
+      v5CupTitles: 0,
+    });
+  });
+
+  const ensureIdol = (id: string, name?: string, groupName?: string, photo?: string) => {
+    const existing = idolRecords.get(id);
+    if (existing) return existing;
+    const idol = idolMap.get(id);
+    const record = makeEmptyRankRecord(id, idol?.name || name || 'Unknown Idol', 'idol', {
+      girlGroup: idol?.girlGroup || groupName || '',
+      photoUrl: idol?.photoUrl || photo || '',
+      nationality: idol?.nationality || 'South Korea',
+      seed: idol?.seed || 'Unseeded',
+    });
+    idolRecords.set(id, record);
+    return record;
+  };
+
+  const ensureGroup = (name: string) => {
+    const normalized = String(name || '').trim();
+    if (!normalized || normalized.toLowerCase() === 'solo' || normalized.toLowerCase() === 'solo / independent') return null;
+    const existing = groupRecords.get(normalized);
+    if (existing) return existing;
+    const meta = groupMeta.get(normalized);
+    const record = makeEmptyRankRecord(meta?.id || normalized, normalized, 'group', {
+      photoUrl: meta?.logoUrl || '',
+    });
+    groupRecords.set(normalized, record);
+    return record;
+  };
+
+  const seenMatches = new Set<string>();
+  (Array.isArray(matchDatabase) ? matchDatabase : []).forEach((match) => {
+    if (!match || !String(match.stage || '').toLowerCase().startsWith('cups & divisions:')) return;
+    if (!match.idolAId || !match.idolBId || match.scoreA == null || match.scoreB == null) return;
+    const matchId = String(match.matchId || [
+      match.seasonId, match.stage, match.idolAId, match.idolBId, match.scoreA, match.scoreB,
+    ].join('|'));
+    if (seenMatches.has(matchId)) return;
+    seenMatches.add(matchId);
+
+    const scoreA = Number(match.scoreA);
+    const scoreB = Number(match.scoreB);
+    if (!Number.isFinite(scoreA) || !Number.isFinite(scoreB)) return;
+
+    const sides = [
+      { id: match.idolAId, name: match.idolAName, group: match.idolAGroup, photo: match.idolAPhoto, scored: scoreA, conceded: scoreB },
+      { id: match.idolBId, name: match.idolBName, group: match.idolBGroup, photo: match.idolBPhoto, scored: scoreB, conceded: scoreA },
+    ];
+
+    sides.forEach((side) => {
+      const idol = ensureIdol(side.id, side.name, side.group, side.photo);
+      const groupName = side.group || idol.girlGroup || '';
+      const group = ensureGroup(groupName);
+      const won = side.scored > side.conceded;
+      const drawn = side.scored === side.conceded;
+
+      idol.matches += 1;
+      idol.wins += won ? 1 : 0;
+      idol.draws += drawn ? 1 : 0;
+      idol.losses += !won && !drawn ? 1 : 0;
+      idol.gameDiff += side.scored - side.conceded;
+      idol.totalPoints += won ? 3 : drawn ? 1 : 0;
+
+      if (group) {
+        group.matches += 1;
+        group.wins += won ? 1 : 0;
+        group.draws += drawn ? 1 : 0;
+        group.losses += !won && !drawn ? 1 : 0;
+        group.gameDiff += side.scored - side.conceded;
+        group.totalPoints += won ? 3 : drawn ? 1 : 0;
+      }
+    });
+  });
+
+  const titleMap = new Map<string, V5TitleArchive>();
+  const competitionKey = (season: number, competition: string) =>
+    String(season) + '::' + String(competition || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+  (Array.isArray(v5TitleArchives) ? v5TitleArchives : []).forEach((title) => {
+    if (!title || !title.winnerId || !title.competition) return;
+    titleMap.set(competitionKey(Number(title.seasonNumber || 1), title.competition), title);
+  });
+
+  const v5Matches = (Array.isArray(matchDatabase) ? matchDatabase : []).filter((match) =>
+    match && String(match.stage || '').toLowerCase().startsWith('cups & divisions:')
+  );
+  const latestV5MatchSeason = v5Matches.reduce((latest, match) =>
+    Math.max(latest, Number(match.seasonId || 1)), 1
+  );
+  const currentSeasonNumber = Math.max(1, Number(leagueState?.seasonNumber || latestV5MatchSeason || 1));
+  const currentSeasonName = leagueState?.seasonName || ('Season ' + currentSeasonNumber);
+
+  const addLiveTitle = (
+    competition: string,
+    winnerId?: string | null,
+    runnerUpId?: string | null,
+    isDivision = false
+  ) => {
+    if (!winnerId) return;
+    const key = competitionKey(currentSeasonNumber, competition);
+    if (titleMap.has(key)) return;
+    const winner = idolMap.get(winnerId);
+    const runner = runnerUpId ? idolMap.get(runnerUpId) : undefined;
+    titleMap.set(key, {
+      id: 'live_v5_' + key,
+      seasonNumber: currentSeasonNumber,
+      seasonName: currentSeasonName,
+      competition,
+      winnerId,
+      winnerName: winner?.name || 'Unknown Idol',
+      winnerGroup: winner?.girlGroup || 'Solo',
+      winnerPhoto: winner?.photoUrl,
+      runnerUpId: runner?.id,
+      runnerUpName: runner?.name,
+      runnerUpGroup: runner?.girlGroup,
+      runnerUpPhoto: runner?.photoUrl,
+      isDivision,
+      archivedAt: '',
+    });
+  };
+
+  if (v5State) {
+    (Array.isArray(v5State.d2) ? v5State.d2 : []).forEach((league) => {
+      if (league?.isCompleted && league.championId) {
+        const ranked = [...(league.standings || [])].sort((a, b) => Number(a.rank || 999) - Number(b.rank || 999));
+        addLiveTitle('Division 2 / ' + league.name, league.championId, ranked[1]?.idolId, true);
+      }
+    });
+
+    const crownFinal = v5State.champsCup?.matches?.find((match) => match.id === 'cc_gf');
+    if (crownFinal?.completed) addLiveTitle('League Champions Cup', crownFinal.winnerId, crownFinal.loserId);
+
+    const openFinal = v5State.leagueCup?.rounds?.slice(-1)[0]?.find((match) => match.completed);
+    if (v5State.leagueCup?.championId) {
+      addLiveTitle('All-League Knockout Cup', v5State.leagueCup.championId, openFinal?.loserId);
+    }
+
+    Object.entries(v5State.miniCups || {}).forEach(([leagueId, matches]) => {
+      const final = matches.find((match) => match.id === 'mc' + leagueId + '_final');
+      if (final?.completed) addLiveTitle('Top 16 Mini Cup / League ' + leagueId, final.winnerId, final.loserId);
+    });
+
+    if (v5State.superA?.completed) addLiveTitle('Super Cup A', v5State.superA.winnerId, v5State.superA.loserId);
+    (Array.isArray(v5State.superB) ? v5State.superB : []).forEach((match, index) => {
+      if (match?.completed) addLiveTitle('Super Cup B ' + (index + 1), match.winnerId, match.loserId);
+    });
+  }
+
+  titleMap.forEach((title) => {
+    const winner = ensureIdol(title.winnerId, title.winnerName, title.winnerGroup, title.winnerPhoto);
+    winner.titles += 1;
+    winner.v5Titles += 1;
+    if (title.isDivision) winner.divisionTwoTitles += 1;
+    else winner.v5CupTitles += 1;
+    winner.totalPoints += 15;
+
+    const winnerGroup = ensureGroup(title.winnerGroup || winner.girlGroup || '');
+    if (winnerGroup) {
+      winnerGroup.titles += 1;
+      winnerGroup.v5Titles += 1;
+      if (title.isDivision) winnerGroup.divisionTwoTitles += 1;
+      else winnerGroup.v5CupTitles += 1;
+      winnerGroup.totalPoints += 15;
+    }
+
+    if (title.runnerUpId) {
+      const runner = ensureIdol(title.runnerUpId, title.runnerUpName, title.runnerUpGroup, title.runnerUpPhoto);
+      runner.totalPoints += 5;
+      const runnerGroup = ensureGroup(title.runnerUpGroup || runner.girlGroup || '');
+      if (runnerGroup) runnerGroup.totalPoints += 5;
+    }
+  });
+
+  const finalize = (records: RankRecordWithV5[]) => records.map((record) => ({
+    ...record,
+    winRate: record.matches > 0 ? Math.round((record.wins / record.matches) * 1000) / 10 : 0,
+  })).sort((a, b) =>
+    b.titles - a.titles ||
+    b.totalPoints - a.totalPoints ||
+    b.winRate - a.winRate ||
+    b.wins - a.wins ||
+    b.matches - a.matches ||
+    a.name.localeCompare(b.name)
+  );
+
+  return {
+    topIdols: finalize(Array.from(idolRecords.values())),
+    topGroups: finalize(Array.from(groupRecords.values())),
+  };
+}
+
 interface RankPanelProps {
   idols: Idol[];
   girlGroups: GirlGroup[];
@@ -48,6 +308,9 @@ interface RankPanelProps {
   leagueArchives: LeagueSeasonArchive[];
   theIdolsState?: TheIdolsSeasonState | null;
   theIdolsArchives?: TheIdolsSeasonArchive[];
+  matchDatabase?: ArchivedMatch[];
+  v5State?: V5State | null;
+  v5TitleArchives?: V5TitleArchive[];
 }
 
 export const RankPanel: React.FC<RankPanelProps> = ({
@@ -58,12 +321,15 @@ export const RankPanel: React.FC<RankPanelProps> = ({
   leagueArchives,
   theIdolsState,
   theIdolsArchives,
+  matchDatabase = [],
+  v5State,
+  v5TitleArchives = [],
 }) => {
   const [activeLeaderboard, setActiveLeaderboard] = useState<'idols' | 'groups'>('idols');
 
-  // Combined Top Rankings (Original Tournament + League + The Idols)
+  // Official all-time ranking: original tournament, Division 1, The Idols, Division 2 and every V5 cup.
   const { topIdols, topGroups } = useMemo(() => {
-    return computeCombinedTopRankings(
+    const base = computeCombinedTopRankings(
       idols,
       girlGroups,
       careerStats,
@@ -72,7 +338,19 @@ export const RankPanel: React.FC<RankPanelProps> = ({
       theIdolsState || null,
       theIdolsArchives || []
     );
-  }, [idols, girlGroups, careerStats, leagueState, leagueArchives, theIdolsState, theIdolsArchives]);
+    return mergeV5RankContributions(
+      base,
+      idols,
+      girlGroups,
+      matchDatabase,
+      v5State,
+      v5TitleArchives,
+      leagueState
+    );
+  }, [
+    idols, girlGroups, careerStats, leagueState, leagueArchives,
+    theIdolsState, theIdolsArchives, matchDatabase, v5State, v5TitleArchives,
+  ]);
 
   const idolsMap = useMemo(() => {
     const map = new Map<string, Idol>();
@@ -105,6 +383,12 @@ export const RankPanel: React.FC<RankPanelProps> = ({
   const [addNotes, setAddNotes] = useState<string>('');
   const [addFavSong, setAddFavSong] = useState<string>('');
   const [searchIdolQuery, setSearchIdolQuery] = useState<string>('');
+
+  useEffect(() => {
+    if (idols.length && !idols.some((idol) => idol.id === selectedAddIdolId)) {
+      setSelectedAddIdolId(idols[0].id);
+    }
+  }, [idols, selectedAddIdolId]);
 
   // Editing inline state
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
@@ -140,7 +424,7 @@ export const RankPanel: React.FC<RankPanelProps> = ({
       idolId: selectedAddIdolId,
       rank: personalRankings.length + 1,
       tier: addTier,
-      customRating: Number(addRating) || 85,
+      customRating: Math.min(100, Math.max(1, Math.round(Number(addRating) || 85))),
       notes: addNotes.trim() || 'Top tier performer',
       favoriteSong: addFavSong.trim(),
       updatedAt: Date.now(),
@@ -186,7 +470,7 @@ export const RankPanel: React.FC<RankPanelProps> = ({
         return {
           ...r,
           tier: editTier,
-          customRating: Number(editRating) || 80,
+          customRating: Math.min(100, Math.max(1, Math.round(Number(editRating) || 80))),
           notes: editNotes.trim(),
           favoriteSong: editFavSong.trim(),
           updatedAt: Date.now(),
@@ -201,6 +485,15 @@ export const RankPanel: React.FC<RankPanelProps> = ({
   const activeRecords = activeLeaderboard === 'idols' ? topIdols : topGroups;
   const top10Records = activeRecords.slice(0, 10);
   const remaining4To10 = activeRecords.slice(3, 10);
+  const v5MatchCount = useMemo(() => new Set((matchDatabase || [])
+    .filter((match) => match && String(match.stage || '').toLowerCase().startsWith('cups & divisions:') && match.scoreA != null && match.scoreB != null)
+    .map((match) => String(match.matchId || [match.seasonId, match.stage, match.idolAId, match.idolBId, match.scoreA, match.scoreB].join('|')))
+  ).size, [matchDatabase]);
+  const v5TitleSummary = useMemo(() => topIdols.reduce((summary, record) => ({
+    total: summary.total + record.v5Titles,
+    divisionTwo: summary.divisionTwo + record.divisionTwoTitles,
+    cups: summary.cups + record.v5CupTitles,
+  }), { total: 0, divisionTwo: 0, cups: 0 }), [topIdols]);
 
   const tierColors: Record<string, string> = {
     'S+': 'bg-gradient-to-r from-red-600 to-amber-500 text-white border-amber-400',
@@ -224,7 +517,7 @@ export const RankPanel: React.FC<RankPanelProps> = ({
               ALL-TIME RANK PANEL
             </h1>
             <p className="text-xs sm:text-sm text-amber-200/80 font-bold">
-              Combined Official Tournament & League Standings + Personal Idol Tier Rankings
+              All-Time Results: Tournament, Division 1, Division 2, The Idols, V5 Cups & Personal Rankings
             </p>
           </div>
         </div>
@@ -256,13 +549,37 @@ export const RankPanel: React.FC<RankPanelProps> = ({
         </div>
       </div>
 
+
+      <section className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        <div className="rounded-2xl border-2 border-black bg-[#17100b] p-4 poster-shadow">
+          <div className="text-[10px] font-black uppercase tracking-wider text-amber-200/55">Ranked Idols</div>
+          <div className="mt-1 font-poster-title text-2xl text-amber-300">{topIdols.length}</div>
+          <div className="text-[10px] text-amber-100/45">All registered idol records</div>
+        </div>
+        <div className="rounded-2xl border-2 border-black bg-[#17100b] p-4 poster-shadow">
+          <div className="text-[10px] font-black uppercase tracking-wider text-amber-200/55">Ranked Girl Groups</div>
+          <div className="mt-1 font-poster-title text-2xl text-amber-300">{topGroups.length}</div>
+          <div className="text-[10px] text-amber-100/45">Historical group aggregation</div>
+        </div>
+        <div className="rounded-2xl border-2 border-black bg-[#17100b] p-4 poster-shadow">
+          <div className="text-[10px] font-black uppercase tracking-wider text-amber-200/55">V5 Matches</div>
+          <div className="mt-1 font-poster-title text-2xl text-cyan-300">{v5MatchCount}</div>
+          <div className="text-[10px] text-amber-100/45">Division 2 and all V5 cups</div>
+        </div>
+        <div className="rounded-2xl border-2 border-black bg-[#17100b] p-4 poster-shadow">
+          <div className="text-[10px] font-black uppercase tracking-wider text-amber-200/55">V5 Titles Archived</div>
+          <div className="mt-1 font-poster-title text-2xl text-amber-300">{v5TitleSummary.total}</div>
+          <div className="text-[10px] text-amber-100/55">{v5TitleSummary.divisionTwo} Division 2 · {v5TitleSummary.cups} Cup titles</div>
+        </div>
+      </section>
+
       {/* 1. KAHOOT-STYLE PODIUM (Top 3) */}
       <section className="space-y-3">
         <KahootPodium
           records={top10Records}
           type={activeLeaderboard === 'idols' ? 'idol' : 'group'}
           title={`All-Time Top 3 ${activeLeaderboard === 'idols' ? 'Idols' : 'Girl Groups'} (Podium)`}
-          subtitle="Combined stats across all original tournament brackets & 6-division league matches"
+          subtitle="Combined all-time record across the original tournament, six Division 1 leagues, six Division 2 leagues, The Idols, and all V5 cup competitions."
         />
       </section>
 
@@ -274,7 +591,7 @@ export const RankPanel: React.FC<RankPanelProps> = ({
             <span>Top 10 All-Time Leaderboard ({activeLeaderboard === 'idols' ? 'Idols' : 'Girl Groups'})</span>
           </h3>
           <span className="text-xs text-amber-400/80 font-bold">
-            Showing Ranks 1 through {Math.min(10, activeRecords.length)}
+            {activeRecords.length > 3 ? `Showing Ranks 4 through ${Math.min(10, activeRecords.length)}` : 'All ranked entries are shown on the podium'}
           </span>
         </div>
 
@@ -285,6 +602,7 @@ export const RankPanel: React.FC<RankPanelProps> = ({
                 <th className="py-3 px-4 text-center w-16">Rank</th>
                 <th className="py-3 px-4">Participant</th>
                 <th className="py-3 px-4 text-center">Titles Won</th>
+                <th className="py-3 px-4 text-center">V5 Titles</th>
                 <th className="py-3 px-4 text-center">Combined PTS</th>
                 <th className="py-3 px-4 text-center">Record (W-D-L)</th>
                 <th className="py-3 px-4 text-center">Win Rate</th>
@@ -292,8 +610,8 @@ export const RankPanel: React.FC<RankPanelProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-black/60 text-xs">
-              {top10Records.map((item, idx) => {
-                const rankNum = idx + 1;
+              {remaining4To10.map((item, idx) => {
+                const rankNum = idx + 4;
                 const isPodium = rankNum <= 3;
                 return (
                   <tr
@@ -368,6 +686,15 @@ export const RankPanel: React.FC<RankPanelProps> = ({
                         <Trophy className="w-3 h-3 text-amber-400 shrink-0" />
                         <span>{item.titles}</span>
                       </span>
+                      <div className="mt-1 text-[9px] font-semibold text-amber-100/45">
+                        {item.originalTitles} Tournament · {item.leagueTitles} D1 · {item.theIdolsTitles || 0} The Idols
+                      </div>
+                    </td>
+
+                    {/* V5 Titles */}
+                    <td className="py-3 px-4 text-center">
+                      <span className="font-mono text-xs font-black text-cyan-300">{item.v5Titles}</span>
+                      <div className="mt-1 text-[9px] font-semibold text-cyan-100/45">{item.divisionTwoTitles} D2 · {item.v5CupTitles} Cups</div>
                     </td>
 
                     {/* Combined Points */}
