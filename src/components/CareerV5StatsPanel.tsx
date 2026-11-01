@@ -108,7 +108,7 @@ export const CareerV5StatsPanel: React.FC<{
           (move.relegated || []).forEach((id) => {
             const row = getRow(id);
             row.relegations += 1;
-            if (Number.isFinite(season)) row.seasons.add(season);
+            row.events.add(`${Number.isFinite(season) ? season : 'unknown'}:Division 2`);
           });
         });
       });
