@@ -72,6 +72,8 @@ ck('C4 rank 17 stays in Division 1', rank17Stay);
 const champs = (flags: [number, number] | null) => d1.map((l: any, k: number) => { const t = rankStandings(l.standings)[0]; return { idolId: t.idolId, leagueId: l.id, wonGrandCup: !!flags && flags[0] === k, wonTheIdols: !!flags && flags[1] === k, points: t.points, gameDiff: t.gameDiff || 0 }; });
 const cc = (flags: [number, number] | null) => { const c = champs(flags); const { matches, byeIds, seedOrder } = E.buildChampsCup(c); E.simulateChampsCup(matches, by, seedOrder); return { c, matches, byeIds, seedOrder }; };
 const a = cc([3, 1]); const cInfo = a.c;
+const expectedSeedOrder = [...cInfo].sort((x, y) => (y.points - x.points) || (y.gameDiff - x.gameDiff) || (x.leagueId - y.leagueId)).map((x) => x.idolId);
+ck('D2a lower-bracket seeding follows league points, game difference, then league order', a.seedOrder.join() === expectedSeedOrder.join());
 ck('D Champs Cup: 10 matches, all complete and valid series', a.matches.length === 10 && a.matches.every(seriesOk));
 ck('D2 formats: Bo7 only Lower Final and Grand Final', a.matches.filter((m) => m.bestOf === 7).map((m) => m.id).sort().join() === 'cc_gf,cc_lf');
 ck('D3 byes = Grand Cup winner and The Idols winner', [...a.byeIds].sort().join() === [cInfo[3].idolId, cInfo[1].idolId].sort().join());
