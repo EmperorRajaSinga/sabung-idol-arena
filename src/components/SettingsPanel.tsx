@@ -358,21 +358,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       showSuccessMsg(`Maximum capacity is ${capacity} idols. Remove ${normalizedNames.length - capacity} name(s) before saving.`);
       return;
     }
+    if (showRosterConflicts(normalizedNames, { division: 'Division 2', leagueId, leagueName: targetLeague.name })) return;
 
     const existingByName = new Map(appState.idols.map((idol) => [idol.name.trim().toLowerCase(), idol]));
-    const assignedElsewhere = new Map<string, string>();
-    (activeLeagueState.leagues || []).forEach((league) =>
-      (league.memberIds || []).forEach((id) => assignedElsewhere.set(id, league.name))
-    );
-    v5State.d2.forEach((league) => {
-      if (league.id !== leagueId) {
-        (league.memberIds || []).forEach((id) => assignedElsewhere.set(id, league.name));
-      }
-    });
+
 
     const createdIdols: Idol[] = [];
     const nextMemberIds: string[] = [];
-    const blockedNames: string[] = [];
     const seenIds = new Set<string>();
     for (const name of normalizedNames) {
       const key = name.toLowerCase();
@@ -392,18 +384,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       }
       if (seenIds.has(idol.id)) continue;
       seenIds.add(idol.id);
-      const assignedTo = assignedElsewhere.get(idol.id);
-      if (assignedTo) {
-        blockedNames.push(`${name} (already assigned to ${assignedTo})`);
-        continue;
-      }
       nextMemberIds.push(idol.id);
-    }
-
-    if (blockedNames.length) {
-      const extra = blockedNames.length > 4 ? ', and ' + (blockedNames.length - 4) + ' more' : '';
-      showSuccessMsg('Roster not saved. Remove or transfer these idols first: ' + blockedNames.slice(0, 4).join(', ') + extra + '.');
-      return;
     }
 
     const allIdols = [...appState.idols, ...createdIdols];
@@ -424,6 +405,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     }
     onUpdateV5State?.(nextV5State);
     setEditingD2RosterLeagueId(null);
+    logDataChange({ action: 'roster_updated', entity: 'division_2_roster', entityName: targetLeague.name, source: 'Settings / Division 2 Roster Manager', details: `Saved ${nextMemberIds.length} roster member(s). Newly created idol profiles: ${createdIdols.map((idol) => idol.name).join(', ') || 'none'}.` });
     showSuccessMsg(`Division 2 roster saved: ${nextMemberIds.length} idol(s) assigned. ${createdIdols.length} new idol(s) added to the database.`);
   };
 
@@ -2204,6 +2186,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   (idol) => isIdolActive(idol, appState.girlGroups) && !d2Assigned.has(idol.id) && !d1Assigned.has(idol.id)
                 );
                 const updateCurrentRoster = (memberIds: string[]) => {
+                  const candidateNames = memberIds.map((id) => appState.idols.find((idol) => idol.id === id)?.name || id);
+                  if (showRosterConflicts(candidateNames, { division: 'Division 2', leagueId: currentLeague.id, leagueName: currentLeague.name })) return;
+                  const beforeIds = currentLeague.memberIds || [];
+                  const addedNames = memberIds.filter((id) => !beforeIds.includes(id)).map((id) => appState.idols.find((idol) => idol.id === id)?.name || id);
+                  const removedNames = beforeIds.filter((id) => !memberIds.includes(id)).map((id) => appState.idols.find((idol) => idol.id === id)?.name || id);
                   onUpdateV5State?.({
                     ...v5State,
                     d2: v5State.d2.map((league) =>
@@ -2212,6 +2199,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                         : league
                     ),
                   });
+                  if (addedNames.length || removedNames.length) {
+                    logDataChange({ action: 'roster_updated', entity: 'division_2_roster', entityName: currentLeague.name, source: 'Settings / Division 2 Quick Editor', details: `Added: ${addedNames.join(', ') || 'none'}. Removed: ${removedNames.join(', ') || 'none'}.` });
+                  }
                 };
 
                 return (
@@ -2297,6 +2287,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                       showSuccessMsg(`The selected ${competitionNames.division2} is already at capacity.`);
                                       return;
                                     }
+                                    const movingIdol = appState.idols.find((idol) => idol.id === idolId);
+                                    if (movingIdol && showRosterConflicts([movingIdol.name], { division: 'Division 2', leagueId: target.id, leagueName: target.name })) return;
                                     const nextD2 = v5State.d2.map((league) =>
                                       league.id === currentLeague.id
                                         ? { ...league, memberIds: league.memberIds.filter((id) => id !== idolId) }
