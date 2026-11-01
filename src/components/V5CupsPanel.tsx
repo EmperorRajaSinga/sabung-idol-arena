@@ -35,8 +35,8 @@ const Row: React.FC<{ m: E.BNode; nm: (id: string | null) => string; onSim: () =
       {[{ id: m.idolAId, score: m.scoreA }, { id: m.idolBId, score: m.scoreB }].map((p, i) => {
         const isWinner = m.completed && m.winnerId === p.id;
         return (
-          <div key={i} className={\`mb-1 flex min-w-0 items-center justify-between rounded-lg border border-black px-2 py-2 \${isWinner ? 'bg-emerald-800 text-white' : 'bg-[#100c09] text-amber-100'}\`}>
-            <span className={\`truncate text-xs font-bold \${!p.id ? 'italic text-amber-100/40' : ''}\`}>{nm(p.id)}</span>
+          <div key={i} className={`mb-1 flex min-w-0 items-center justify-between rounded-lg border border-black px-2 py-2 ${isWinner ? 'bg-emerald-800 text-white' : 'bg-[#100c09] text-amber-100'}`}>
+            <span className={`truncate text-xs font-bold ${!p.id ? 'italic text-amber-100/40' : ''}`}>{nm(p.id)}</span>
             <span className="ml-2 min-w-5 rounded bg-black/40 px-1.5 text-center font-mono text-xs font-black text-amber-300">{p.score ?? '-'}</span>
           </div>
         );
