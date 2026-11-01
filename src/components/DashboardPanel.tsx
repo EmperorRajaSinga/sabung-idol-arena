@@ -322,25 +322,10 @@ export const DashboardPanel: React.FC<DashboardPanelProps> = ({
     [safeMatchDatabase]
   );
 
-  const totalMatchesAll = useMemo(() => {
-    const completedMatchIds = new Set<string>();
-
-    safeMatchDatabase.forEach((match) => {
-      if (match?.matchId && isRecordedMatch(match)) completedMatchIds.add(String(match.matchId));
-    });
-
-    safeGroups.forEach((group) => {
-      (group?.matches || []).forEach((match) => {
-        if (match?.completed && match.id) completedMatchIds.add(String(match.id));
-      });
-    });
-
-    safeKnockoutMatches.forEach((match) => {
-      if (match?.completed && match.id) completedMatchIds.add(String(match.id));
-    });
-
-    return completedMatchIds.size;
-  }, [safeMatchDatabase, safeGroups, safeKnockoutMatches]);
+  // The permanent match database is the canonical, de-duplicated source.
+  // Active group/knockout matches are synchronized into it by match handlers;
+  // adding those arrays again here would count the same fixture twice.
+  const totalMatchesAll = archivedMatchCount;
 
   // Total Distinct Seasons Completed across all formats
   const totalCompletedSeasons = useMemo(() => {
