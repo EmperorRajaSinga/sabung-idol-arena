@@ -307,8 +307,18 @@ export const DashboardPanel: React.FC<DashboardPanelProps> = ({
   // Count actual match records only. Career/ranking aggregates are derived
   // from these same records and league standings, so using them as a second
   // counter double-counts matches that already exist in the archive.
+  const isRecordedMatch = (match: ArchivedMatch) =>
+    Boolean(
+      match &&
+      (match.isDraw === true ||
+        match.winnerId === 'DRAW' ||
+        Boolean(match.winnerId) ||
+        Number(match.scoreA ?? 0) !== 0 ||
+        Number(match.scoreB ?? 0) !== 0)
+    );
+
   const archivedMatchCount = useMemo(
-    () => new Set(safeMatchDatabase.filter((match) => match?.matchId).map((match) => String(match.matchId))).size,
+    () => new Set(safeMatchDatabase.filter((match) => match?.matchId && isRecordedMatch(match)).map((match) => String(match.matchId))).size,
     [safeMatchDatabase]
   );
 
@@ -316,7 +326,7 @@ export const DashboardPanel: React.FC<DashboardPanelProps> = ({
     const completedMatchIds = new Set<string>();
 
     safeMatchDatabase.forEach((match) => {
-      if (match?.matchId) completedMatchIds.add(String(match.matchId));
+      if (match?.matchId && isRecordedMatch(match)) completedMatchIds.add(String(match.matchId));
     });
 
     safeGroups.forEach((group) => {
