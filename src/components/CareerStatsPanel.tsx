@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import type { V5TitleArchive } from '../utils/v5/store';
 import { CareerV5StatsPanel } from './CareerV5StatsPanel';
 import {
   CareerStat,
@@ -33,6 +34,7 @@ interface CareerStatsPanelProps {
   idols?: Idol[];
   matchDatabase?: ArchivedMatch[];
   archives?: TournamentArchive[];
+  v5TitleArchives?: V5TitleArchive[];
   onSelectIdolProfile?: (idolId: string) => void;
 }
 
@@ -48,6 +50,8 @@ export interface CombinedCareerStat {
   theIdolsPlayed: number;
   totalTitles: number;
   tournamentTitles: number;
+  v5CupTitles: number;
+  divisionTwoTitles: number;
   divisionTitles: number;
   theIdolsSuperleagueTitles: number; // 1st place in regular season
   theIdolsMastersTitles: number; // 1st in Masters Playoff
@@ -73,6 +77,7 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
   idols = [],
   matchDatabase = [],
   archives = [],
+  v5TitleArchives = [],
   onSelectIdolProfile,
 }) => {
   const [activeSystem, setActiveSystem] = useState<'combined' | 'tournament' | 'league' | 'the_idols' | 'crown_cup' | 'open_arena_cup' | 'spotlight_cup' | 'super_cup_a' | 'super_cup_b' | 'division_2'>('combined');
@@ -486,7 +491,9 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
       const lDivTitles = l?.divisionTitles || 0;
       const tiSuperleague = ti?.superleagueTitles || 0;
       const tiMasters = ti?.mastersTitles || 0;
-      const totalTitles = calculateUnifiedTotalTitles(tChamps, lDivTitles, tiSuperleague, tiMasters);
+      const v5CupTitles = v5TitleArchives.filter((title) => !title.isDivision && title.winnerId === id).length;
+      const divisionTwoTitles = v5TitleArchives.filter((title) => title.isDivision && title.winnerId === id).length;
+      const totalTitles = calculateUnifiedTotalTitles(tChamps, lDivTitles, tiSuperleague, tiMasters) + v5CupTitles + divisionTwoTitles;
 
       const tMatches = t?.matches || 0;
       const lMatches = l?.matches || 0;
@@ -545,6 +552,8 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
           theIdolsPlayed: tiSeasons,
           totalTitles,
           tournamentTitles: tChamps,
+          v5CupTitles,
+          divisionTwoTitles,
           divisionTitles: lDivTitles,
           theIdolsSuperleagueTitles: tiSuperleague,
           theIdolsMastersTitles: tiMasters,
@@ -564,7 +573,7 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
     });
 
     return list;
-  }, [careerStats, leagueCareerStats, theIdolsCareerStats, idols, idolsMap]);
+  }, [careerStats, leagueCareerStats, theIdolsCareerStats, idols, idolsMap, v5TitleArchives]);
 
   const sortedCombinedStats = useMemo(() => {
     return [...combinedCareerStats]
@@ -709,6 +718,8 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
               <option value="goalDiff">Total Score Difference</option>
               <option value="totalCompetitions">Competitions Played</option>
               <option value="tournamentTitles">Tournament Championships</option>
+              <option value="v5CupTitles">V5 Cup Titles</option>
+              <option value="divisionTwoTitles">Division 2 Titles</option>
               <option value="divisionTitles">League Division Titles</option>
               <option value="theIdolsSuperleagueTitles">The Idols Superleague Titles (1st)</option>
               <option value="theIdolsMastersTitles">The Idols Masters Titles (Playoffs)</option>
@@ -787,7 +798,9 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
                   <th className="px-3 py-3 text-center">Comp.</th>
                   <th className="px-3 py-3 text-center font-bold text-amber-400">Total Titles</th>
                   <th className="px-3 py-3 text-center font-semibold text-yellow-300">Tourney</th>
-                  <th className="px-3 py-3 text-center font-semibold text-teal-300">Division</th>
+                  <th className="px-3 py-3 text-center font-semibold text-cyan-300">V5 Cups</th>
+                  <th className="px-3 py-3 text-center font-semibold text-sky-300">Div 2</th>
+                  <th className="px-3 py-3 text-center font-semibold text-teal-300">Division 1</th>
                   <th className="px-3 py-3 text-center font-semibold text-purple-300">Superleague</th>
                   <th className="px-3 py-3 text-center font-semibold text-amber-300">Masters</th>
                   <th className="px-3 py-3 text-center font-bold text-amber-400">Points</th>
@@ -869,6 +882,12 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
                       </td>
                       <td className="px-3 py-2.5 text-center font-bold text-yellow-300">
                         {stat.tournamentTitles}
+                      </td>
+                      <td className="px-3 py-2.5 text-center font-bold text-cyan-300">
+                        {stat.v5CupTitles}
+                      </td>
+                      <td className="px-3 py-2.5 text-center font-bold text-sky-300">
+                        {stat.divisionTwoTitles}
                       </td>
                       <td className="px-3 py-2.5 text-center font-bold text-teal-300">
                         {stat.divisionTitles}
