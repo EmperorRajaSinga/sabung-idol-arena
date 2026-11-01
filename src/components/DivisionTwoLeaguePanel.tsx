@@ -205,6 +205,7 @@ export const DivisionTwoLeaguePanel: React.FC<Props> = ({
         divisionLabel={divisionName}
         hidePostseason
         promotionCount={v5State.promotionCount || 3}
+        skipFavoriteMatchesOnBulkSimulation={false}
       />
     </div>
   );
