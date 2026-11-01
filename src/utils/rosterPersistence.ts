@@ -138,7 +138,10 @@ export function saveDivisionOneRosterSnapshot<T extends { id: number; memberIds:
   });
 }
 
-export function saveDivisionTwoRosterSnapshot<T extends { id: number; memberIds: string[] }>(leagues: T[]): boolean {
+export function saveDivisionTwoRosterSnapshot<T extends { id: number; memberIds: string[] }>(
+  leagues: T[],
+  options: { allowEmptyRosterIds?: number[] } = {}
+): boolean {
   if (
     !Array.isArray(leagues) ||
     (leagues.length > 0 && (leagues.length !== 6 || new Set(leagues.map((league) => Number(league.id))).size !== 6))
@@ -156,11 +159,21 @@ export function saveDivisionTwoRosterSnapshot<T extends { id: number; memberIds:
     console.error('[Persistence] Empty Division 2 state rejected because a populated roster snapshot already exists.');
     return false;
   }
+  const incoming = toMemberships(leagues);
+  const savedById = new Map((current?.division2 || []).map((league) => [league.id, league.memberIds]));
+  const protectedMembership = incoming.map((league) => {
+    const savedMembers = savedById.get(league.id) || [];
+    const explicitlyCleared = (options.allowEmptyRosterIds || []).includes(league.id);
+    if (league.memberIds.length === 0 && savedMembers.length > 0 && !explicitlyCleared) {
+      return { ...league, memberIds: [...savedMembers] };
+    }
+    return league;
+  });
   return writeSnapshot({
     version: 1,
     updatedAt: Date.now(),
     division1: current?.division1 ?? null,
-    division2: toMemberships(leagues),
+    division2: protectedMembership,
   });
 }
 
@@ -191,9 +204,13 @@ export function restoreDivisionTwoRoster<T extends { id: number; memberIds: stri
   leagues: T[] | null | undefined,
   snapshot: RosterSnapshot | null
 ): T[] | null | undefined {
-  if (!Array.isArray(leagues) || !snapshot?.division2) return leagues;
-  const saved = new Map(snapshot.division2.map((item) => [item.id, item.memberIds]));
-  return leagues.map((league) => saved.has(Number(league.id))
-    ? { ...league, memberIds: [...saved.get(Number(league.id))!] }
-    : league);
+  if (!Array.isArray(leagues)) return leagues;
+  const saved = new Map((snapshot?.division2 || []).map((item) => [item.id, item.memberIds]));
+  return leagues.map((league) => {
+    const savedIds = saved.get(Number(league.id)) || [];
+    const currentIds = Array.isArray(league.memberIds) ? league.memberIds : [];
+    // An empty snapshot must not erase a populated V5 state during recovery.
+    const memberIds = savedIds.length > 0 ? [...savedIds] : [...currentIds];
+    return memberIds.length > 0 ? { ...league, memberIds } : league;
+  });
 }
