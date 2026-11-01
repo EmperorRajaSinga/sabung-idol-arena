@@ -781,7 +781,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
               <OpenArenaMatchList matches={lcView.rounds.slice(0, lcRoundOf16Index).flat()} idols={by} nm={nm} onSave={saveOpenArenaResult} />
               <div className="rounded-2xl border border-indigo-500/25 bg-gradient-to-br from-indigo-950/30 via-slate-950 to-slate-950 p-3 sm:p-5">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><p className="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-300">Round of 16 · Single Elimination</p><h4 className="mt-1 text-lg font-black text-white">Knockout Championship Bracket</h4></div><span className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-indigo-200">{lcKnockoutStage.reduce((sum, round) => sum + round.len      {section === 'spotlight' && (() => {
-        const selectedLeague = d1.find((league) => league.id === (selectedSpotlightLeague || d1[0]?.id)) || d1[0] || null;
+        const selectedLeague = d1.find((league) => league.id === Number(selectedSpotlightLeague || d1[0]?.id)) || d1[0] || null;
         const leagueId = selectedLeague?.id ?? (selectedSpotlightLeague || 0);
         const storedMatches = v5.miniCups[leagueId];
         const spotlightMatches = storedMatches || createEmptyMiniCup(leagueId);
@@ -834,7 +834,6 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
             target.winnerId = result.winnerId;
             target.loserId = result.winnerId === target.idolAId ? target.idolBId : target.idolAId;
             target.completed = true;
-            E.invalidateDownstream(next, target.id);
           });
           E.advanceBracket(next);
           commit({ miniCups: { ...v5.miniCups, [leagueId]: next } });
