@@ -109,19 +109,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           badge: '1-Click',
         },
         { id: 'competition' as ActiveTab, label: 'Competition Manager', icon: Play },
-        { id: 'draw' as ActiveTab, label: 'Group Draw', icon: Layers },
-        {
-          id: 'group_stage' as ActiveTab,
-          label: 'Group Stage',
-          icon: Table,
-          badge: isTournamentActive ? 'Live' : undefined,
-        },
-        {
-          id: 'knockout' as ActiveTab,
-          label: 'Knockout Bracket',
-          icon: Swords,
-          badge: isTournamentActive ? 'Live' : undefined,
-        },
+        { id: 'unzure_cup' as ActiveTab, label: 'Unzure Cup', icon: Trophy, badge: isTournamentActive ? 'Live' : undefined },
         {
           id: 'league_system' as ActiveTab,
           label: 'League System',
