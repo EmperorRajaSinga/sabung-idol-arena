@@ -107,6 +107,43 @@ export function recoverMissingSeasonArchives(
     const seasonMatches = allMatches.filter((m) => Number(m.seasonId) === sId);
     if (seasonMatches.length === 0) return;
 
+    // Backfill immutable champion identity on older tournament archives from
+    // the archived Grand Final match snapshot. Never replace existing snapshots.
+    const existingTournamentArchive = recoveredTournMap.get(sId);
+    if (existingTournamentArchive?.championId) {
+      const championFinal = seasonMatches.find((match) => {
+        const stage = (match.stage || '').toLowerCase();
+        const isTournamentMatch =
+          !match.matchId?.startsWith('league_') &&
+          !match.matchId?.startsWith('league-') &&
+          !match.matchId?.startsWith('the_idols_') &&
+          !stage.includes('league') &&
+          !stage.includes('division') &&
+          !stage.includes('the idols') &&
+          !stage.includes('3rd') &&
+          !stage.includes('third') &&
+          !stage.includes('bronze');
+        const isFinal =
+          stage.includes('grand final') ||
+          stage === 'final' ||
+          (stage.includes('final') && !stage.includes('semi') && !stage.includes('quarter'));
+        return isTournamentMatch && isFinal && match.winnerId === existingTournamentArchive.championId;
+      });
+
+      if (championFinal) {
+        const championIsA = championFinal.idolAId === existingTournamentArchive.championId;
+        const snapshotGroup = championIsA ? championFinal.idolAGroup : championFinal.idolBGroup;
+        const snapshotPhoto = championIsA ? championFinal.idolAPhoto : championFinal.idolBPhoto;
+        const championGroup = existingTournamentArchive.championGroup || snapshotGroup || undefined;
+        const championPhoto = existingTournamentArchive.championPhoto || snapshotPhoto || undefined;
+        if (championGroup !== existingTournamentArchive.championGroup || championPhoto !== existingTournamentArchive.championPhoto) {
+          recoveredTournMap.set(sId, { ...existingTournamentArchive, championGroup, championPhoto });
+          recoveredSeasonNumbersSet.add(sId);
+          hasChanges = true;
+        }
+      }
+    }
+
     // -------------------------------------------------------------
     // 1. TOURNAMENT ARCHIVE RECOVERY
     // -------------------------------------------------------------
