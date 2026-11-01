@@ -1561,7 +1561,7 @@ export const HallOfChampionsPanel: React.FC<HallOfChampionsPanelProps> = ({
                       <th className="px-3 py-3 text-center text-purple-400 font-black">⚡ The Idols</th>
                       <th className="px-3 py-3 text-center text-amber-400 font-black text-sm">⭐ Total Trophies</th>
                       <th className="px-4 py-3 text-center text-slate-300 font-black">📊 Record &amp; Win%</th>
-                      <th className="px-4 py-3">Trophy Cabinet / Title Details</th>
+                      <th className="px-4 py-3">Title History</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/40 font-medium">
@@ -1693,20 +1693,13 @@ export const HallOfChampionsPanel: React.FC<HallOfChampionsPanelProps> = ({
                         {/* Badges / History */}
                         <td className="px-4 py-3">
                           {lead.titlesHistory.length > 0 ? (
-                            <div className="flex flex-wrap gap-1 max-w-xs">
-                              {lead.titlesHistory.map((th, hIdx) => (
-                                <span
-                                  key={`h-${lead.idolId}-${hIdx}`}
-                                  className="px-2 py-0.5 rounded-md text-[10px] font-bold border border-black"
-                                  style={{
-                                    backgroundColor: th.type === 'CUP' ? '#78350f' : th.type === 'DIV1' ? '#451a03' : th.type === 'MASTERS_CHAMP' ? '#581c87' : th.type === 'SUPERLEAGUE_SHIELD' ? '#0e7490' : '#1e1b4b',
-                                    color: th.type === 'CUP' ? '#fef08a' : th.type === 'DIV1' ? '#fde047' : th.type === 'MASTERS_CHAMP' ? '#f3e8ff' : th.type === 'SUPERLEAGUE_SHIELD' ? '#cffafe' : '#93c5fd',
-                                  }}
-                                  title={th.label}
-                                >
-                                  {th.label}
+                            <div className="flex min-w-[150px] max-w-[220px] flex-col gap-1.5">
+                              {lead.titlesHistory.slice(-3).reverse().map((th, hIdx) => (
+                                <span key={`h-${lead.idolId}-${hIdx}`} className="block max-w-full truncate rounded-lg border border-white/10 bg-black/35 px-2.5 py-1.5 text-[10px] font-bold text-amber-100" title={th.label}>
+                                  <span className="mr-1 text-amber-400">◆</span>{th.label.replace(/^V5:\\s*/, '')}
                                 </span>
                               ))}
+                              {lead.titlesHistory.length > 3 && <span className="inline-flex w-fit rounded-full bg-amber-400/15 px-2 py-1 text-[10px] font-black text-amber-300" title={lead.titlesHistory.map((item) => item.label).join(' • ')}>+{lead.titlesHistory.length - 3} more titles</span>}
                             </div>
                           ) : (
                             <span className="text-slate-500 text-[11px] italic">Active competitor</span>
