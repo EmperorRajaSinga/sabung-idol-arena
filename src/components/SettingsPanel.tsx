@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { clearDataHistory, findRosterNameConflicts, loadDataHistory, recordDataHistory, type DataHistoryEntry, type RosterLocation } from '../utils/dataChangeHistory';
+import { clearDataHistory, findRosterNameConflicts, loadDataHistory, normalizeDataName, recordDataHistory, type DataHistoryEntry, type RosterLocation } from '../utils/dataChangeHistory';
 import {
   TournamentConfig,
   LeagueSeasonState,
