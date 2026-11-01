@@ -1434,7 +1434,7 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
             <span>
               Total Titles:{' '}
               <span className="text-amber-400 font-black">
-                {combinedChampionships} ({stat?.championships || 0} Cup + {leagueData.divisionTitlesCount} League + {(theIdolsData.mastersTitlesCount || 0) + (theIdolsData.regularSeasonTitlesCount || 0)} Superleague)
+                {combinedChampionships} ({stat?.championships || 0} Tournament + {leagueData.divisionTitlesCount} Division 1 + {v5CareerTitles} New Competitions + {(theIdolsData.mastersTitlesCount || 0) + (theIdolsData.regularSeasonTitlesCount || 0)} Superleague)
               </span>
             </span>
             {divisionStatus.tier !== 'Unassigned' && (<><span>&bull;</span><span className="text-teal-300">Current: <span className="font-black text-white">{divisionStatus.tier} · {divisionStatus.leagueName}</span>{divisionStatus.rank ? ` (Rank #${divisionStatus.rank})` : ''}</span></>)}
@@ -2910,6 +2910,8 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
               const oppScore = m.idolAId === idol.id ? m.scoreB : m.scoreA;
               const isTheIdols = isMatchTheIdols(m);
               const isLeague = !isTheIdols && isMatchLeague(m);
+              const stageLabel = String(m.stage || '').toLowerCase();
+              const v5CompetitionLabel = stageLabel.includes('league champions cup') ? 'Crown Cup' : stageLabel.includes('all-league knockout cup') ? 'Open Arena Cup' : stageLabel.includes('top 16 mini cup') ? 'Spotlight Cup' : stageLabel.includes('super cup a') ? 'Super Cup A' : stageLabel.includes('super cup b') ? 'Super Cup B' : stageLabel.startsWith('cups & divisions: division 2') ? 'Division 2' : '';
 
               return (
                 <div
@@ -2951,7 +2953,7 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
                             : 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/30'
                         }`}
                       >
-                        {isTheIdols ? '👑 Superleague' : isLeague ? '🛡️ League' : '🏆 Tournament'}
+                        {isTheIdols ? '👑 Superleague' : isLeague ? '🛡️ Division 1' : v5CompetitionLabel || '🏆 Tournament'}
                       </span>
                       <span className="text-[10px] text-amber-400/70">
                         {m.seasonName || `Season ${m.seasonId}`} &bull; {m.stage}
