@@ -26,12 +26,21 @@ jobs:
         run: npm ci
 
       - name: Run tests
+        id: tests
         run: npm test
+        continue-on-error: true
 
       - name: Build production assets
         run: npm run build
 
+      - name: Block deployment when tests fail
+        if: steps.tests.outcome != 'success'
+        run: |
+          echo "The test suite failed. Production deployment is blocked."
+          exit 1
+
       - name: Deploy to Cloudflare Workers
+        if: steps.tests.outcome == 'success'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
