@@ -189,12 +189,12 @@ export function computeAllIdolAchievements(params: {
     matchDatabase = [],
   } = params;
 
-  const safeIdols = Array.isArray(idols) ? idols : [];
-  const safeCareerStats = Array.isArray(careerStats) ? careerStats : [];
-  const safeTournamentArchives = Array.isArray(tournamentArchives) ? tournamentArchives : [];
-  const safeLeagueArchives = Array.isArray(leagueArchives) ? leagueArchives : [];
-  const safeTheIdolsArchives = Array.isArray(theIdolsArchives) ? theIdolsArchives : [];
-  const safeMatchDatabase = Array.isArray(matchDatabase) ? matchDatabase : [];
+  const safeIdols = Array.isArray(idols) ? idols.filter((item): item is Idol => Boolean(item && typeof item === 'object' && item.id)) : [];
+  const safeCareerStats = Array.isArray(careerStats) ? careerStats.filter((item): item is CareerStat => Boolean(item && typeof item === 'object' && item.idolId)) : [];
+  const safeTournamentArchives = Array.isArray(tournamentArchives) ? tournamentArchives.filter((item): item is TournamentArchive => Boolean(item && typeof item === 'object')) : [];
+  const safeLeagueArchives = Array.isArray(leagueArchives) ? leagueArchives.filter((item): item is LeagueSeasonArchive => Boolean(item && typeof item === 'object')) : [];
+  const safeTheIdolsArchives = Array.isArray(theIdolsArchives) ? theIdolsArchives.filter((item): item is TheIdolsSeasonArchive => Boolean(item && typeof item === 'object')) : [];
+  const safeMatchDatabase = Array.isArray(matchDatabase) ? matchDatabase.filter((item): item is ArchivedMatch => Boolean(item && typeof item === 'object')) : [];
 
   const results = new Map<string, IdolAchievementReport>();
 
@@ -414,7 +414,7 @@ export function computeAllIdolAchievements(params: {
   });
 
   // Calculate consecutive tournament champions across chronological tournament seasons
-  const sortedTournaments = [...tournamentArchives]
+  const sortedTournaments = [...safeTournamentArchives]
     .filter((t) => t.championId)
     .sort((a, b) => (Number(a.seasonId) || 0) - (Number(b.seasonId) || 0));
 
@@ -502,8 +502,8 @@ export function computeAllIdolAchievements(params: {
     }
 
     // 4. Invincible Season (0 losses in tournament cup run or league)
-    const hasInvincibleCup = tournamentArchives.some(
-      (t) => t.championId === idol.id && !matchDatabase.some((m) => m.seasonId === t.seasonId && m.loserId === idol.id)
+    const hasInvincibleCup = safeTournamentArchives.some(
+      (t) => t.championId === idol.id && !safeMatchDatabase.some((m) => m.seasonId === t.seasonId && m.loserId === idol.id)
     );
     if (hasInvincibleCup || lStat.undefeatedSeason || (cupTitles > 0 && cStat?.losses === 0)) {
       const badge = ALL_MILESTONE_BADGES.find((b) => b.id === 'invincible_season')!;
