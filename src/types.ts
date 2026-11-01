@@ -860,6 +860,8 @@ export interface AppState {
   customLeagueBranding?: any[];
   theIdolsState?: TheIdolsSeasonState | null;
   theIdolsArchives?: TheIdolsSeasonArchive[];
+  v5State?: any;
+  v5TitleArchives?: any[];
 }
 
 export interface LeagueCareerStat {
