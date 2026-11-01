@@ -21,7 +21,7 @@ const readSection = (match: ArchivedMatch): SectionKey | null => {
   if (stage.includes('super cup b')) return 'Super Cup B';
   return null;
 };
-const eventNameFromStage = (stage: string) => String(stage || '').split('/')[0].trim();
+const eventNameFromStage = (stage: string) => String(stage || '').replace(/^Cups & Divisions:\\s*/i, '').split('/')[0].trim();
 
 export const CareerV5StatsPanel: React.FC<{
   section: SectionKey;
