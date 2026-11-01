@@ -708,6 +708,7 @@ export function App() {
               };
             }
 
+            dataAuditSnapshotRef.current = { idols: merged.idols, girlGroups: merged.girlGroups };
             return merged;
           });
 
@@ -750,6 +751,7 @@ export function App() {
             });
           }
         }
+        dataAuditSnapshotRef.current = { idols: appState.idols, girlGroups: appState.girlGroups };
         isHydratedRef.current = true;
       })
       .catch((err) => {
