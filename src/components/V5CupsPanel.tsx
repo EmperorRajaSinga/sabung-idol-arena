@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { Idol, LeagueSeasonState, KnockoutMatch, TournamentConfig } from '../types';
 import { saveV5State, V5State } from '../utils/v5/store';
 import { loadNames, type CompetitionNames } from '../utils/v5/names';
@@ -317,6 +317,12 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
   const nm = (id: string | null) => (id ? by.get(id)?.name || id : 'TBD');
   const d1 = leagueState?.leagues || [];
   const commit = (patch: Partial<V5State>) => { const n = { ...v5, ...patch }; onUpdateV5State(n); if (!saveV5State(n)) setMsg('Storage is full: this change is not saved. Export a backup and clear old data.'); };
+  useEffect(() => {
+    if (!v5.champsCup?.matches.some((match) => match.id === 'cc_lr2' || match.id === 'cc_lr3')) return;
+    const migrated = { ...v5, champsCup: { ...v5.champsCup, matches: E.migrateChampsCup(v5.champsCup.matches) } };
+    onUpdateV5State(migrated);
+    if (!saveV5State(migrated)) setMsg('Storage is full: Crown Cup format migration could not be saved. Export a backup and clear old data.');
+  }, [v5.champsCup, onUpdateV5State]);
   const done = (ls: { matches: any[] }[]) => ls.length > 0 && ls.every((l) => l.matches.length > 0 && l.matches.every((m: any) => m.completed));
   const d1Done = done(d1 as any), d2Done = done(v5.d2 as any);
   const gf = knockoutMatches.find((m) => m.completed && /grand final/i.test(m.roundName));
