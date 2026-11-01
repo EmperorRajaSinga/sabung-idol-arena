@@ -53,6 +53,11 @@ function parseSnapshot(raw: string | null): RosterSnapshot | null {
   }
 }
 
+export function clearRosterSnapshot(): void {
+  try { localStorage.removeItem(PRIMARY_KEY); } catch { /* storage may be unavailable */ }
+  try { localStorage.removeItem(BACKUP_KEY); } catch { /* storage may be unavailable */ }
+}
+
 export function loadRosterSnapshot(): RosterSnapshot | null {
   try {
     const primary = parseSnapshot(localStorage.getItem(PRIMARY_KEY));
