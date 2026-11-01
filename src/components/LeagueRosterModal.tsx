@@ -9,6 +9,7 @@ import {
   LeagueBrandingItem,
 } from '../utils/leagueLogic';
 import { generateAvatarUrl } from '../data/initialData';
+import { normalizeDataName } from '../utils/dataChangeHistory';
 import { getCountryFlag } from '../utils/nationalityHelper';
 import {
   X,
@@ -31,6 +32,7 @@ interface LeagueRosterModalProps {
   onClose: () => void;
   idols: Idol[];
   girlGroups: GirlGroup[];
+  reservedNames?: string[];
   leagueState: LeagueSeasonState | null;
   onUpdateLeagueState: (newState: LeagueSeasonState) => void;
   onUpdateIdols?: (updatedIdols: Idol[]) => void;
@@ -41,6 +43,7 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
   onClose,
   idols,
   girlGroups,
+  reservedNames = [],
   leagueState,
   onUpdateLeagueState,
   onUpdateIdols,
@@ -110,6 +113,9 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
     });
     return map;
   }, [allIdolsPool]);
+
+  // Division 2 names are reserved and cannot be assigned to any Division 1 league.
+  const reservedNameSet = useMemo(() => new Set(reservedNames.map(normalizeDataName).filter(Boolean)), [reservedNames]);
 
   // Set of assigned idol IDs
   const assignedIdolIds = useMemo(() => {
@@ -185,6 +191,10 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
     }
 
     const idol = idolsMap.get(idolId);
+    if (idol && reservedNameSet.has(normalizeDataName(idol.name))) {
+      triggerFeedback(`${idol.name} is already assigned to Division 2. Remove it from Division 2 before assigning it here.`, 'error');
+      return;
+    }
     setDivisionMembers((prev) => ({
       ...prev,
       [activeDivisionTab]: [...(prev[activeDivisionTab] || []), idolId],
@@ -214,6 +224,10 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
     }
 
     const idol = idolsMap.get(idolId);
+    if (idol && reservedNameSet.has(normalizeDataName(idol.name))) {
+      triggerFeedback(`${idol.name} is already assigned to Division 2 and cannot be transferred into another Division 1 league.`, 'error');
+      return;
+    }
     setDivisionMembers((prev) => ({
       ...prev,
       [activeDivisionTab]: (prev[activeDivisionTab] || []).filter((id) => id !== idolId),
@@ -241,6 +255,11 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
 
     if (lines.length === 0) {
       triggerFeedback('No valid idol names found.', 'error');
+      return;
+    }
+    const reservedConflicts = Array.from(new Set(lines.filter((name) => reservedNameSet.has(normalizeDataName(name)))));
+    if (reservedConflicts.length) {
+      triggerFeedback(`Paste blocked. Already assigned to Division 2: ${reservedConflicts.slice(0, 8).join(', ')}.`, 'error');
       return;
     }
 
@@ -328,9 +347,15 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
       }
     });
 
+    const reservedConflicts = Array.from(new Set(Object.values(sections).flat().filter((name) => reservedNameSet.has(normalizeDataName(name)))));
+    if (reservedConflicts.length) {
+      triggerFeedback(`Bulk paste blocked. Already assigned to Division 2: ${reservedConflicts.slice(0, 10).join(', ')}.`, 'error');
+      return;
+    }
     const newlyCreated: Idol[] = [];
     const newDivisionMembers: Record<number, string[]> = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
     const globalAssigned = new Set<string>();
+    const globalAssignedNames = new Set<string>();
 
     for (let d = 1; d <= 6; d++) {
       const names = sections[d] || [];
@@ -340,8 +365,10 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
           idol = getOrCreateIdol(name);
           newlyCreated.push(idol);
         }
-        if (!globalAssigned.has(idol.id) && newDivisionMembers[d].length < 20) {
+        const normalizedName = normalizeDataName(idol.name);
+        if (!globalAssigned.has(idol.id) && !globalAssignedNames.has(normalizedName) && newDivisionMembers[d].length < 20) {
           globalAssigned.add(idol.id);
+          globalAssignedNames.add(normalizedName);
           newDivisionMembers[d].push(idol.id);
         }
       });
@@ -360,6 +387,20 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
   // --- SAVE & APPLY ALL ROSTERS ---
   const handleSaveAndApply = () => {
     const allKnownIdols = [...idols, ...createdIdolsAccumulator];
+    const knownById = new Map(allKnownIdols.map((idol) => [idol.id, idol]));
+    const nameCounts = new Map<string, number>();
+    for (let division = 1; division <= 6; division++) {
+      for (const id of divisionMembers[division] || []) {
+        const normalized = normalizeDataName(knownById.get(id)?.name || id);
+        if (normalized) nameCounts.set(normalized, (nameCounts.get(normalized) || 0) + 1);
+      }
+    }
+    const duplicateNames = Array.from(nameCounts.entries()).filter(([, count]) => count > 1).map(([name]) => name);
+    const d2Conflicts = Array.from(nameCounts.keys()).filter((name) => reservedNameSet.has(name));
+    if (duplicateNames.length || d2Conflicts.length) {
+      triggerFeedback(`Save blocked. Duplicate names across Division 1 leagues: ${duplicateNames.slice(0, 8).join(', ') || 'none'}. Already assigned to Division 2: ${d2Conflicts.slice(0, 8).join(', ') || 'none'}. Resolve these conflicts first.`, 'error');
+      return;
+    }
     const customDefs = loadCustomLeagueBranding();
 
     const updatedLeagues: LeagueInfo[] = [1, 2, 3, 4, 5, 6].map((leagueId) => {
