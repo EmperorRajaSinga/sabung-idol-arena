@@ -173,6 +173,25 @@ export function buildChampsCup(champions: ChampionInfo[]): { matches: BNode[]; b
 export function advanceChampsCup(matches: BNode[], _seedOrder: string[] = []) {
   advanceBracket(matches);
 }
+/** Migrates saved ten-match Crown Cup brackets to the current eight-match format.
+ * Completed upper matches are retained. Obsolete lower-bracket results are discarded
+ * because their participants and elimination rules changed.
+ */
+export function migrateChampsCup(matches: BNode[]): BNode[] {
+  if (!matches.some((match) => match.id === 'cc_lr2' || match.id === 'cc_lr3')) return matches;
+  const by = new Map(matches.map((match) => [match.id, match]));
+  const upperIds = ['cc_ur1_a', 'cc_ur1_b', 'cc_usf_a', 'cc_usf_b', 'cc_uf'];
+  const next = upperIds.map((id) => by.get(id)).filter((match): match is BNode => !!match).map((match) => ({ ...match }));
+  const reset = (id: string, roundName: string, bestOf: 5 | 7, a: Slot, b: Slot): BNode =>
+    ({ id, roundName, bestOf, a, b, idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false });
+  next.push(
+    reset('cc_lr1', 'Lower Round 1', 5, { lose: 'cc_usf_a' }, { lose: 'cc_usf_b' }),
+    reset('cc_lf', 'Lower Final', 7, { win: 'cc_lr1' }, { lose: 'cc_uf' }),
+    reset('cc_gf', 'Grand Final', 7, { win: 'cc_uf' }, { win: 'cc_lf' }),
+  );
+  advanceBracket(next);
+  return next;
+}
 /** Crown Cup uses a fixed lower bracket: both Upper Semi Final losers meet in Lower Round 1. */
 export function advanceChampsCup(matches: BNode[], _seedOrder: string[] = []) {
   advanceBracket(matches);
