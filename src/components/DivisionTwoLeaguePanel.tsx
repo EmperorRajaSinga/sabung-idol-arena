@@ -171,7 +171,7 @@ export const DivisionTwoLeaguePanel: React.FC<Props> = ({
   if (!leagueStateForPanel.leagues.length) {
     return (
       <div className="mx-auto max-w-7xl">
-        {promotionReview}
+        <div className="mb-5 rounded-2xl border border-emerald-900/60 bg-emerald-950/20 px-4 py-3 text-xs text-emerald-200/80">Promotion and relegation are calculated automatically when you archive the season. The next-season Division 1 and Division 2 rosters are updated during that process.</div>
         <div className="rounded-2xl border border-amber-500/30 bg-[#18110c] p-8 text-center text-amber-100">
           <h2 className="text-xl font-black text-amber-300">{divisionName.toUpperCase()} LEAGUE SYSTEM</h2>
           <p className="mt-3 text-sm text-amber-100/70">Division 2 leagues have not been generated. Open Settings, then Division 2 Roster Manager, to generate the six league rosters.</p>
@@ -189,7 +189,7 @@ export const DivisionTwoLeaguePanel: React.FC<Props> = ({
 
   return (
     <div className="mx-auto max-w-7xl">
-      {promotionReview}
+      <div className="mb-5 rounded-2xl border border-emerald-900/60 bg-emerald-950/20 px-4 py-3 text-xs text-emerald-200/80">Promotion and relegation are calculated automatically when you archive the season. The next-season Division 1 and Division 2 rosters are updated during that process.</div>
       <LeagueSystemPanel
         idols={idols}
         girlGroups={girlGroups}
