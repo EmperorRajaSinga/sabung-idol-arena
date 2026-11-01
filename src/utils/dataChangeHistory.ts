@@ -14,12 +14,18 @@ export interface DataHistoryEntry {
 const HISTORY_KEY = 'sabung_data_change_history_v1';
 const HISTORY_LIMIT = 5000;
 
+/**
+ * Normalizes names for duplicate checks. Unicode accents, punctuation, repeated
+ * whitespace, and letter casing do not create separate identities.
+ */
 export function normalizeDataName(value: string): string {
   return String(value || '')
-    .normalize('NFKC')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
     .trim()
-    .replace(/\s+/g, ' ')
-    .toLocaleLowerCase();
+    .replace(/\s+/g, ' ');
 }
 
 export function loadDataHistory(): DataHistoryEntry[] {
@@ -106,6 +112,14 @@ export function findRosterNameConflicts(
   return conflicts;
 }
 
+function getChangedFields(before: Record<string, any>, after: Record<string, any>): string[] {
+  const keys = new Set([...Object.keys(before || {}), ...Object.keys(after || {})]);
+  return Array.from(keys).filter((key) => {
+    if (key === 'updatedAt') return false;
+    return JSON.stringify(before?.[key]) !== JSON.stringify(after?.[key]);
+  });
+}
+
 export function auditAppStateDataChanges(
   previous: { idols?: any[]; girlGroups?: any[] },
   next: { idols?: any[]; girlGroups?: any[] },
@@ -129,13 +143,18 @@ export function auditAppStateDataChanges(
           source,
           details: `New ${entity === 'idol' ? 'idol' : 'girl group'} added to the database.`,
         });
-      } else if (JSON.stringify(old) !== JSON.stringify(item)) {
+      } else {
+        const changedFields = getChangedFields(old, item);
+        if (!changedFields.length) return;
+        const oldName = getName(old);
+        const newName = getName(item);
+        const renameNote = oldName !== newName ? ` Name changed from "${oldName}" to "${newName}".` : '';
         recordDataHistory({
           action: 'updated',
           entity,
-          entityName: getName(item),
+          entityName: newName,
           source,
-          details: `Profile data changed for ${getName(item)}.`,
+          details: `Updated fields: ${changedFields.join(', ')}.${renameNote}`,
         });
       }
     });
