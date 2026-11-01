@@ -1471,8 +1471,7 @@ export function exportMatchDatabaseToCSV(
     ].join(',');
   });
 
-  const csvContent = [headers.join(','), ...rows].join('\r
-');
+  const csvContent = [headers.join(','), ...rows].join('\\r\\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const downloadAnchor = document.createElement('a');
