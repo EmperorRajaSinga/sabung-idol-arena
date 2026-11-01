@@ -389,7 +389,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       .map((name) => name.replace(/^[0-9]+[.\-)]\s*/, '').trim())
       .filter(Boolean);
     const capacity = v5State.perLeague || 20;
-    if (showRosterConflicts(rawNames, { division: 'Division 2', leagueId, leagueName: targetLeague.name })) return;
+    if (showRosterConflicts(rawNames, { division: 'Division 2', leagueId, leagueName: targetLeague.name }, { division: 'Division 2', leagueId, leagueName: targetLeague.name })) return;
     const normalizedNames = rawNames.filter((name, index) =>
       rawNames.findIndex((candidate) => normalizeDataName(candidate) === normalizeDataName(name)) === index
     );
@@ -902,7 +902,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       showSuccessMsg('Maximum capacity is 20 idols per Division 1 league.');
       return;
     }
-    if (showRosterConflicts(rawNames, { division: 'Division 1', leagueId, leagueName: targetLeague.name })) return;
+    if (showRosterConflicts(rawNames, { division: 'Division 1', leagueId, leagueName: targetLeague.name }, { division: 'Division 1', leagueId, leagueName: targetLeague.name })) return;
 
     // Map names to idol IDs, creating any new idols if they don't exist
     const existingNamesMap = new Map<string, Idol>();
@@ -2803,6 +2803,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           onClose={() => setIsRosterModalOpen(false)}
           idols={appState.idols}
           girlGroups={appState.girlGroups}
+          reservedNames={(v5State?.d2 || []).flatMap((league) => (league.memberIds || []).map((id) => appState.idols.find((idol) => idol.id === id)?.name || id))}
           leagueState={activeLeagueState}
           onUpdateLeagueState={(newState) => {
             if (onUpdateLeagueState) onUpdateLeagueState(newState);
