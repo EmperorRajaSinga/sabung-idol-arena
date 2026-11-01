@@ -367,6 +367,94 @@ export const HeadToHeadPanel: React.FC<HeadToHeadPanelProps> = ({
       }
     });
 
+    // V5 cups and Division 2 are sourced from the same unified match database
+    // used by Career Statistics, so newly archived results flow into this panel automatically.
+    const v5Sections = [
+      { key: 'crown', test: (stage: string) => stage.includes('league champions cup') },
+      { key: 'open', test: (stage: string) => stage.includes('all-league knockout cup') },
+      { key: 'spotlight', test: (stage: string) => stage.includes('top 16 mini cup') },
+      { key: 'super_a', test: (stage: string) => stage.includes('super cup a') },
+      { key: 'super_b', test: (stage: string) => stage.includes('super cup b') },
+      { key: 'division_2', test: (stage: string) => stage.includes('division 2') },
+    ];
+    const v5Matches = (Array.isArray(matchDatabase) ? matchDatabase : []).filter((match) => {
+      const stage = String(match?.stage || '').toLowerCase();
+      return stage.startsWith('cups & divisions:') && v5Sections.some((section) => section.test(stage)) &&
+        (match.idolAId === idol.id || match.idolBId === idol.id);
+    });
+    const seenV5Matches = new Set<string>();
+    let v5MatchesPlayed = 0;
+    let v5Wins = 0;
+    let v5Draws = 0;
+    let v5Losses = 0;
+    let v5GoalsFor = 0;
+    v5Matches.forEach((match) => {
+      if (match.scoreA == null || match.scoreB == null) return;
+      const key = String(match.matchId || [match.seasonId, match.stage, match.idolAId, match.idolBId, match.scoreA, match.scoreB].join('|'));
+      if (seenV5Matches.has(key)) return;
+      seenV5Matches.add(key);
+      const isA = match.idolAId === idol.id;
+      const scoreFor = Number(isA ? match.scoreA : match.scoreB);
+      const scoreAgainst = Number(isA ? match.scoreB : match.scoreA);
+      if (!Number.isFinite(scoreFor) || !Number.isFinite(scoreAgainst)) return;
+      v5MatchesPlayed += 1;
+      v5GoalsFor += scoreFor;
+      if (scoreFor > scoreAgainst) v5Wins += 1;
+      else if (scoreFor === scoreAgainst) v5Draws += 1;
+      else v5Losses += 1;
+    });
+
+    // Cup titles come only from a recorded Final. Division 2 titles are calculated
+    // independently per season using its official points, goal-difference and goals-scored tiebreakers.
+    const v5CupTitleSeasons = new Set<string>();
+    const d2Tables = new Map<string, Map<string, { points: number; diff: number; scored: number }>>();
+    const seenTitleMatches = new Set<string>();
+    (Array.isArray(matchDatabase) ? matchDatabase : []).forEach((match) => {
+      const stage = String(match?.stage || '');
+      const lowerStage = stage.toLowerCase();
+      if (!lowerStage.startsWith('cups & divisions:')) return;
+      if (match.scoreA == null || match.scoreB == null || !match.idolAId || !match.idolBId) return;
+      const key = String(match.matchId || [match.seasonId, stage, match.idolAId, match.idolBId, match.scoreA, match.scoreB].join('|'));
+      if (seenTitleMatches.has(key)) return;
+      seenTitleMatches.add(key);
+      const scoreA = Number(match.scoreA), scoreB = Number(match.scoreB);
+      if (!Number.isFinite(scoreA) || !Number.isFinite(scoreB)) return;
+      const season = String(match.seasonId || 1);
+      if (lowerStage.includes('division 2')) {
+        if (!d2Tables.has(season)) d2Tables.set(season, new Map());
+        const table = d2Tables.get(season)!;
+        const update = (id: string, scored: number, conceded: number) => {
+          const row = table.get(id) || { points: 0, diff: 0, scored: 0 };
+          row.points += scored > conceded ? 3 : scored === conceded ? 1 : 0;
+          row.diff += scored - conceded;
+          row.scored += scored;
+          table.set(id, row);
+        };
+        update(match.idolAId, scoreA, scoreB);
+        update(match.idolBId, scoreB, scoreA);
+      } else if (
+        lowerStage.includes('league champions cup') ||
+        lowerStage.includes('all-league knockout cup') ||
+        lowerStage.includes('top 16 mini cup') ||
+        lowerStage.includes('super cup a') ||
+        lowerStage.includes('super cup b')
+      ) {
+        const detail = stage.split(' / ').slice(1).join(' / ').trim().toLowerCase();
+        if (/^final(?:\\b|\\s|$)/.test(detail) && scoreA !== scoreB) {
+          const winnerId = scoreA > scoreB ? match.idolAId : match.idolBId;
+          if (winnerId === idol.id) v5CupTitleSeasons.add(`${season}|${lowerStage.split(' / ')[0]}`);
+        }
+      }
+    });
+    let v5DivisionTitles = 0;
+    d2Tables.forEach((table) => {
+      const championId = [...table.entries()].sort((a, b) =>
+        b[1].points - a[1].points || b[1].diff - a[1].diff || b[1].scored - a[1].scored
+      )[0]?.[0];
+      if (championId === idol.id) v5DivisionTitles += 1;
+    });
+    const v5Titles = v5CupTitleSeasons.size + v5DivisionTitles;
+
     const ov = overrides[idol.id];
     const isOverridden = ov && ov.enabled;
     const cupTitles = isOverridden && ov.championships !== undefined ? ov.championships : (cStat?.championships || 0);
@@ -374,13 +462,13 @@ export const HeadToHeadPanel: React.FC<HeadToHeadPanelProps> = ({
     const finalTheIdolsTitles = isOverridden && (ov.theIdolsSuperleagueTitles !== undefined || ov.theIdolsMastersTitles !== undefined)
       ? (ov.theIdolsSuperleagueTitles || 0) + (ov.theIdolsMastersTitles || 0)
       : theIdolsTitles;
-    const totalTitles = cupTitles + finalLeagueTitles + finalTheIdolsTitles;
-    const totalMatches = isOverridden && ov.matches !== undefined ? ov.matches : ((cStat?.matches || 0) + leagueMatches + theIdolsMatches);
-    const totalWins = isOverridden && ov.wins !== undefined ? ov.wins : ((cStat?.wins || 0) + leagueWins + theIdolsWins);
-    const totalDraws = isOverridden && ov.draws !== undefined ? ov.draws : ((cStat?.draws || 0) + leagueDraws + theIdolsDraws);
-    const totalLosses = isOverridden && ov.losses !== undefined ? ov.losses : ((cStat?.losses || 0) + leagueLosses + theIdolsLosses);
+    const totalTitles = cupTitles + finalLeagueTitles + finalTheIdolsTitles + v5Titles;
+    const totalMatches = isOverridden && ov.matches !== undefined ? ov.matches : ((cStat?.matches || 0) + leagueMatches + theIdolsMatches + v5MatchesPlayed);
+    const totalWins = isOverridden && ov.wins !== undefined ? ov.wins : ((cStat?.wins || 0) + leagueWins + theIdolsWins + v5Wins);
+    const totalDraws = isOverridden && ov.draws !== undefined ? ov.draws : ((cStat?.draws || 0) + leagueDraws + theIdolsDraws + v5Draws);
+    const totalLosses = isOverridden && ov.losses !== undefined ? ov.losses : ((cStat?.losses || 0) + leagueLosses + theIdolsLosses + v5Losses);
     const winRate = totalMatches > 0 ? Math.round((totalWins / totalMatches) * 100) : 0;
-    const points = (cStat?.gamesFor || 0) + leagueGF + theIdolsGF;
+    const points = (cStat?.gamesFor || 0) + leagueGF + theIdolsGF + v5GoalsFor;
     const longestStreak = isOverridden && ov.longestWinStreak !== undefined ? ov.longestWinStreak : (cStat?.longestWinStreak || 0);
 
     // Recent Form from match database
@@ -648,17 +736,13 @@ export const HeadToHeadPanel: React.FC<HeadToHeadPanelProps> = ({
                 <Trophy className="w-4 h-4 text-amber-400" />
                 <span>{statA.totalTitles} Titles</span>
               </div>
-              <span className="text-[10px] text-slate-400 font-normal">
-                ({statA.cupTitles} Cup{statA.cupTitles !== 1 ? 's' : ''} &bull; {statA.leagueTitles} Lg &bull; {statA.theIdolsTitles} Superleague)
-              </span>
+
             </div>
             <div className="text-center font-bold text-slate-400 uppercase text-[11px]">
-              Major Titles
+              Titles
             </div>
             <div className="text-right font-black text-base text-amber-300 flex flex-col sm:flex-row sm:items-center justify-end gap-1.5">
-              <span className="text-[10px] text-slate-400 font-normal">
-                ({statB.cupTitles} Cup{statB.cupTitles !== 1 ? 's' : ''} &bull; {statB.leagueTitles} Lg &bull; {statB.theIdolsTitles} Superleague)
-              </span>
+
               <div className="flex items-center justify-end gap-1.5">
                 <span>{statB.totalTitles} Titles</span>
                 <Trophy className="w-4 h-4 text-amber-400" />
