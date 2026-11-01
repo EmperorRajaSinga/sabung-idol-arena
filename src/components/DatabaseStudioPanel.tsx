@@ -1032,7 +1032,7 @@ export const DatabaseStudioPanel: React.FC<DatabaseStudioPanelProps> = ({
                 logoUrl: division.logoUrl,
                 description: division.description,
                 memberIds,
-                matches: [],
+                matches,
                 standings,
               };
             }),
