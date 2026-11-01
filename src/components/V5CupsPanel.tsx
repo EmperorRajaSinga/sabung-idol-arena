@@ -17,7 +17,7 @@ interface Props {
 }
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 
-const CROWN_ROUND_ORDER = ['Upper Round 1', 'Upper Semi Final', 'Upper Final', 'Lower Round 1', 'Lower Round 2', 'Lower Round 3', 'Lower Final', 'Grand Final'];
+const CROWN_ROUND_ORDER = ['Upper Round 1', 'Upper Semi Final', 'Upper Final', 'Lower Round 1', 'Lower Final', 'Grand Final'];
 const createEmptyCrownCup = (): { matches: E.BNode[]; byeIds: string[]; seedOrder: string[] } => {
   const S = (id: string): E.Slot => ({ id });
   const W = (id: string): E.Slot => ({ win: id });
@@ -28,10 +28,8 @@ const createEmptyCrownCup = (): { matches: E.BNode[]; byeIds: string[]; seedOrde
     { id: 'cc_usf_a', roundName: 'Upper Semi Final', bestOf: 5, a: S(''), b: W('cc_ur1_a'), idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
     { id: 'cc_usf_b', roundName: 'Upper Semi Final', bestOf: 5, a: S(''), b: W('cc_ur1_b'), idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
     { id: 'cc_uf', roundName: 'Upper Final', bestOf: 5, a: W('cc_usf_a'), b: W('cc_usf_b'), idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
-    { id: 'cc_lr1', roundName: 'Lower Round 1', bestOf: 5, a: L('cc_ur1_a'), b: L('cc_ur1_b'), idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
-    { id: 'cc_lr2', roundName: 'Lower Round 2', bestOf: 5, a: W('cc_lr1'), b: L('cc_usf_a'), idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
-    { id: 'cc_lr3', roundName: 'Lower Round 3', bestOf: 5, a: W('cc_lr2'), b: L('cc_usf_b'), idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
-    { id: 'cc_lf', roundName: 'Lower Final', bestOf: 7, a: W('cc_lr3'), b: L('cc_uf'), idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
+    { id: 'cc_lr1', roundName: 'Lower Round 1', bestOf: 5, a: L('cc_usf_a'), b: L('cc_usf_b'), idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
+    { id: 'cc_lf', roundName: 'Lower Final', bestOf: 7, a: W('cc_lr1'), b: L('cc_uf'), idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
     { id: 'cc_gf', roundName: 'Grand Final', bestOf: 7, a: W('cc_uf'), b: W('cc_lf'), idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
   ];
   E.advanceBracket(matches);
