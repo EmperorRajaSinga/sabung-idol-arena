@@ -314,7 +314,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
     // Active Playoff Champion
     if ((theIdolsState.isPlayoffCompleted || theIdolsState.championId) && theIdolsState.championId) {
       const champIdol = idolsMap.get(theIdolsState.championId);
-      const groupName = theIdolsState.championGroup || champIdol?.girlGroup || 'Solo / Independent';
+      const groupName = champIdol?.girlGroup || 'Solo / Independent';
       if (!groupTheIdolsPlayoffWinnersMap.has(groupName)) {
         groupTheIdolsPlayoffWinnersMap.set(groupName, []);
       }
@@ -326,7 +326,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
           seasonName: theIdolsState.seasonName || `The Idols Season ${theIdolsState.seasonNumber}`,
           championId: theIdolsState.championId,
           championName: theIdolsState.championName || champIdol?.name || 'Playoff Champion',
-          championPhoto: theIdolsState.championPhoto || champIdol?.photoUrl,
+          championPhoto: champIdol?.photoUrl,
         });
       }
     }
