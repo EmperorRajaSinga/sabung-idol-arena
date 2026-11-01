@@ -63,7 +63,8 @@ export function createV5ArchiveSnapshot(
   (state.d2 || []).forEach((league) => {
     (league.matches || []).forEach((match) => addMatch(`Division 2 ${league.name}`, match, `Matchday ${match.matchday}`));
     const ranked = [...(league.standings || [])].sort((a, b) => a.rank - b.rank);
-    const championId = league.championId || (league.isCompleted ? ranked[0]?.idolId : undefined);
+    const seasonFinished = (league.matches || []).length > 0 && (league.matches || []).every((match) => match.completed);
+    const championId = league.championId || (seasonFinished ? ranked[0]?.idolId : undefined);
     if (championId) addTitle(`Division 2 / ${league.name}`, championId, ranked[1]?.idolId, true);
   });
 
