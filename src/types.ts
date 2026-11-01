@@ -181,6 +181,7 @@ export interface CareerStat {
 
 export type ActiveTab =
   | 'dashboard'
+  | 'v5_cups'
   | 'season_simulator'
   | 'rank_panel'
   | 'settings'
@@ -196,8 +197,6 @@ export type ActiveTab =
   | 'group_stage'
   | 'knockout'
   | 'league_system'
-  | 'division_system'
-  | 'cup_competitions'
   | 'the_idols'
   | 'public_results'
   | 'match_db'
@@ -858,7 +857,6 @@ export interface AppState {
   customLeagueBranding?: any[];
   theIdolsState?: TheIdolsSeasonState | null;
   theIdolsArchives?: TheIdolsSeasonArchive[];
-  divisionSystem?: import('./utils/divisionSystem').DivisionSystemState;
 }
 
 export interface LeagueCareerStat {

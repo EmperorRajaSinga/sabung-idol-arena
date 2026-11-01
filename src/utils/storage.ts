@@ -58,8 +58,6 @@ export interface AppState {
   customLeagueBranding?: LeagueBrandingItem[];
   theIdolsState?: TheIdolsSeasonState | null;
   theIdolsArchives?: TheIdolsSeasonArchive[];
-  divisionSystem?: import('./divisionSystem').DivisionSystemState;
-  cupSystem?: import('./cupSystem').CupSystemState;
 }
 
 export const DEFAULT_CONFIG: TournamentConfig = {
@@ -650,7 +648,6 @@ export function normalizeAppState(parsed: any, isFullRestore: boolean = false): 
     customLeagueBranding,
     theIdolsState,
     theIdolsArchives,
-    divisionSystem: parsed.divisionSystem,
     _savedAt: typeof parsed._savedAt === 'number' ? parsed._savedAt : Date.now(),
   };
 

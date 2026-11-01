@@ -34,7 +34,8 @@ When adding new features or fixing issues, adhere strictly to these safety bound
    - User tournament saves, active league standings, and career archives live in `localStorage` (`sabung_league_season_state_v1`, `sabung_tournament_state_v1`, etc.).
    - Always write defensive fallbacks (e.g. `(leagueArchives || []).forEach(...)`, `gate?.directQualifiersPerDivision ?? 5`).
    - Never wipe or reset existing keys when adding a new field to data structures.
-3. **No Promotion / Relegation in the 6 Leagues**:
+3. **Promotion / Relegation (UPDATED by the owner, v5)**: the 6 leagues are now all Division 1. Each has a Division 2 below it. The bottom 3 of Division 1 go down and the top 3 of Division 2 go up each season. This is implemented as an additive module in `src/utils/v5/` and `src/components/V5CupsPanel.tsx`. The old text below describes the earlier rule and is superseded:
+   - (old rule) No Promotion / Relegation in the 6 Leagues:
    - The 6 active leagues (Idol Premier League, Div 2, Div 3, Div 4, Div 5, Div 6) are **parallel, equal-tier divisions** with fixed rosters of 20 idols each.
    - Do not re-introduce promotion or relegation logic. Use **Division Championships**, **Top-3 Podium Finishes**, and **Top-5 Champions Tournament Qualifications**.
 
@@ -113,3 +114,11 @@ When adding new features or fixing issues, adhere strictly to these safety bound
 - Idol Profile league totals count only division matches. The Idols matchdays, Swiss and LCQ are separate competitions (`tests/profile.test.ts`).
 - Swiss contains only league ranks 7-16 plus the best four 17th places. Ranks 1-6 never enter Swiss, and the legacy Wildcard Play-In is not played in the 64-idol format (`tests/swiss_ranks.test.ts`).
 - League Branding & Rosters import rebuilds fixtures and standings, works with no league season yet, resolves idols by ID or by name, and reports unknown or duplicate idols (`src/utils/leagueRosterImport.ts`, `tests/roster_import.test.ts`).
+
+## 6. v5 Modules (added, do not remove)
+
+- `src/utils/v5/engine.ts`: Division 2, promotion and relegation, Crown Cup (6 champions, double elimination), Open Arena Cup (all idols, tiered entry plan solved exactly), Spotlight Cup (top 16 per league), Super Cups. Names are placeholders stored in `src/utils/v5/names.ts`.
+- All new cups are Best of 5. Lower Final, Grand Final and every cup final are Best of 7. Super Cups are Best of 5. Division 2 uses the Best of 4 league format.
+- Division 2 plays only its league and the Open Arena Cup. It does not enter Swiss, LCQ, The Idols, the Unzure Cup or the Mini Cup.
+- State lives in localStorage key `sabung_v5_state_v1`. The archive guard (`seasonGuard.ts`) also checks these competitions.
+- `npm test` includes `tests/v5.test.ts` (35 checks).

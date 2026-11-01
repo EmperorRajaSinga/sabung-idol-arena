@@ -62,12 +62,7 @@ check('I The Idols phase 1 Bo4 (4 games each, draws allowed)', tm.every((m: any)
 const pm = ti.playoffMatches; pm.forEach((m: any) => allMatchIds.push(m.id));
 check('I playoff: 16 matches, Bo5 except grand final Bo7', pm.length === 16 && pm.filter((m: any) => m.bestOf === 7).length === 1 && pm.filter((m: any) => m.bestOf === 5).length === 15, 'bestOf: ' + dist(pm.map((m: any) => m.bestOf)));
 // global
-const divisionMatchCount = (s.divisionSystem?.divisions || []).reduce(
-  (sum: number, division: any) => sum + (division.matches || []).filter((match: any) => match.completed).length,
-  0
-);
-check('J total matches simulated includes all completed D1/D2 fixtures', s.totalMatchesSimulated === 2966 + (s.divisionSystem?.divisions || []).reduce((sum: number, division: any) => sum + (division.matches || []).filter((match: any) => !match.completed).length, 0), `${s.totalMatchesSimulated} (base 2966 + divisions ${divisionMatchCount})`);
-check('J all 12 D1/D2 divisions are simulated', (s.divisionSystem?.divisions || []).length === 12 && (s.divisionSystem?.divisions || []).every((division: any) => division.matches.length === division.memberIds.length * (division.memberIds.length - 1) && division.matches.every((match: any) => match.completed)), (s.divisionSystem?.divisions || []).map((division: any) => division.matches.length).join('/'));
+check('J total matches simulated = 2966', s.totalMatchesSimulated === 2966, String(s.totalMatchesSimulated));
 check('J match IDs unique', new Set(allMatchIds).size === allMatchIds.length, `${new Set(allMatchIds).size}/${allMatchIds.length}`);
 const usedAll = new Set<string>([...usedIdolIds, ...sw.participants.map((p: any) => p.idolId), ...ti.memberIds, ...q]);
 check('J no inactive idol anywhere', [...usedAll].every(id => activeIds.has(id)), String([...usedAll].filter(id => !activeIds.has(id)).length));

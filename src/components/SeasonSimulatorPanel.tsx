@@ -246,7 +246,6 @@ export const SeasonSimulatorPanel: React.FC<SeasonSimulatorPanelProps> = ({
           matchDatabase: summary.syncedMatchDatabase,
           leagueState: summary.updatedLeagueState,
           theIdolsState: summary.updatedTheIdolsState,
-          divisionSystem: summary.divisionSystem,
         }));
 
         onUpdateLeagueState(summary.updatedLeagueState);

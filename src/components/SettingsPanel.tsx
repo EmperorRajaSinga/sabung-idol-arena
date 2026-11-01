@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   TournamentConfig,
   LeagueSeasonState,
@@ -35,7 +35,6 @@ import {
   saveCustomLeagueBranding,
 } from '../utils/leagueLogic';
 import { saveTheIdolsState, saveTheIdolsArchives } from '../utils/theIdolsLogic';
-import { initializeDivisionSystem } from '../utils/divisionSystem';
 import { isIdolActive } from '../utils/tournamentLogic';
 import { getCountryFlag } from '../utils/nationalityHelper';
 import { compressImage } from '../utils/imageHelper';
@@ -160,17 +159,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!appState.divisionSystem?.initialized && appState.leagueState?.leagues?.length === 6 && onUpdateAppState) {
-      const divisionSystem = initializeDivisionSystem(
-        appState.leagueState.leagues,
-        appState.idols,
-        appState.config.seasonNumber || 1
-      );
-      onUpdateAppState((prev) => ({ ...prev, divisionSystem }));
-    }
-  }, [appState.divisionSystem, appState.leagueState, appState.idols, appState.config.seasonNumber, onUpdateAppState]);
-
   // League State Reference
   const activeLeagueState: LeagueSeasonState = useMemo(() => {
     if (leagueState && leagueState.leagues && leagueState.leagues.length === 6) {
@@ -246,7 +234,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   }, [activeLeagueState, appState.customLeagueBranding]);
 
   const [selectedLeagueTab, setSelectedLeagueTab] = useState<number>(1);
-  const [selectedRosterTier, setSelectedRosterTier] = useState<1 | 2>(1);
   const [rosterSearchQuery, setRosterSearchQuery] = useState<string>('');
   const [editingRosterLeagueId, setEditingRosterLeagueId] = useState<number | null>(null);
   const [rosterTextVal, setRosterTextVal] = useState<string>('');
@@ -514,14 +501,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   };
 
   const handleAddIdolToActiveLeague = (idolId: string) => {
-    if (selectedRosterTier === 2) {
-      if (!onUpdateAppState) return;
-      const d2 = (appState.divisionSystem?.divisions || []).find((d) => d.leagueId === selectedLeagueTab && d.tier === 2);
-      if (!d2 || d2.memberIds.length >= 20 || (appState.divisionSystem?.divisions || []).some((d) => d.memberIds.includes(idolId))) return;
-      onUpdateAppState((prev) => ({ ...prev, divisionSystem: { ...(prev.divisionSystem || initializeDivisionSystem(prev.leagueState?.leagues || [], prev.idols, prev.config.seasonNumber || 1)), divisions: (prev.divisionSystem?.divisions || initializeDivisionSystem(prev.leagueState?.leagues || [], prev.idols, prev.config.seasonNumber || 1).divisions).map((d) => d.leagueId === selectedLeagueTab && d.tier === 2 ? { ...d, memberIds: [...d.memberIds, idolId], matches: [], standings: [] } : d) } }));
-      showSuccessMsg('Idol added to Division 2.');
-      return;
-    }
     const activeL = activeLeagueState.leagues.find((l) => l.id === selectedLeagueTab);
     if (!activeL) return;
 
@@ -565,18 +544,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   };
 
   const handleRemoveIdolFromLeague = (leagueId: number, idolId: string) => {
-    if (selectedRosterTier === 2) {
-      if (!onUpdateAppState) return;
-      const currentSystem = appState.divisionSystem?.initialized ? appState.divisionSystem : initializeDivisionSystem(activeLeagueState.leagues, appState.idols, appState.config.seasonNumber || 1);
-      const targetDivision = currentSystem.divisions.find((d) => d.leagueId === leagueId && d.tier === 2);
-      if (targetDivision?.matches.some((match) => match.completed)) {
-        alert('Roster tidak dapat diubah karena division ini sudah memiliki hasil pertandingan. Reset musim terlebih dahulu.');
-        return;
-      }
-      onUpdateAppState((prev) => ({ ...prev, divisionSystem: { ...currentSystem, divisions: currentSystem.divisions.map((d) => d.leagueId === leagueId && d.tier === 2 ? { ...d, memberIds: d.memberIds.filter((id) => id !== idolId), matches: [], standings: [] } : d) } }));
-      showSuccessMsg('Idol removed from Division 2.');
-      return;
-    }
     const updatedLeagues = activeLeagueState.leagues.map((l) => {
       if (l.id === leagueId) {
         const newMembers = l.memberIds.filter((id) => id !== idolId);
@@ -614,11 +581,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
   const handleOpenEditRoster = (leagueId: number) => {
     const l = activeLeagueState.leagues.find((x) => x.id === leagueId);
-    const memberIds = selectedRosterTier === 2
-      ? appState.divisionSystem?.divisions.find((d) => d.leagueId === leagueId && d.tier === 2)?.memberIds || []
-      : l?.memberIds || [];
     if (!l) return;
-    const names = memberIds.map((id) => idolsMap.get(id)?.name || id);
+    const names = l.memberIds.map((id) => idolsMap.get(id)?.name || id);
     setRosterTextVal(names.join('\n'));
     setEditingRosterLeagueId(leagueId);
   };
@@ -665,17 +629,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     });
 
     const allCombinedIdols = [...appState.idols, ...createdIdols];
-
-    if (selectedRosterTier === 2) {
-      if (!onUpdateAppState) return;
-      const existingD1Ids = new Set(activeLeagueState.leagues.flatMap((league) => league.memberIds));
-      const otherD2Ids = new Set(appState.divisionSystem.divisions.filter((d) => !(d.leagueId === leagueId && d.tier === 2)).flatMap((d) => d.memberIds));
-      const safeIds = newMemberIds.filter((id) => !existingD1Ids.has(id) && !otherD2Ids.has(id)).slice(0, 20);
-      onUpdateAppState((prev) => ({ ...prev, idols: allCombinedIdols, divisionSystem: { ...(prev.divisionSystem || initializeDivisionSystem(prev.leagueState?.leagues || [], prev.idols, prev.config.seasonNumber || 1)), divisions: (prev.divisionSystem?.divisions || initializeDivisionSystem(prev.leagueState?.leagues || [], prev.idols, prev.config.seasonNumber || 1).divisions).map((d) => d.leagueId === leagueId && d.tier === 2 ? { ...d, memberIds: safeIds, matches: [], standings: [] } : d) } }));
-      setEditingRosterLeagueId(null);
-      showSuccessMsg(`Division 2 roster saved (${safeIds.length} idols).`);
-      return;
-    }
 
     const updatedLeagues = activeLeagueState.leagues.map((l) => {
       if (l.id === leagueId) {
@@ -734,18 +687,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   };
 
   const handleClearLeagueRoster = (leagueId: number) => {
-    if (selectedRosterTier === 2) {
-      if (!onUpdateAppState) return;
-      const currentSystem = appState.divisionSystem?.initialized ? appState.divisionSystem : initializeDivisionSystem(activeLeagueState.leagues, appState.idols, appState.config.seasonNumber || 1);
-      const targetDivision = currentSystem.divisions.find((d) => d.leagueId === leagueId && d.tier === 2);
-      if (targetDivision?.matches.some((match) => match.completed)) {
-        alert('Roster tidak dapat diubah karena division ini sudah memiliki hasil pertandingan. Reset musim terlebih dahulu.');
-        return;
-      }
-      onUpdateAppState((prev) => ({ ...prev, divisionSystem: { ...currentSystem, divisions: currentSystem.divisions.map((d) => d.leagueId === leagueId && d.tier === 2 ? { ...d, memberIds: [], matches: [], standings: [] } : d) } }));
-      showSuccessMsg(`Cleared Division 2 roster for League ${leagueId}.`);
-      return;
-    }
     const updatedLeagues = activeLeagueState.leagues.map((l) => {
       if (l.id === leagueId) {
         return {
@@ -1557,7 +1498,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 <span>LEAGUE ROSTER MANAGER</span>
               </h3>
               <p className="text-xs text-amber-200/70 font-semibold">
-                Manage Division 1 and Division 2 rosters for the six configured leagues. Division 2 supports up to 20 idols.
+                Manage, transfer, or distribute idol rosters across the 6 football-style divisions (20 idols per league).
               </p>
             </div>
 
@@ -1607,7 +1548,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           {/* Division Selector */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             {(activeLeagueState?.leagues || []).map((l) => {
-              const count = selectedRosterTier === 2 ? (appState.divisionSystem?.divisions.find((d) => d.leagueId === l.id && d.tier === 2)?.memberIds.length || 0) : (l.memberIds?.length || 0);
+              const count = l.memberIds?.length || 0;
               const isSelected = l.id === selectedLeagueTab;
               return (
                 <button
@@ -1641,16 +1582,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             })}
           </div>
 
-          <div className="flex gap-2">
-            {[1, 2].map((tier) => <button key={tier} type="button" onClick={() => setSelectedRosterTier(tier as 1 | 2)} className={`rounded-xl px-4 py-2 text-xs font-black ${selectedRosterTier === tier ? 'bg-amber-500 text-black' : 'bg-[#2a1d14] text-amber-200'}`}>Division {tier}</button>)}
-          </div>
-
           {/* Active League Roster Grid & Transfer Pool */}
           {(() => {
             const currentLeague = (activeLeagueState?.leagues || []).find((l) => l.id === selectedLeagueTab);
             if (!currentLeague) return null;
-            const currentRosterIds = selectedRosterTier === 2 ? (appState.divisionSystem?.divisions.find((d) => d.leagueId === currentLeague.id && d.tier === 2)?.memberIds || []) : currentLeague.memberIds;
-            const rosterLimit = 20;
 
             return (
               <div className="rounded-3xl border-2 border-black bg-[#16100b] p-5 sm:p-6 poster-shadow space-y-4">
@@ -1661,13 +1596,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: currentLeague.color }}
                       />
-                      <span>{currentLeague.name} · Division {selectedRosterTier} Roster</span>
+                      <span>{currentLeague.name} Roster</span>
                       <span className="text-xs text-amber-400 font-mono font-bold">
-                        ({currentRosterIds.length}/{rosterLimit} Idols Assigned)
+                        ({currentLeague.memberIds?.length || 0}/20 Idols Assigned)
                       </span>
                     </h4>
                     <p className="text-xs text-slate-400 font-medium">
-                      {selectedRosterTier === 1 ? 'Manage the existing league roster.' : 'Division 2 roster is managed here and remains linked to its parent league.'}
+                      Select a target league from the dropdown on any idol card to transfer them instantly.
                     </p>
                   </div>
 
@@ -1700,7 +1635,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
                 {/* Grid of 20 Members */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {currentRosterIds.map((idolId, idx) => {
+                  {(currentLeague.memberIds || []).map((idolId, idx) => {
                     const idol = idolsMap.get(idolId);
 
                     return (
@@ -1794,7 +1729,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     {appState.idols
                       .filter(
                         (i) =>
-                          !(appState.divisionSystem?.divisions || []).some((d) => d.memberIds.includes(i.id)) && !activeLeagueState.leagues.some((l) => l.memberIds.includes(i.id)) &&
+                          !currentLeague.memberIds.includes(i.id) &&
                           (rosterSearchQuery
                             ? i.name.toLowerCase().includes(rosterSearchQuery.toLowerCase()) ||
                               i.girlGroup.toLowerCase().includes(rosterSearchQuery.toLowerCase())
@@ -1825,7 +1760,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               <div className="w-full max-w-lg rounded-3xl border-2 border-black bg-[#18110b] p-6 poster-shadow space-y-4">
                 <div className="flex items-center justify-between border-b border-black pb-3">
                   <h4 className="font-poster-title text-base text-amber-400">
-                    Edit / Paste {activeLeagueState.leagues.find((l) => l.id === editingRosterLeagueId)?.name} Division {selectedRosterTier} Roster
+                    Edit / Paste Roster for Division #{editingRosterLeagueId}
                   </h4>
                   <button
                     type="button"
@@ -1865,7 +1800,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       onClick={() => handleSaveRosterText(editingRosterLeagueId)}
                       className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-poster-title text-xs font-black shadow"
                     >
-                      Save Division {selectedRosterTier} Roster
+                      Save Division Roster
                     </button>
                   </div>
                 </div>

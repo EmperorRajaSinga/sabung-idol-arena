@@ -46,7 +46,7 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 /** Official league ranking order (same comparator as calculateLeagueStandings). Never trust stored array order. */
-const rankStandings = (standings: LeagueStanding[] | undefined): LeagueStanding[] =>
+export const rankStandings = (standings: LeagueStanding[] | undefined): LeagueStanding[] =>
   [...(standings || [])].sort((a, b) => {
     if ((b.points || 0) !== (a.points || 0)) return (b.points || 0) - (a.points || 0);
     if ((b.gameDiff || 0) !== (a.gameDiff || 0)) return (b.gameDiff || 0) - (a.gameDiff || 0);
