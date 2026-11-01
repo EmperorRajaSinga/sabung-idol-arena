@@ -1821,25 +1821,313 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
       {/* TAB: DATA MAKER & POT DRAW GENERATOR */}
       {activeSettingsTab === 'division2_roster' && (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Division 2 controls, styled to match League Roster Manager */}
           <div className="rounded-3xl border-2 border-black bg-[#18110b] p-6 poster-shadow space-y-4">
-            <div><h3 className="font-poster-title text-xl text-amber-400 flex items-center gap-2"><Trophy className="w-6 h-6"/>DIVISION 2 ROSTER MANAGER</h3><p className="text-xs text-amber-200/70 font-semibold">Manage and distribute idol rosters across the six Challenger Divisions. Promotion and relegation remain linked to Division 1.</p></div>
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="text-xs font-bold text-amber-100">Capacity per league <input type="number" min={2} max={40} value={v5State?.perLeague||20} onChange={e=>v5State&&onUpdateV5State?.({...v5State,perLeague:Math.max(2,Math.min(40,Number(e.target.value)||20))})} className="ml-2 w-16 rounded-xl border-2 border-black bg-black/60 px-2 py-1 text-center font-mono text-white"/></label>
-              <label className="text-xs font-bold text-amber-100">Promotion / relegation <input type="number" min={1} max={5} value={v5State?.promotionCount||3} onChange={e=>v5State&&onUpdateV5State?.({...v5State,promotionCount:Math.max(1,Math.min(5,Number(e.target.value)||3))})} className="ml-2 w-14 rounded-xl border-2 border-black bg-black/60 px-2 py-1 text-center font-mono text-white"/></label>
-              <button type="button" onClick={()=>{if(v5State&&leagueState)onUpdateV5State?.({...v5State,d2:V5Engine.autoFillDivisionTwo(leagueState.leagues,v5State.d2,appState.idols,appState.girlGroups,v5State.perLeague,'Challenger Division')})}} disabled={!leagueState?.leagues?.length} className="rounded-xl border-2 border-black bg-amber-500 px-4 py-2 text-xs font-black text-black disabled:opacity-40">Auto-fill from free idols</button>
-              <button type="button" onClick={()=>v5State&&onUpdateV5State?.({...v5State,d2:v5State.d2.map(l=>V5Engine.rebuildLeague(l,appState.idols))})} disabled={!v5State?.d2?.length||v5State.d2.some(l=>l.matches.some(m=>m.completed))} className="rounded-xl border-2 border-black bg-[#2a1d14] px-4 py-2 text-xs font-black text-amber-200 disabled:opacity-40">Rebuild fixtures</button>
-              <button type="button" onClick={()=>v5State&&onUpdateV5State?.({...v5State,d2:v5State.d2.map(l=>V5Engine.simulateLeagueMatches(l,appState.idols))})} disabled={!v5State?.d2?.length||v5State.d2.every(l=>l.isCompleted)} className="rounded-xl border-2 border-black bg-[#2a1d14] px-4 py-2 text-xs font-black text-amber-200 disabled:opacity-40">Simulate Challenger Division</button>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h3 className="font-poster-title text-xl text-amber-400 flex items-center gap-2">
+                  <Trophy className="w-6 h-6 text-amber-400" />
+                  <span>DIVISION 2 ROSTER MANAGER</span>
+                </h3>
+                <p className="mt-1 text-xs font-semibold text-amber-200/70">
+                  Manage the six Challenger Division rosters. Promotion and relegation remain linked to their corresponding Division 1 leagues.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!v5State || !leagueState?.leagues?.length) return;
+                    onUpdateV5State?.({
+                      ...v5State,
+                      d2: V5Engine.autoFillDivisionTwo(
+                        leagueState.leagues,
+                        v5State.d2,
+                        appState.idols,
+                        appState.girlGroups,
+                        v5State.perLeague,
+                        'Challenger Division'
+                      ),
+                    });
+                    showSuccessMsg('Division 2 rosters filled from available idols.');
+                  }}
+                  disabled={!v5State || !leagueState?.leagues?.length}
+                  className="flex items-center gap-1.5 rounded-xl border-2 border-black poster-pill-gold px-4 py-2.5 text-xs font-black text-amber-950 shadow-lg transition-all hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Auto-fill from Free Idols
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!v5State) return;
+                    onUpdateV5State?.({
+                      ...v5State,
+                      d2: v5State.d2.map((league) => V5Engine.rebuildLeague(league, appState.idols)),
+                    });
+                    showSuccessMsg('Division 2 fixtures rebuilt.');
+                  }}
+                  disabled={!v5State?.d2?.length || v5State.d2.some((league) => league.matches.some((match) => match.completed))}
+                  className="flex items-center gap-1.5 rounded-xl border-2 border-black bg-[#2a1d14] px-4 py-2.5 text-xs font-black text-amber-300 shadow transition-all hover:bg-[#38261b] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Rebuild Fixtures
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!v5State) return;
+                    onUpdateV5State?.({
+                      ...v5State,
+                      d2: v5State.d2.map((league) => V5Engine.simulateLeagueMatches(league, appState.idols)),
+                    });
+                    showSuccessMsg('Division 2 matches simulated.');
+                  }}
+                  disabled={!v5State?.d2?.length || v5State.d2.every((league) => league.isCompleted)}
+                  className="flex items-center gap-1.5 rounded-xl border-2 border-black bg-[#2a1d14] px-4 py-2.5 text-xs font-black text-amber-300 shadow transition-all hover:bg-[#38261b] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Shuffle className="h-4 w-4" />
+                  Simulate Challenger Division
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4 border-t border-black pt-4">
+              <label className="flex items-center gap-2 text-xs font-bold text-amber-100">
+                <span>Capacity per league</span>
+                <input
+                  type="number"
+                  min={2}
+                  max={40}
+                  value={v5State?.perLeague || 20}
+                  onChange={(e) => {
+                    if (!v5State) return;
+                    const value = Math.max(2, Math.min(40, Number(e.target.value) || 20));
+                    onUpdateV5State?.({ ...v5State, perLeague: value });
+                  }}
+                  className="w-16 rounded-xl border-2 border-black bg-black/60 px-2 py-1.5 text-center font-mono text-sm text-white"
+                />
+              </label>
+              <label className="flex items-center gap-2 text-xs font-bold text-amber-100">
+                <span>Promotion / relegation</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={5}
+                  value={v5State?.promotionCount || 3}
+                  onChange={(e) => {
+                    if (!v5State) return;
+                    const value = Math.max(1, Math.min(5, Number(e.target.value) || 3));
+                    onUpdateV5State?.({ ...v5State, promotionCount: value });
+                  }}
+                  className="w-14 rounded-xl border-2 border-black bg-black/60 px-2 py-1.5 text-center font-mono text-sm text-white"
+                />
+              </label>
+              <p className="text-[11px] font-semibold text-amber-200/60">
+                Capacity and promotion settings apply only to Division 2 and its paired Division 1 leagues.
+              </p>
             </div>
           </div>
-          {!v5State?.d2?.length ? <div className="rounded-2xl border-2 border-black bg-[#18110b] p-8 text-center text-amber-200/70">Division 2 leagues have not been generated. Use Auto-fill from free idols.</div> : <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">{v5State.d2.map((l,i)=><button key={l.id} type="button" onClick={()=>setSelectedD2LeagueTab(l.id)} className={`rounded-2xl border-2 p-3 text-left ${(selectedD2LeagueTab||v5State.d2[0].id)===l.id?'border-amber-400 bg-[#24170e] ring-2 ring-amber-400/30':'border-black bg-[#140e0a]'}`}><div className="flex justify-between mb-1"><span className="w-2.5 h-2.5 rounded-full" style={{backgroundColor:l.color}}/><span className="text-[10px] font-mono text-amber-200">{l.memberIds.length}/{v5State.perLeague}</span></div><div className="font-poster-title text-xs font-black text-white truncate">{l.name}</div><div className="text-[10px] text-amber-400/70">Challenger Division {i+1}</div></button>)}</div>
-            {(()=>{const current=v5State.d2.find(l=>l.id===(selectedD2LeagueTab||v5State.d2[0].id))||v5State.d2[0];const allAssigned=new Set(v5State.d2.flatMap(l=>l.memberIds));const available=appState.idols.filter(i=>isIdolActive(i,appState.girlGroups)&&!allAssigned.has(i.id));const updateRoster=(ids:string[])=>onUpdateV5State?.({...v5State,d2:v5State.d2.map(l=>l.id===current.id?V5Engine.rebuildLeague({...l,memberIds:ids},appState.idols):l)});return <div className="rounded-3xl border-2 border-black bg-[#16100b] p-5 sm:p-6 poster-shadow space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black pb-4"><div><h4 className="font-poster-title text-lg text-white">{current.name} Roster <span className="text-xs text-amber-400 font-mono">({current.memberIds.length}/{v5State.perLeague} Idols Assigned)</span></h4><p className="text-xs text-slate-400">Transfer idols between Division 2 leagues or add available idols.</p></div><div className="flex gap-2"><input value={d2RosterSearch} onChange={e=>setD2RosterSearch(e.target.value)} placeholder="Search idols..." className="bg-black border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white"/><button type="button" onClick={()=>{if(confirm('Clear this Division 2 roster?'))updateRoster([])}} className="rounded-xl bg-red-950/60 px-3 py-1.5 text-xs font-bold text-red-300 border border-red-800">Clear Roster</button></div></div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">{current.memberIds.map((id,idx)=>{const idol=appState.idols.find(i=>i.id===id);return <div key={id+idx} className="p-3 rounded-2xl border-2 border-black bg-[#120e0a] flex flex-col gap-2 shadow"><div className="flex items-center gap-3"><div className="w-11 h-11 rounded-xl border border-black bg-black overflow-hidden shrink-0">{idol?.photoUrl?<img src={idol.photoUrl} alt={idol.name} className="w-full h-full object-cover"/>:<div className="p-2 text-amber-300">{idol?.name?.slice(0,2)||'ID'}</div>}</div><div className="min-w-0"><div className="font-poster-title text-xs text-white truncate">{idol?.name||'Unknown'}</div><div className="text-[9px] text-amber-400/80 truncate">{idol?.girlGroup} · {idol?.seed}</div></div></div><div className="flex items-center justify-between gap-2 border-t border-black pt-2"><span className="text-[10px] text-slate-400">Move to</span><select value="" onChange={e=>{const target=Number(e.target.value);if(!target)return;const dest=v5State.d2.find(l=>l.id===target);if(!dest||dest.memberIds.length>=v5State.perLeague)return;const next=v5State.d2.map(l=>l.id===current.id?{...l,memberIds:l.memberIds.filter(x=>x!==id)}:l.id===target?{...l,memberIds:[...l.memberIds,id]}:l);onUpdateV5State?.({...v5State,d2:next.map(l=>V5Engine.rebuildLeague(l,appState.idols))})}} className="bg-black border border-slate-700 rounded-lg px-2 py-1 text-[10px] text-amber-300"><option value="">Transfer...</option>{v5State.d2.filter(l=>l.id!==current.id).map(l=><option key={l.id} value={l.id}>{l.name}</option>)}</select><button type="button" onClick={()=>updateRoster(current.memberIds.filter(x=>x!==id))} className="p-1 rounded bg-red-950/60 text-red-300"><Trash2 className="w-3 h-3"/></button></div></div>})}</div>
-              <div className="border-t border-black pt-4 space-y-3"><h5 className="font-poster-title text-sm text-amber-400">Quick Add Idol to {current.name}</h5><div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 bg-black/40 rounded-2xl border border-black">{available.filter(i=>!d2RosterSearch||i.name.toLowerCase().includes(d2RosterSearch.toLowerCase())||i.girlGroup.toLowerCase().includes(d2RosterSearch.toLowerCase())).slice(0,60).map(idol=><button key={idol.id} type="button" disabled={current.memberIds.length>=v5State.perLeague} onClick={()=>updateRoster([...current.memberIds,idol.id])} className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900 hover:bg-amber-500 hover:text-black border border-slate-700 text-slate-300 text-xs font-bold disabled:opacity-40"><Plus className="w-3 h-3"/>{idol.name}<span className="text-[9px] opacity-70">({idol.girlGroup})</span></button>)}</div></div>
-            </div>})()}
-          </>}
+
+          {!v5State?.d2?.length ? (
+            <div className="rounded-3xl border-2 border-black bg-[#16100b] p-8 text-center poster-shadow">
+              <Users className="mx-auto mb-3 h-8 w-8 text-amber-400" />
+              <h4 className="font-poster-title text-lg text-amber-300">NO DIVISION 2 ROSTERS YET</h4>
+              <p className="mt-2 text-xs text-amber-100/60">Use Auto-fill from Free Idols to generate the six Challenger Division rosters.</p>
+            </div>
+          ) : (
+            <>
+              {/* Six league selector cards, using the League Roster Manager layout */}
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                {v5State.d2.map((league, index) => {
+                  const count = league.memberIds?.length || 0;
+                  const isSelected = (selectedD2LeagueTab || v5State.d2[0].id) === league.id;
+                  return (
+                    <button
+                      type="button"
+                      key={league.id}
+                      onClick={() => setSelectedD2LeagueTab(league.id)}
+                      className={`relative rounded-2xl border-2 p-3 text-left transition-all ${
+                        isSelected
+                          ? 'border-amber-400 bg-[#24170e] ring-2 ring-amber-400/30'
+                          : 'border-black bg-[#140e0a] text-slate-400 hover:bg-[#1c130d]'
+                      }`}
+                    >
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: league.color || '#d97706' }} />
+                        <span className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-bold ${
+                          count >= (v5State.perLeague || 20)
+                            ? 'bg-emerald-950 text-emerald-300'
+                            : 'bg-red-950 text-red-300'
+                        }`}>
+                          {count}/{v5State.perLeague || 20}
+                        </span>
+                      </div>
+                      <div className="truncate font-poster-title text-xs font-black text-white sm:text-sm">{league.name}</div>
+                      <div className="truncate text-[10px] font-bold text-amber-400/70">Challenger Division {index + 1}</div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Active Division 2 roster */}
+              {(() => {
+                const currentLeague = v5State.d2.find((league) => league.id === (selectedD2LeagueTab || v5State.d2[0].id)) || v5State.d2[0];
+                if (!currentLeague) return null;
+
+                const d2Assigned = new Set(v5State.d2.flatMap((league) => league.memberIds || []));
+                const d1Assigned = new Set((activeLeagueState.leagues || []).flatMap((league) => league.memberIds || []));
+                const availableIdols = appState.idols.filter(
+                  (idol) => isIdolActive(idol, appState.girlGroups) && !d2Assigned.has(idol.id) && !d1Assigned.has(idol.id)
+                );
+                const updateCurrentRoster = (memberIds: string[]) => {
+                  onUpdateV5State?.({
+                    ...v5State,
+                    d2: v5State.d2.map((league) =>
+                      league.id === currentLeague.id
+                        ? V5Engine.rebuildLeague({ ...league, memberIds }, appState.idols)
+                        : league
+                    ),
+                  });
+                };
+
+                return (
+                  <div className="rounded-3xl border-2 border-black bg-[#16100b] p-5 poster-shadow space-y-4 sm:p-6">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black pb-4">
+                      <div>
+                        <h4 className="flex items-center gap-2 font-poster-title text-lg text-white">
+                          <span className="h-3 w-3 rounded-full" style={{ backgroundColor: currentLeague.color || '#d97706' }} />
+                          <span>{currentLeague.name} Roster</span>
+                          <span className="font-mono text-xs font-bold text-amber-400">
+                            ({currentLeague.memberIds.length}/{v5State.perLeague || 20} Idols Assigned)
+                          </span>
+                        </h4>
+                        <p className="text-xs font-medium text-slate-400">
+                          Transfer idols between Challenger Divisions or add unassigned idols from the database.
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm(`Clear the ${currentLeague.name} roster?`)) updateCurrentRoster([]);
+                          }}
+                          className="flex items-center gap-1.5 rounded-xl border border-red-800 bg-red-950/60 px-3 py-1.5 text-xs font-bold text-red-300 transition-all hover:bg-red-900"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Clear Roster
+                        </button>
+                        <input
+                          type="text"
+                          value={d2RosterSearch}
+                          onChange={(e) => setD2RosterSearch(e.target.value)}
+                          placeholder="Search available idols..."
+                          className="rounded-xl border border-slate-700 bg-black px-3 py-1.5 text-xs text-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                      {currentLeague.memberIds.map((idolId, index) => {
+                        const idol = idolsMap.get(idolId);
+                        return (
+                          <div key={`${idolId}_${index}`} className="flex flex-col justify-between gap-2 rounded-2xl border-2 border-black bg-[#120e0a] p-3 shadow transition-all hover:border-slate-700">
+                            <div className="flex items-center gap-3">
+                              <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-black bg-black">
+                                {idol?.photoUrl ? (
+                                  <img src={idol.photoUrl} alt={idol.name} referrerPolicy="no-referrer" className="h-full w-full object-cover" />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center bg-black font-poster-title text-xs text-amber-300">
+                                    {idol?.name?.slice(0, 2) || 'ID'}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1">
+                                  <span className="truncate font-poster-title text-xs font-bold text-white">{idol?.name || 'Unknown'}</span>
+                                  {idol?.nationality && <span className="shrink-0 text-[10px]">{getCountryFlag(idol.nationality)}</span>}
+                                </div>
+                                <div className="truncate text-[9px] font-bold text-amber-400/80">{idol?.girlGroup} &bull; {idol?.seed}</div>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between gap-2 border-t border-black/60 pt-2">
+                              <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                                <ArrowRightLeft className="h-3 w-3 text-amber-400" />
+                                <span>Move to:</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <select
+                                  value=""
+                                  onChange={(e) => {
+                                    const targetId = Number(e.target.value);
+                                    if (!targetId) return;
+                                    const target = v5State.d2.find((league) => league.id === targetId);
+                                    if (!target || target.memberIds.length >= (v5State.perLeague || 20)) {
+                                      showSuccessMsg('The selected Challenger Division is already at capacity.');
+                                      return;
+                                    }
+                                    const nextD2 = v5State.d2.map((league) =>
+                                      league.id === currentLeague.id
+                                        ? { ...league, memberIds: league.memberIds.filter((id) => id !== idolId) }
+                                        : league.id === targetId
+                                          ? { ...league, memberIds: [...league.memberIds, idolId] }
+                                          : league
+                                    );
+                                    onUpdateV5State?.({ ...v5State, d2: nextD2.map((league) => V5Engine.rebuildLeague(league, appState.idols)) });
+                                  }}
+                                  className="rounded-lg border border-slate-700 bg-black px-2 py-0.5 text-[10px] font-bold text-amber-300"
+                                >
+                                  <option value="">Transfer Division...</option>
+                                  {v5State.d2.filter((league) => league.id !== currentLeague.id).map((league) => (
+                                    <option key={league.id} value={league.id}>{league.name}</option>
+                                  ))}
+                                </select>
+                                <button
+                                  type="button"
+                                  onClick={() => updateCurrentRoster(currentLeague.memberIds.filter((id) => id !== idolId))}
+                                  title="Remove from Division 2"
+                                  className="rounded bg-red-950/60 p-1 text-red-300 transition-all hover:bg-red-900"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="mt-6 space-y-3 border-t border-black pt-4">
+                      <h5 className="flex items-center gap-1.5 font-poster-title text-sm text-amber-400">
+                        <Plus className="h-4 w-4" />
+                        Quick Add Idol to {currentLeague.name}
+                      </h5>
+                      <div className="flex max-h-52 flex-wrap gap-2 overflow-y-auto rounded-2xl border border-black bg-black/40 p-2">
+                        {availableIdols
+                          .filter((idol) => !d2RosterSearch || idol.name.toLowerCase().includes(d2RosterSearch.toLowerCase()) || idol.girlGroup.toLowerCase().includes(d2RosterSearch.toLowerCase()))
+                          .slice(0, 100)
+                          .map((idol) => (
+                            <button
+                              key={idol.id}
+                              type="button"
+                              disabled={currentLeague.memberIds.length >= (v5State.perLeague || 20)}
+                              onClick={() => updateCurrentRoster([...currentLeague.memberIds, idol.id])}
+                              className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs font-bold text-slate-300 transition-all hover:bg-amber-500 hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              <Plus className="h-3 w-3" />
+                              {idol.name}
+                              <span className="text-[9px] opacity-70">({idol.girlGroup})</span>
+                            </button>
+                          ))}
+                        {!availableIdols.length && <p className="px-2 py-1 text-xs text-amber-100/50">No unassigned active idols are available.</p>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </>
+          )}
         </div>
       )}
 
