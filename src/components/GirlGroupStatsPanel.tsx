@@ -168,7 +168,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
         if (winner.championId) {
           recordedDivision.add(winner.leagueId);
           const champIdol = idolsMap.get(winner.championId);
-          const groupName = champIdol?.girlGroup || 'Solo / Independent';
+          const groupName = winner.championGroup || champIdol?.girlGroup || 'Solo / Independent';
           if (!groupLeagueCupWinnersMap.has(groupName)) {
             groupLeagueCupWinnersMap.set(groupName, []);
           }
@@ -192,7 +192,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
           if (champ && champ.idolId) {
             recordedDivision.add(divId);
             const champIdol = idolsMap.get(champ.idolId);
-            const groupName = champIdol?.girlGroup || 'Solo / Independent';
+            const groupName = champ.girlGroup || champIdol?.girlGroup || 'Solo / Independent';
             if (!groupLeagueCupWinnersMap.has(groupName)) {
               groupLeagueCupWinnersMap.set(groupName, []);
             }
@@ -266,7 +266,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
     // Playoff champion
     if (arch.championId) {
       const champIdol = idolsMap.get(arch.championId);
-      const groupName = champIdol?.girlGroup || 'Solo / Independent';
+      const groupName = arch.championGroup || champIdol?.girlGroup || 'Solo / Independent';
       if (!groupTheIdolsPlayoffWinnersMap.has(groupName)) {
         groupTheIdolsPlayoffWinnersMap.set(groupName, []);
       }
