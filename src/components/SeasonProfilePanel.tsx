@@ -15,6 +15,7 @@ import { TournamentBracketTree } from './TournamentBracketTree';
 import { Trophy, Crown, Swords, Shield, Medal, Award, Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Flame, Layers, Sparkles } from 'lucide-react';
 import { DEFAULT_LEAGUE_DEFS } from '../utils/leagueLogic';
 import { getAllSeasonArchives } from '../utils/tournamentLogic';
+import type { V5State, V5TitleArchive } from '../utils/v5/store';
 
 interface SeasonProfilePanelProps {
   archives: TournamentArchive[];
@@ -28,6 +29,8 @@ interface SeasonProfilePanelProps {
   theIdolsState?: TheIdolsSeasonState | null;
   theIdolsArchives?: TheIdolsSeasonArchive[];
   idols?: Idol[];
+  v5State?: V5State | null;
+  v5TitleArchives?: V5TitleArchive[];
 }
 
 export const SeasonProfilePanel: React.FC<SeasonProfilePanelProps> = ({
@@ -42,6 +45,8 @@ export const SeasonProfilePanel: React.FC<SeasonProfilePanelProps> = ({
   theIdolsState,
   theIdolsArchives = [],
   idols = [],
+  v5State,
+  v5TitleArchives = [],
 }) => {
   const safeMatchDatabase = matchDatabase || [];
 
@@ -95,7 +100,8 @@ export const SeasonProfilePanel: React.FC<SeasonProfilePanelProps> = ({
     return list.sort((a, b) => a.seasonId - b.seasonId);
   }, [archives, safeMatchDatabase, currentConfig, currentGroups, currentKnockoutMatches, idolsMap]);
 
-  const [activeTab, setActiveTab] = useState<'tournament' | 'league' | 'the_idols'>('tournament');
+  const [activeTab, setActiveTab] = useState<'tournament' | 'league' | 'division_two' | 'new_competitions' | 'the_idols'>('tournament');
+  const [activeV5Competition, setActiveV5Competition] = useState<'crown' | 'open' | 'spotlight' | 'super_a' | 'super_b'>('crown');
 
   const initialSeasonId =
     allArchives && allArchives.length > 0
@@ -239,6 +245,27 @@ export const SeasonProfilePanel: React.FC<SeasonProfilePanelProps> = ({
     );
   }, [safeMatchDatabase, selectedSeasonId]);
 
+  const selectedV5Matches = useMemo(() => safeMatchDatabase.filter((m) => Number(m.seasonId || 1) === Number(selectedLeagueSeasonNum) && String(m.stage || '').toLowerCase().startsWith('cups & divisions:')), [safeMatchDatabase, selectedLeagueSeasonNum]);
+  const v5CompetitionData = useMemo(() => {
+    const defs = [
+      { key: 'crown', label: 'Crown Cup', test: (s: string) => s.includes('league champions cup'), title: (n: string) => n.toLowerCase() === 'league champions cup' },
+      { key: 'open', label: 'Open Arena Cup', test: (s: string) => s.includes('all-league knockout cup'), title: (n: string) => n.toLowerCase() === 'all-league knockout cup' },
+      { key: 'spotlight', label: 'Spotlight Cup', test: (s: string) => s.includes('top 16 mini cup'), title: (n: string) => n.toLowerCase().startsWith('top 16 mini cup') },
+      { key: 'super_a', label: 'Super Cup A', test: (s: string) => s.includes('super cup a'), title: (n: string) => n.toLowerCase() === 'super cup a' },
+      { key: 'super_b', label: 'Super Cup B', test: (s: string) => s.includes('super cup b'), title: (n: string) => n.toLowerCase().startsWith('super cup b') },
+    ] as const;
+    return defs.map((d) => {
+      const matches = selectedV5Matches.filter((m) => d.test(String(m.stage || '').toLowerCase()));
+      const done = matches.filter((m) => m.completed);
+      const titles = (v5TitleArchives || []).filter((t) => Number(t.seasonNumber) === Number(selectedLeagueSeasonNum) && !t.isDivision && d.title(String(t.competition || '')));
+      const participants = new Set(matches.flatMap((m) => [m.idolAId, m.idolBId]).filter(Boolean));
+      const wins = done.filter((m) => Boolean(m.winnerId && m.winnerId !== 'DRAW')).length;
+      const draws = done.filter((m) => m.winnerId === 'DRAW' || (m.scoreA != null && m.scoreA === m.scoreB)).length;
+      return { ...d, matches, completed: done.length, pending: matches.length-done.length, participants: participants.size, wins, draws, losses: Math.max(0,done.length-wins-draws), titles, champion: titles.find((t)=>t.winnerId), runnerUp: titles.find((t)=>t.runnerUpId), goalsFor: done.reduce((n,m)=>n+Number(m.scoreA||0),0), goalsAgainst: done.reduce((n,m)=>n+Number(m.scoreB||0),0) };
+    });
+  }, [selectedV5Matches, v5TitleArchives, selectedLeagueSeasonNum]);
+  const selectedD2Leagues = useMemo(() => (v5State?.d2 || []), [v5State]);
+  const d2Stats = useMemo(() => selectedD2Leagues.reduce((a,l) => { a.leagues++; a.idols += l.memberIds?.length || 0; a.matches += l.matches?.length || 0; a.completed += (l.matches || []).filter(m=>m.completed).length; return a; }, {leagues:0,idols:0,matches:0,completed:0}), [selectedD2Leagues]);
   const selectedLeagueSeason =
     allLeagueSeasons.find((s) => s.seasonNumber === selectedLeagueSeasonNum) ||
     allLeagueSeasons[0];
@@ -315,6 +342,8 @@ export const SeasonProfilePanel: React.FC<SeasonProfilePanelProps> = ({
             <Shield className="h-4 w-4" />
             <span>League Division System</span>
           </button>
+          <button onClick={() => setActiveTab('division_two')} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-poster-body font-black ${activeTab==='division_two'?'poster-pill-gold text-amber-950':'text-amber-200 hover:text-white'}`}><Shield className="h-4 w-4"/><span>Division 2</span></button>
+          <button onClick={() => setActiveTab('new_competitions')} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-poster-body font-black ${activeTab==='new_competitions'?'poster-pill-gold text-amber-950':'text-amber-200 hover:text-white'}`}><Trophy className="h-4 w-4"/><span>New Competitions</span></button>
           <button
             onClick={() => setActiveTab('the_idols')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-poster-body font-black transition-all ${
@@ -894,6 +923,24 @@ export const SeasonProfilePanel: React.FC<SeasonProfilePanelProps> = ({
         </div>
       )}
 
+      {activeTab === 'division_two' && <div className="space-y-5">
+        <div className="rounded-2xl border-2 border-black bg-[#1e1510] p-4"><h3 className="font-poster-title text-amber-300">Division 2 Season Profile</h3><p className="mt-1 text-xs text-amber-100/60">Second tier standings and match history. Division 1 remains unchanged in its existing section.</p><select className="mt-3 rounded-lg border border-black bg-[#120d09] p-2 text-xs text-amber-200" value={selectedLeagueSeasonNum} onChange={e=>setSelectedLeagueSeasonNum(Number(e.target.value))}>{allLeagueSeasons.map(x=><option key={x.seasonNumber} value={x.seasonNumber}>{x.seasonName}</option>)}</select></div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{[['Leagues',d2Stats.leagues],['Idols',d2Stats.idols],['Completed Matches',d2Stats.completed],['Total Fixtures',d2Stats.matches]].map(([k,v])=><div key={String(k)} className="rounded-xl border-2 border-black bg-[#1b130e] p-4 text-center"><div className="text-[10px] font-black uppercase text-amber-300/70">{k}</div><div className="mt-1 text-2xl font-black text-amber-300">{v}</div></div>)}</div>
+        {selectedD2Leagues.length ? selectedD2Leagues.map(l=><section key={l.id} className="space-y-4 rounded-2xl border-2 border-black bg-[#1b130e] p-5"><div className="flex justify-between border-b border-black pb-3"><div><h4 className="font-poster-title text-amber-300">{l.name}</h4><p className="text-[10px] text-amber-100/50">Division 2 · Parent Division {l.parentLeagueId}</p></div><span className="text-xs text-amber-300">{(l.matches||[]).filter(m=>m.completed).length}/{l.matches?.length||0} Played</span></div>
+          <div className="overflow-x-auto"><table className="w-full text-xs text-left"><thead className="text-[10px] uppercase text-amber-300 bg-black/30"><tr>{['Pos','Idol','P','W','D','L','GF','GA','GD','PTS'].map(x=><th key={x} className="p-2">{x}</th>)}</tr></thead><tbody>{[...(l.standings||[])].sort((a,b)=>a.rank-b.rank).map((st,i)=><tr key={st.idolId} className="border-t border-black/50 text-amber-100/80"><td className="p-2">{st.rank||i+1}</td><td className="p-2"><div className="flex items-center gap-2">{st.photoUrl&&<img src={st.photoUrl} alt="" className="w-7 h-7 rounded object-cover"/>}<span>{st.idolName}</span></div><span className="text-[9px] text-amber-100/50">{st.girlGroup}</span></td>{[st.played,st.wins,st.draws,st.losses,st.gamesFor,st.gamesAgainst,st.gameDiff,st.points].map((v,i)=><td key={i} className="p-2">{v}</td>)}</tr>)}</tbody></table></div>
+          <div><h5 className="mb-2 text-xs font-black uppercase text-amber-300">Division 2 Fixtures &amp; Results</h5><div className="space-y-1">{(l.matches||[]).map(m=><div key={m.id} className="flex justify-between gap-2 rounded-lg border border-black bg-black/20 p-2 text-xs"><span className="text-amber-200/50">MD {m.matchday}</span><span className="font-bold text-white">{idolsMap.get(m.idolAId)?.name||'TBD'} <b className="px-2 text-amber-300">{m.completed?`${m.scoreA} - ${m.scoreB}`:'VS'}</b> {idolsMap.get(m.idolBId)?.name||'TBD'}</span><span className={m.completed?'text-emerald-300':'text-slate-400'}>{m.completed?'Final':'Pending'}</span></div>)}</div></div>
+        </section>) : <div className="rounded-xl border-2 border-black bg-[#1b130e] p-8 text-center text-xs text-amber-200/60">No Division 2 data available.</div>}
+      </div>}
+      {activeTab === 'new_competitions' && <div className="space-y-5">
+        <div className="rounded-2xl border-2 border-black bg-[#1e1510] p-4"><h3 className="font-poster-title text-amber-300">Competition Season Profiles</h3><p className="mt-1 text-xs text-amber-100/60">Each cup has a dedicated report and its own archived match records.</p><select className="mt-3 rounded-lg border border-black bg-[#120d09] p-2 text-xs text-amber-200" value={selectedLeagueSeasonNum} onChange={e=>setSelectedLeagueSeasonNum(Number(e.target.value))}>{allLeagueSeasons.map(x=><option key={x.seasonNumber} value={x.seasonNumber}>{x.seasonName}</option>)}</select></div>
+        <div className="flex flex-wrap gap-2">{v5CompetitionData.map(c=><button key={c.key} onClick={()=>setActiveV5Competition(c.key as any)} className={`rounded-xl border-2 border-black px-3 py-2 text-xs font-black ${activeV5Competition===c.key?'bg-amber-400 text-black':'bg-[#251a13] text-amber-200'}`}>{c.label} ({c.matches.length})</button>)}</div>
+        {v5CompetitionData.filter(c=>c.key===activeV5Competition).map(c=><section key={c.key} className="space-y-4 rounded-2xl border-2 border-black bg-[#1b130e] p-5">
+          <div className="flex items-center justify-between border-b border-black pb-3"><h3 className="font-poster-title text-lg text-amber-300">{c.label}</h3><span className="text-[10px] font-black text-amber-300">{c.matches.length&&c.completed===c.matches.length?'COMPLETED':c.matches.length?'IN PROGRESS':'NO DATA'}</span></div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">{[['Participants',c.participants],['Matches',c.matches.length],['Completed',c.completed],['Pending',c.pending],['Wins',c.wins],['Draws',c.draws],['Losses',c.losses],['Championships',c.titles.filter(t=>t.winnerId).length],['Runner-Up',c.titles.filter(t=>t.runnerUpId).length],['Points For',c.goalsFor],['Points Against',c.goalsAgainst]].map(([k,v])=><div key={String(k)} className="rounded-xl border border-black bg-[#24180f] p-3 text-center"><div className="text-[9px] uppercase font-black text-amber-200/60">{k}</div><div className="mt-1 text-xl font-black text-amber-300">{v}</div></div>)}</div>
+          <div className="grid grid-cols-2 gap-3"><div className="rounded-xl border border-black bg-black/20 p-3"><div className="text-[10px] uppercase text-amber-200/50">Champion</div><div className="mt-1 font-bold text-amber-300">{c.champion?.winnerName||'Not decided'}</div></div><div className="rounded-xl border border-black bg-black/20 p-3"><div className="text-[10px] uppercase text-amber-200/50">Runner-Up</div><div className="mt-1 font-bold text-amber-300">{c.champion?.runnerUpName||c.runnerUp?.runnerUpName||'Not decided'}</div></div></div>
+          <div><h4 className="mb-2 text-xs font-black uppercase text-amber-300">Match History · {c.matches.length}</h4>{c.matches.length?<div className="space-y-1">{c.matches.map(m=><div key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-black bg-black/20 p-2 text-xs"><span className="text-amber-200/50">{String(m.stage||'').split('/').slice(1).join('/')}</span><b className="text-white">{m.idolAName||idolsMap.get(m.idolAId)?.name||'TBD'} <span className="px-2 text-amber-300">{m.completed?`${m.scoreA} - ${m.scoreB}`:'VS'}</span> {m.idolBName||idolsMap.get(m.idolBId)?.name||'TBD'}</b><span className={m.completed?'text-emerald-300':'text-slate-400'}>{m.completed?'Final':'Pending'}</span></div>)}</div>:<p className="text-xs text-amber-100/50 italic">No {c.label} match data archived for this season.</p>}</div>
+        </section>)}
+      </div>}
       {/* 3. THE IDOLS SEASON PROFILE TAB */}
       {activeTab === 'the_idols' && (
         <div className="space-y-6">
