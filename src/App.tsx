@@ -2398,6 +2398,7 @@ export function App() {
               leagueArchives={leagueArchives}
               theIdolsState={theIdolsState}
               theIdolsArchives={theIdolsArchives}
+              matchDatabase={allCombinedMatchDatabase}
               v5State={v5State}
               v5TitleArchives={appState.v5TitleArchives || []}
             />
