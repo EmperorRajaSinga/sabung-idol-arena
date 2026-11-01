@@ -1969,16 +1969,16 @@ export function App() {
   };
 
   // --- HANDLERS: CROWN CHAMPION & ARCHIVE ---
-  const handleCrownChampionAndArchive = (archivePayload?: { sourceAppState: AppState; sourceLeagueState: LeagueSeasonState; sourceTheIdolsState: TheIdolsSeasonState; v5State?: V5State }) => {
-    const sourceAppState = archivePayload?.sourceAppState || sourceAppState;
-    const sourceLeagueState = archivePayload?.sourceLeagueState || sourceLeagueState;
-    const sourceTheIdolsState = archivePayload?.sourceTheIdolsState || sourceTheIdolsState;
+  const handleCrownChampionAndArchive = (archivePayload?: { appState: AppState; leagueState: LeagueSeasonState; theIdolsState: TheIdolsSeasonState; v5State?: V5State }) => {
+    const sourceAppState = archivePayload?.appState || appState;
+    const sourceLeagueState = archivePayload?.leagueState || leagueState;
+    const sourceTheIdolsState = archivePayload?.theIdolsState || theIdolsState;
     const sourceV5State = archivePayload?.v5State || sourceAppState.v5State || loadV5State();
     const unfinished = getUnfinishedCompetitions({
       groups: sourceAppState.groups,
       knockoutMatches: sourceAppState.knockoutMatches,
-      sourceLeagueState,
-      sourceTheIdolsState,
+      leagueState: sourceLeagueState,
+      theIdolsState: sourceTheIdolsState,
       v5: sourceAppState.v5State || loadV5State(),
       v5Names: loadNames(),
     });
@@ -2060,11 +2060,11 @@ export function App() {
 
     const storedLeagueArchives = loadLeagueArchives();
     const effectiveLeagueArchives =
-      storedLeagueArchives.length > leagueArchives.length ? storedLeagueArchives : leagueArchives;
+      storedLeagueArchives.length > (sourceAppState.leagueArchives || leagueArchives).length ? storedLeagueArchives : (sourceAppState.leagueArchives || leagueArchives);
 
     const storedTheIdolsArchives = loadTheIdolsArchives();
     const effectiveTheIdolsArchives =
-      storedTheIdolsArchives.length > theIdolsArchives.length ? storedTheIdolsArchives : theIdolsArchives;
+      storedTheIdolsArchives.length > (sourceAppState.theIdolsArchives || theIdolsArchives).length ? storedTheIdolsArchives : (sourceAppState.theIdolsArchives || theIdolsArchives);
 
     const storedTournamentArchives = loadTournamentArchives();
     const effectiveTournamentArchives =
