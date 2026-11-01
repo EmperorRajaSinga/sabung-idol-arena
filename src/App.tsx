@@ -2,6 +2,7 @@ import { loadV5State, saveV5State, hasStoredV5State, V5State, V5TitleArchive } f
 import { loadRosterSnapshot, saveDivisionOneRosterSnapshot, saveDivisionTwoRosterSnapshot, restoreDivisionOneRoster, clearRosterSnapshot } from './utils/rosterPersistence';
 import { loadNames } from './utils/v5/names';
 import { createV5ArchiveSnapshot } from './utils/v5/archive';
+import * as V5Engine from './utils/v5/engine';
 import { auditAppStateDataChanges, normalizeDataName, recordDataHistory } from './utils/dataChangeHistory';
 
 
@@ -408,6 +409,7 @@ export function App() {
     }, 0);
   };
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+  const [promotionArchiveModal, setPromotionArchiveModal] = useState<Array<{ leagueName: string; promoted: Array<{ id: string; name: string; group: string }>; relegated: Array<{ id: string; name: string; group: string }> }> | null>(null);
   const [selectedIdolId, setSelectedIdolId] = useState<string>('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [leagueState, setLeagueState] = useState<LeagueSeasonState | null>(() => {
@@ -2083,6 +2085,30 @@ export function App() {
     const maxSeason = allSeasonIds.length > 0 ? Math.max(...allSeasonIds) : 1;
     const nextSeasonId = Math.max(currentSeasonId + 1, maxSeason + 1);
 
+    // Calculate promotion/relegation from the just-completed season before any fixtures are reset.
+    const promotionMoves = sourceLeagueState?.leagues?.length === 6 && sourceV5State.d2?.length === 6
+      ? sourceLeagueState.leagues.flatMap((division) => {
+          const pairedD2 = sourceV5State.d2.find((league) => league.parentLeagueId === division.id);
+          return pairedD2 ? [V5Engine.computePromotionRelegation(division as any, pairedD2 as any, sourceV5State.promotionCount || 3)] : [];
+        })
+      : [];
+    const promotionModalRows = promotionMoves.map((move) => {
+      const division = sourceLeagueState.leagues.find((league) => league.id === move.leagueId);
+      const pairedD2 = sourceV5State.d2.find((league) => league.parentLeagueId === move.leagueId);
+      const byId = new Map(sourceAppState.idols.map((idol) => [idol.id, idol]));
+      return {
+        leagueName: division?.name || pairedD2?.name || `League ${move.leagueId}`,
+        promoted: move.promoted.map((id) => {
+          const idol = byId.get(id);
+          return { id, name: idol?.name || id, group: idol?.girlGroup || 'Unknown Group' };
+        }),
+        relegated: move.relegated.map((id) => {
+          const idol = byId.get(id);
+          return { id, name: idol?.name || id, group: idol?.girlGroup || 'Unknown Group' };
+        }),
+      };
+    });
+
     // Archive and advance League Season matches & standings
     if (sourceLeagueState && sourceLeagueState.leagues && sourceLeagueState.leagues.length > 0) {
       const leagueArchiveRec = archiveLeagueSeason(sourceLeagueState, sourceAppState.idols);
@@ -2092,12 +2118,24 @@ export function App() {
       ];
       handleUpdateLeagueArchives(updatedLeagueArchives);
 
-      const nextLeagueState = advanceLeagueSeason(
+      let nextLeagueState = advanceLeagueSeason(
         sourceLeagueState,
         sourceAppState.idols,
         sourceAppState.girlGroups,
         nextSeasonId
       );
+      if (promotionMoves.length === 6) {
+        const applied = V5Engine.applyMoves(nextLeagueState.leagues as any, v5ArchiveSnapshot.resetState.d2 as any, promotionMoves, sourceAppState.idols);
+        nextLeagueState = { ...nextLeagueState, leagues: applied.d1 as any };
+        const seasonName = sourceLeagueState.seasonName || sourceAppState.config.seasonName || `Season ${currentSeasonId}`;
+        const history = [...(v5ArchiveSnapshot.resetState.promotionHistory || [])].filter((entry) => Number(entry.seasonNumber) !== currentSeasonId);
+        history.push({ seasonNumber: currentSeasonId, seasonName, appliedAt: new Date().toISOString(), moves: promotionMoves });
+        const promotedV5State = { ...v5ArchiveSnapshot.resetState, d2: applied.d2 as any, pendingMoves: null, promotionHistory: history };
+        saveV5State(promotedV5State);
+        saveDivisionTwoRosterSnapshot(promotedV5State.d2 || []);
+        // The state update below persists the promoted/relegated Division 2 roster.
+        (v5ArchiveSnapshot as any).nextSeasonState = promotedV5State;
+      }
       handleUpdateLeagueState(nextLeagueState);
     }
 
@@ -2133,7 +2171,7 @@ export function App() {
         ...prev,
         archives: [...pFiltered, archiveRecord],
         matchDatabase: v5ArchiveSnapshot.matches,
-        v5State: v5ArchiveSnapshot.resetState,
+        v5State: (v5ArchiveSnapshot as any).nextSeasonState || v5ArchiveSnapshot.resetState,
         v5TitleArchives: v5ArchiveSnapshot.titles,
         groups: [],
         knockoutMatches: [],
@@ -2150,6 +2188,7 @@ export function App() {
     });
 
     flushAppStateToIndexedDB();
+    if (promotionModalRows.length > 0) setPromotionArchiveModal(promotionModalRows);
     setActiveTab('hall_of_champions');
   };
 
