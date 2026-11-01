@@ -84,11 +84,16 @@ const Bracket: React.FC<{ ms: E.BNode[]; nm: (id: string | null) => string; sim:
           );
         })}
       </div>
-      {ms.some((m) => m.completed && /final/i.test(m.roundName)) && (
-        <div className="mt-3 border-t border-amber-500/20 pt-3 text-center text-xs font-black uppercase tracking-widest text-amber-300">
-          Champion: {nm(ms.find((m) => m.completed && /final/i.test(m.roundName) && m.winnerId)?.winnerId || null)}
-        </div>
-      )}
+      {(() => {
+        const finalMatch = ms.find((m) => m.completed && /grand final/i.test(m.roundName))
+          || ms.find((m) => m.completed && /^final$/i.test(m.roundName))
+          || (ms.length === 1 && ms[0].completed ? ms[0] : null);
+        return finalMatch?.winnerId ? (
+          <div className="mt-3 border-t border-amber-500/20 pt-3 text-center text-xs font-black uppercase tracking-widest text-amber-300">
+            Champion: {nm(finalMatch.winnerId)}
+          </div>
+        ) : null;
+      })()}
     </div>
   );
 };
