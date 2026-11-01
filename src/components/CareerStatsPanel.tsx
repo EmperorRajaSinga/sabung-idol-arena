@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { V5CompetitionStatsPanel } from './V5CompetitionStatsPanel';
+import { CareerV5StatsPanel } from './CareerV5StatsPanel';
 import {
   CareerStat,
   LeagueSeasonState,
@@ -75,12 +75,27 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
   archives = [],
   onSelectIdolProfile,
 }) => {
-  const [activeSystem, setActiveSystem] = useState<'combined' | 'tournament' | 'league' | 'the_idols' | 'v5_competitions'>('combined');
+  const [activeSystem, setActiveSystem] = useState<'combined' | 'tournament' | 'league' | 'the_idols' | 'crown_cup' | 'open_arena_cup' | 'spotlight_cup' | 'super_cup_a' | 'super_cup_b' | 'division_2'>('combined');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<keyof CareerStat>('championships');
   const [leagueSortBy, setLeagueSortBy] = useState<keyof LeagueCareerStat>('points');
   const [theIdolsSortBy, setTheIdolsSortBy] = useState<keyof TheIdolsCareerStat>('mastersTitles');
   const [combinedSortBy, setCombinedSortBy] = useState<keyof CombinedCareerStat>('totalTitles');
+
+  const v5SectionCounts = useMemo(() => {
+    const counts = { crown_cup: 0, open_arena_cup: 0, spotlight_cup: 0, super_cup_a: 0, super_cup_b: 0, division_2: 0 };
+    (Array.isArray(matchDatabase) ? matchDatabase : []).forEach((match) => {
+      const stage = String(match?.stage || '').toLowerCase();
+      if (!stage.startsWith('cups & divisions:')) return;
+      if (stage.includes('division 2')) counts.division_2 += 1;
+      else if (stage.includes('league champions cup')) counts.crown_cup += 1;
+      else if (stage.includes('all-league knockout cup')) counts.open_arena_cup += 1;
+      else if (stage.includes('top 16 mini cup')) counts.spotlight_cup += 1;
+      else if (stage.includes('super cup a')) counts.super_cup_a += 1;
+      else if (stage.includes('super cup b')) counts.super_cup_b += 1;
+    });
+    return counts;
+  }, [matchDatabase]);
 
   const careerOverrides = useMemo(() => loadCareerOverrides(), []);
 
@@ -617,8 +632,23 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
             <Shield className="w-3.5 h-3.5" />
             <span>League Pyramid ({leagueCareerStats.length})</span>
           </button>
-          <button onClick={() => setActiveSystem('v5_competitions')} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${activeSystem === 'v5_competitions' ? 'bg-amber-500 text-slate-950 font-black shadow-lg' : 'text-amber-300 hover:text-white'}`}>
-            <Trophy className="w-3.5 h-3.5" /><span>New V5 Cups</span>
+          <button onClick={() => setActiveSystem('crown_cup') } className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${activeSystem === 'crown_cup' ? 'bg-amber-500 text-slate-950 font-black shadow-lg' : 'text-amber-300 hover:text-white'}`}>
+            <Trophy className="w-3.5 h-3.5" /><span>Crown Cup ({v5SectionCounts.crown_cup})</span>
+          </button>
+          <button onClick={() => setActiveSystem('open_arena_cup') } className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${activeSystem === 'open_arena_cup' ? 'bg-amber-500 text-slate-950 font-black shadow-lg' : 'text-amber-300 hover:text-white'}`}>
+            <Trophy className="w-3.5 h-3.5" /><span>Open Arena Cup ({v5SectionCounts.open_arena_cup})</span>
+          </button>
+          <button onClick={() => setActiveSystem('spotlight_cup') } className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${activeSystem === 'spotlight_cup' ? 'bg-amber-500 text-slate-950 font-black shadow-lg' : 'text-amber-300 hover:text-white'}`}>
+            <Trophy className="w-3.5 h-3.5" /><span>Spotlight Cup ({v5SectionCounts.spotlight_cup})</span>
+          </button>
+          <button onClick={() => setActiveSystem('super_cup_a') } className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${activeSystem === 'super_cup_a' ? 'bg-amber-500 text-slate-950 font-black shadow-lg' : 'text-amber-300 hover:text-white'}`}>
+            <Trophy className="w-3.5 h-3.5" /><span>Super Cup A ({v5SectionCounts.super_cup_a})</span>
+          </button>
+          <button onClick={() => setActiveSystem('super_cup_b') } className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${activeSystem === 'super_cup_b' ? 'bg-amber-500 text-slate-950 font-black shadow-lg' : 'text-amber-300 hover:text-white'}`}>
+            <Trophy className="w-3.5 h-3.5" /><span>Super Cup B ({v5SectionCounts.super_cup_b})</span>
+          </button>
+          <button onClick={() => setActiveSystem('division_2') } className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${activeSystem === 'division_2' ? 'bg-amber-500 text-slate-950 font-black shadow-lg' : 'text-amber-300 hover:text-white'}`}>
+            <Trophy className="w-3.5 h-3.5" /><span>Division 2 ({v5SectionCounts.division_2})</span>
           </button>
           <button
             onClick={() => setActiveSystem('the_idols')}
@@ -634,9 +664,22 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
         </div>
       </div>
 
-      {activeSystem === 'v5_competitions' && <V5CompetitionStatsPanel matchDatabase={matchDatabase} idols={idols} compact />}
+      {(['crown_cup', 'open_arena_cup', 'spotlight_cup', 'super_cup_a', 'super_cup_b', 'division_2'] as const).includes(activeSystem as any) && (
+        <CareerV5StatsPanel
+          section={{
+            crown_cup: 'Crown Cup',
+            open_arena_cup: 'Open Arena Cup',
+            spotlight_cup: 'Spotlight Cup',
+            super_cup_a: 'Super Cup A',
+            super_cup_b: 'Super Cup B',
+            division_2: 'Division 2',
+          }[activeSystem as 'crown_cup' | 'open_arena_cup' | 'spotlight_cup' | 'super_cup_a' | 'super_cup_b' | 'division_2']}
+          matchDatabase={matchDatabase}
+          idols={idols}
+        />
+      )}
 
-      {activeSystem !== 'v5_competitions' && <>
+      {!(['crown_cup', 'open_arena_cup', 'spotlight_cup', 'super_cup_a', 'super_cup_b', 'division_2'] as string[]).includes(activeSystem) && <>
       {/* Filter & Sort Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-900/80 p-4 rounded-2xl border border-slate-800">
         <div className="relative w-full sm:w-72">
