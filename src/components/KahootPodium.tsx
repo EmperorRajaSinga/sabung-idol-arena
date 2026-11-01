@@ -3,8 +3,10 @@ import { CombinedStatsRecord } from '../utils/leagueLogic';
 import { Trophy, Crown, Medal, Flame, Sparkles, TrendingUp } from 'lucide-react';
 import { getCountryFlag } from '../utils/nationalityHelper';
 
+type PodiumRankRecord = CombinedStatsRecord & { v5Titles?: number };
+
 interface KahootPodiumProps {
-  records: CombinedStatsRecord[];
+  records: PodiumRankRecord[];
   type: 'idol' | 'group';
   title?: string;
   subtitle?: string;
@@ -29,7 +31,7 @@ export const KahootPodium: React.FC<KahootPodiumProps> = ({
   }
 
   const renderCard = (
-    rec: CombinedStatsRecord | undefined,
+    rec: PodiumRankRecord | undefined,
     place: 1 | 2 | 3,
     stepHeight: string,
     pillarBg: string,
@@ -121,6 +123,11 @@ export const KahootPodium: React.FC<KahootPodiumProps> = ({
                 {rec.titles} {rec.titles === 1 ? 'Title' : 'Titles'}
               </span>
             </div>
+            {(rec.v5Titles || 0) > 0 && (
+              <div className="flex items-center justify-center gap-1 rounded-lg border border-cyan-500/20 bg-cyan-950/30 px-1.5 py-0.5">
+                <span className="text-[9px] font-black text-cyan-300">V5 TITLES {rec.v5Titles}</span>
+              </div>
+            )}
             <div className="flex items-center justify-center gap-1 bg-black/40 rounded-lg px-1.5 py-0.5">
               <span className="text-[9px] sm:text-[10px] font-bold text-slate-300">
                 ⭐ {rec.totalPoints} PTS
