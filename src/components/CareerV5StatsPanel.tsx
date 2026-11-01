@@ -74,9 +74,9 @@ export const CareerV5StatsPanel: React.FC<{
 
       if (section !== 'Division 2') {
         const detail = String(match.stage || '').split(' / ').slice(1).join(' / ').toLowerCase();
-        if (/^final(?:\\b|\\s|$)/.test(detail)) {
-          const winner = scoreA > scoreB ? match.idolAId : scoreB > scoreA ? match.idolBId : '';
-          const runner = scoreA > scoreB ? match.idolBId : scoreB > scoreA ? match.idolAId : '';
+        if (/^(?:grand\\s+)?final(?:\\b|\\s|$)/.test(detail) || detail === 'super cup') {
+          const winner = match.winnerId || (scoreA > scoreB ? match.idolAId : scoreB > scoreA ? match.idolBId : '');
+          const runner = match.loserId || (winner === match.idolAId ? match.idolBId : match.idolAId);
           if (winner) finals.set(String(match.seasonId || 1), { winnerId: winner, runnerUpId: runner });
         }
       }
