@@ -485,7 +485,14 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
       const tPart = t?.participations || 0;
       const lSeasons = l?.seasonsPlayed || 0;
       const tiSeasons = ti?.seasonsPlayed || 0;
-      const totalCompetitions = tPart + lSeasons + tiSeasons;
+      const idolV5Matches = (matchDatabase || []).filter((match) =>
+        String(match.stage || '').toLowerCase().startsWith('cups & divisions:') &&
+        (match.idolAId === id || match.idolBId === id)
+      );
+      const v5CompetitionCount = new Set(idolV5Matches.map((match) =>
+        `${Number(match.seasonId || 1)}::${String(match.stage || '').split(' / ')[0]}`
+      )).size;
+      const totalCompetitions = tPart + lSeasons + tiSeasons + v5CompetitionCount;
 
       const tChamps = t?.championships || 0;
       const lDivTitles = l?.divisionTitles || 0;
@@ -498,39 +505,49 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
       const tMatches = t?.matches || 0;
       const lMatches = l?.matches || 0;
       const tiMatches = (ti?.matches || 0) + (ti?.playoffMatches || 0);
-      const matches = tMatches + lMatches + tiMatches;
+      const matches = tMatches + lMatches + tiMatches + idolV5Matches.length;
 
       const tWins = t?.wins || 0;
       const lWins = l?.wins || 0;
       const tiWins = (ti?.wins || 0) + (ti?.playoffWins || 0);
-      const wins = tWins + lWins + tiWins;
+      const v5Wins = idolV5Matches.filter((match) => match.winnerId === id).length;
+      const wins = tWins + lWins + tiWins + v5Wins;
 
       const tDraws = t?.draws || 0;
       const lDraws = l?.draws || 0;
       const tiDraws = ti?.draws || 0;
-      const draws = tDraws + lDraws + tiDraws;
+      const v5Draws = idolV5Matches.filter((match) => match.isDraw || match.winnerId === 'DRAW' || Number(match.scoreA) === Number(match.scoreB)).length;
+      const draws = tDraws + lDraws + tiDraws + v5Draws;
 
       const tLosses = t?.losses || 0;
       const lLosses = l?.losses || 0;
       const tiLosses = (ti?.losses || 0) + (ti?.playoffLosses || 0);
-      const losses = tLosses + lLosses + tiLosses;
+      const v5Losses = idolV5Matches.length - v5Wins - v5Draws;
+      const losses = tLosses + lLosses + tiLosses + v5Losses;
 
       const tPoints = tWins * 3 + tDraws * 1;
       const lPoints = l?.points || 0;
       const tiPoints = (ti?.points || 0) + (ti?.playoffWins || 0) * 3;
-      const points = tPoints + lPoints + tiPoints;
+      const v5Points = idolV5Matches.reduce((sum, match) => {
+        if (!String(match.stage || '').toLowerCase().includes('division 2')) return sum;
+        const isDraw = Boolean(match.isDraw || match.winnerId === 'DRAW' || Number(match.scoreA) === Number(match.scoreB));
+        return sum + (isDraw ? 1 : match.winnerId === id ? 3 : 0);
+      }, 0);
+      const points = tPoints + lPoints + tiPoints + v5Points;
 
       const tGF = t?.gamesFor || 0;
       const lGF = l?.goalsFor || 0;
       const tiGF = ti?.goalsFor || 0;
-      const goalsFor = tGF + lGF + tiGF;
+      const v5GF = idolV5Matches.reduce((sum, match) => sum + Number(match.idolAId === id ? match.scoreA || 0 : match.scoreB || 0), 0);
+      const goalsFor = tGF + lGF + tiGF + v5GF;
 
       const tGA = t?.gamesAgainst || 0;
       const lGA = l?.goalsAgainst || 0;
       const tiGA = ti?.goalsAgainst || 0;
-      const goalsAgainst = tGA + lGA + tiGA;
+      const v5GA = idolV5Matches.reduce((sum, match) => sum + Number(match.idolAId === id ? match.scoreB || 0 : match.scoreA || 0), 0);
+      const goalsAgainst = tGA + lGA + tiGA + v5GA;
 
-      const goalDiff = (t?.gameDiff || 0) + (l?.goalDiff || 0) + (ti?.goalDiff || 0);
+      const goalDiff = (t?.gameDiff || 0) + (l?.goalDiff || 0) + (ti?.goalDiff || 0) + v5GF - v5GA;
       const winRate = matches > 0 ? Math.round((wins / matches) * 100) : 0;
       const podiums =
         (t?.championships || 0) +
@@ -573,7 +590,7 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
     });
 
     return list;
-  }, [careerStats, leagueCareerStats, theIdolsCareerStats, idols, idolsMap, v5TitleArchives]);
+  }, [careerStats, leagueCareerStats, theIdolsCareerStats, idols, idolsMap, v5TitleArchives, matchDatabase]);
 
   const sortedCombinedStats = useMemo(() => {
     return [...combinedCareerStats]
@@ -710,7 +727,7 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
               onChange={(e) => setCombinedSortBy(e.target.value as keyof CombinedCareerStat)}
               className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
             >
-              <option value="totalTitles">Total Titles (Major + Div + Masters)</option>
+              <option value="totalTitles">Total Titles (Tournament + Cups + Divisions + Masters)</option>
               <option value="points">Total Combined Points</option>
               <option value="wins">Total Wins</option>
               <option value="winRate">Win Rate (%)</option>
@@ -920,7 +937,7 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={14} className="py-12 text-center text-slate-500">
+                    <td colSpan={16} className="py-12 text-center text-slate-500">
                       No career statistics found matching your search.
                     </td>
                   </tr>
