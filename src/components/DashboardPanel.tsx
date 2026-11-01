@@ -307,6 +307,11 @@ export const DashboardPanel: React.FC<DashboardPanelProps> = ({
   // Count actual match records only. Career/ranking aggregates are derived
   // from these same records and league standings, so using them as a second
   // counter double-counts matches that already exist in the archive.
+  const archivedMatchCount = useMemo(
+    () => new Set(safeMatchDatabase.filter((match) => match?.matchId).map((match) => String(match.matchId))).size,
+    [safeMatchDatabase]
+  );
+
   const totalMatchesAll = useMemo(() => {
     const completedMatchIds = new Set<string>();
 
@@ -1122,7 +1127,7 @@ export const DashboardPanel: React.FC<DashboardPanelProps> = ({
           <div className="mt-3">
             <div className="text-2xl lg:text-3xl font-poster-title text-cyan-300">{totalMatchesAll}</div>
             <p className="mt-0.5 text-[11px] text-slate-400 font-semibold truncate">
-              {safeMatchDatabase.length} in historic archive
+              {archivedMatchCount} in historic archive
             </p>
           </div>
         </div>
