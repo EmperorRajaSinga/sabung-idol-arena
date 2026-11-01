@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Idol, GirlGroup, LeagueInfo, LeagueSeasonState } from '../types';
 import {
   generateRoundRobinMatches,
@@ -72,21 +72,27 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
   const [searchPoolQuery, setSearchPoolQuery] = useState<string>('');
   const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  // Sync state whenever modal opens
+  // Keep the latest persisted state available without resetting unsaved modal edits
+  // whenever the parent re-renders or receives an unrelated league-state update.
+  const latestLeagueStateRef = useRef(leagueState);
+  latestLeagueStateRef.current = leagueState;
+
+  // Load the saved roster only when the modal opens.
   useEffect(() => {
     if (isOpen) {
       const freshBranding = loadCustomLeagueBranding();
       setLeaguesBranding(freshBranding);
 
+      const source = latestLeagueStateRef.current;
       const map: Record<number, string[]> = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
       for (let d = 1; d <= 6; d++) {
-        const found = leagueState?.leagues?.find((l) => l.id === d);
-        map[d] = found ? [...found.memberIds] : [];
+        const found = source?.leagues?.find((l) => l.id === d);
+        map[d] = found ? [...(found.memberIds || [])] : [];
       }
       setDivisionMembers(map);
       setCreatedIdolsAccumulator([]);
     }
-  }, [isOpen, leagueState]);
+  }, [isOpen]);
 
   const triggerFeedback = (text: string, type: 'success' | 'error' = 'success') => {
     setFeedbackMsg({ text, type });
@@ -416,6 +422,12 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
 
   // --- SAVE & APPLY ALL ROSTERS ---
   const handleSaveAndApply = () => {
+    // Never interpret an unavailable or partial source state as six empty rosters.
+    if (!leagueState || !Array.isArray(leagueState.leagues) || leagueState.leagues.length !== 6) {
+      triggerFeedback('Save blocked. The saved Division 1 league data is incomplete or unavailable. Existing rosters were not changed.', 'error');
+      return;
+    }
+
     const allKnownIdols = [...idols, ...createdIdolsAccumulator];
     const knownById = new Map(allKnownIdols.map((idol) => [idol.id, idol]));
     const nameCounts = new Map<string, number>();
@@ -436,21 +448,37 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
     const updatedLeagues: LeagueInfo[] = [1, 2, 3, 4, 5, 6].map((leagueId) => {
       const customDef = customDefs.find((c) => c.id === leagueId);
       const def = DEFAULT_LEAGUE_DEFS.find((d) => d.id === leagueId) || DEFAULT_LEAGUE_DEFS[0];
-      const memberIds = divisionMembers[leagueId] || [];
-      const matches = generateRoundRobinMatches(leagueId, memberIds);
+      const previous = leagueState.leagues.find((league) => league.id === leagueId);
+      const memberIds = [...(divisionMembers[leagueId] || [])];
+      const sameRoster = Boolean(previous) &&
+        previous!.memberIds.length === memberIds.length &&
+        previous!.memberIds.every((id) => memberIds.includes(id));
+      const generatedMatches = sameRoster && previous?.matches?.length
+        ? previous.matches
+        : generateRoundRobinMatches(leagueId, memberIds);
+      // If a roster changes, retain results only for fixtures whose participants and
+      // matchday remain identical. Never wipe unrelated completed fixtures.
+      const previousMatches = new Map((previous?.matches || []).map((match) => [
+        `${match.matchday}_${match.idolAId}_${match.idolBId}`, match,
+      ]));
+      const matches = sameRoster ? generatedMatches : generatedMatches.map((match) => {
+        const saved = previousMatches.get(`${match.matchday}_${match.idolAId}_${match.idolBId}`);
+        return saved?.completed ? { ...match, ...saved } : match;
+      });
       const standings = calculateLeagueStandings(leagueId, memberIds, matches, allKnownIdols);
 
       return {
+        ...previous,
         id: leagueId,
-        name: customDef?.name || def.name,
-        tierName: customDef?.tierName || def.tierName,
-        color: customDef?.color || def.color,
-        logoUrl: customDef?.logoUrl !== undefined ? customDef.logoUrl : (def.logoUrl || ''),
-        description: customDef?.description !== undefined ? customDef.description : (def.description || ''),
+        name: customDef?.name || previous?.name || def.name,
+        tierName: customDef?.tierName || previous?.tierName || def.tierName,
+        color: customDef?.color || previous?.color || def.color,
+        logoUrl: customDef?.logoUrl !== undefined ? customDef.logoUrl : (previous?.logoUrl || def.logoUrl || ''),
+        description: customDef?.description !== undefined ? customDef.description : (previous?.description || def.description || ''),
         memberIds,
         matches,
         standings,
-        isCompleted: false,
+        isCompleted: sameRoster ? (previous?.isCompleted || false) : false,
       };
     });
 
