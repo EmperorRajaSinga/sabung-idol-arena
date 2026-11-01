@@ -41,7 +41,7 @@ export const CareerV5StatsPanel: React.FC<{
       const idol = idolMap.get(id);
       const row = table.get(id) || {
         idolId: id, idolName: idol?.name || name || 'Unknown Idol',
-        group: idol?.girlGroup || group || 'Solo', photo: idol?.photoUrl || photo,
+        group: group || idol?.girlGroup || 'Solo', photo: photo || idol?.photoUrl,
         matches: 0, wins: 0, draws: 0, losses: 0, points: 0,
         scored: 0, conceded: 0, titles: 0, runnerUps: 0, podiums: 0,
       };
