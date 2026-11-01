@@ -1,6 +1,6 @@
 import { loadV5State, saveV5State, hasStoredV5State, V5State, V5TitleArchive } from './utils/v5/store';
 import { loadNames } from './utils/v5/names';
-import { auditAppStateDataChanges } from './utils/dataChangeHistory';
+import { auditAppStateDataChanges, normalizeDataName, recordDataHistory } from './utils/dataChangeHistory';
 
 
 import { getUnfinishedCompetitions } from './utils/seasonGuard';
@@ -1027,6 +1027,12 @@ export function App() {
 
   // --- HANDLERS: IDOLS CRUD ---
   const handleAddIdol = (idol: Idol) => {
+    const existingIdol = appState.idols.find((item) => normalizeDataName(item.name) === normalizeDataName(idol.name));
+    if (existingIdol) {
+      recordDataHistory({ action: 'duplicate_blocked', entity: 'idol', entityName: existingIdol.name, source: 'Idol Database / Add Idol', details: `Blocked creation of "${idol.name}" because an idol with the same normalized name already exists.` });
+      window.alert(`Idol "${existingIdol.name}" already exists in the database. Use Edit Idol to update the existing profile.`);
+      return;
+    }
     setAppState((prev) => {
       const lowerName = idol.name.trim().toLowerCase();
       const existingIdx = prev.idols.findIndex(
@@ -1069,6 +1075,18 @@ export function App() {
     memberNames: string[],
     logoUrl?: string
   ) => {
+    const existingGroup = appState.girlGroups.find((group) => normalizeDataName(group.name) === normalizeDataName(groupName));
+    if (existingGroup) {
+      recordDataHistory({ action: 'duplicate_blocked', entity: 'girl_group', entityName: existingGroup.name, source: 'Girl Group Manager / Add Group', details: `Blocked creation of "${groupName}" because a girl group with the same normalized name already exists.` });
+      window.alert(`Girl group "${existingGroup.name}" already exists. Open that group to edit it instead of creating another record.`);
+      return;
+    }
+    const normalizedMemberNames = memberNames.map(normalizeDataName).filter(Boolean);
+    if (new Set(normalizedMemberNames).size !== normalizedMemberNames.length) {
+      recordDataHistory({ action: 'duplicate_blocked', entity: 'girl_group', entityName: groupName, source: 'Girl Group Manager / Add Group', details: 'Blocked group creation because the member list contains duplicate idol names.' });
+      window.alert('This girl group contains duplicate member names. Remove repeated names before saving.');
+      return;
+    }
     setAppState((prev) => {
       const newGroupId = `group-${Date.now()}`;
       const newGroup: GirlGroup = {
@@ -1121,6 +1139,12 @@ export function App() {
   };
 
   const handleUpdateGirlGroup = (updated: GirlGroup) => {
+    const duplicate = appState.girlGroups.find((group) => group.id !== updated.id && normalizeDataName(group.name) === normalizeDataName(updated.name));
+    if (duplicate) {
+      recordDataHistory({ action: 'duplicate_blocked', entity: 'girl_group', entityName: duplicate.name, source: 'Girl Group Manager / Edit Group', details: `Blocked rename to "${updated.name}" because that group name already exists.` });
+      window.alert(`Girl group name "${duplicate.name}" is already in use.`);
+      return;
+    }
     setAppState((prev) => ({
       ...prev,
       girlGroups: prev.girlGroups.map((g) => (g.id === updated.id ? updated : g)),
