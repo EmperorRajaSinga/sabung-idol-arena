@@ -2325,7 +2325,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     return;
                   }
                   if (showRosterConflicts(addedNames, { division: 'Division 2', leagueId: currentLeague.id, leagueName: currentLeague.name })) return;
-                  const addedNames = memberIds.filter((id) => !beforeIds.includes(id)).map((id) => appState.idols.find((idol) => idol.id === id)?.name || id);
                   const removedNames = beforeIds.filter((id) => !memberIds.includes(id)).map((id) => appState.idols.find((idol) => idol.id === id)?.name || id);
                   onUpdateV5State?.({
                     ...v5State,
