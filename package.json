@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist dist-single",
     "lint": "tsc --noEmit",
-    "test": "tsx tests/v4.test.ts tests/fixtures/idols_and_groups.json && tsx tests/guard.test.ts tests/fixtures/idols_and_groups.json && tsx tests/profile.test.ts tests/fixtures/idols_and_groups.json && tsx tests/swiss_ranks.test.ts tests/fixtures/idols_and_groups.json && tsx tests/roster_import.test.ts tests/fixtures/idols_and_groups.json && tsx tests/v5.test.ts tests/fixtures/idols_and_groups.json",
+    "test": "tsx tests/roster_persistence.test.ts && tsx tests/v4.test.ts tests/fixtures/idols_and_groups.json && tsx tests/guard.test.ts tests/fixtures/idols_and_groups.json && tsx tests/profile.test.ts tests/fixtures/idols_and_groups.json && tsx tests/swiss_ranks.test.ts tests/fixtures/idols_and_groups.json && tsx tests/roster_import.test.ts tests/fixtures/idols_and_groups.json && tsx tests/v5.test.ts tests/fixtures/idols_and_groups.json",
     "build:single": "sh build-single.sh"
   },
   "dependencies": {
