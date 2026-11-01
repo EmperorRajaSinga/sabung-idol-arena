@@ -296,7 +296,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
     const leagueWinner = (arch.standings || []).find((s) => s.rank === 1 && (s.played || 0) > 0);
     if (leagueWinner) {
       const champIdol = idolsMap.get(leagueWinner.idolId);
-      const groupName = champIdol?.girlGroup || 'Solo / Independent';
+      const groupName = leagueWinner.girlGroup || champIdol?.girlGroup || 'Solo / Independent';
       if (!groupTheIdolsLeagueWinnersMap.has(groupName)) {
         groupTheIdolsLeagueWinnersMap.set(groupName, []);
       }
@@ -314,7 +314,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
     // Active Playoff Champion
     if ((theIdolsState.isPlayoffCompleted || theIdolsState.championId) && theIdolsState.championId) {
       const champIdol = idolsMap.get(theIdolsState.championId);
-      const groupName = champIdol?.girlGroup || 'Solo / Independent';
+      const groupName = theIdolsState.championGroup || champIdol?.girlGroup || 'Solo / Independent';
       if (!groupTheIdolsPlayoffWinnersMap.has(groupName)) {
         groupTheIdolsPlayoffWinnersMap.set(groupName, []);
       }
@@ -335,7 +335,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
     if (theIdolsState.isLeagueCompleted && theIdolsState.standings?.[0]?.rank === 1 && (theIdolsState.standings[0].played || 0) > 0) {
       const leagueWinner = theIdolsState.standings[0];
       const champIdol = idolsMap.get(leagueWinner.idolId);
-      const groupName = champIdol?.girlGroup || 'Solo / Independent';
+      const groupName = leagueWinner.girlGroup || champIdol?.girlGroup || 'Solo / Independent';
       if (!groupTheIdolsLeagueWinnersMap.has(groupName)) {
         groupTheIdolsLeagueWinnersMap.set(groupName, []);
       }
@@ -347,7 +347,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
           seasonName: theIdolsState.seasonName || `The Idols Season ${theIdolsState.seasonNumber}`,
           championId: leagueWinner.idolId,
           championName: leagueWinner.idolName || champIdol?.name || 'League Winner',
-          championPhoto: champIdol?.photoUrl,
+          championPhoto: leagueWinner.photoUrl || champIdol?.photoUrl,
         });
       }
     }
@@ -486,9 +486,13 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
       // Count the idols playoff titles for this member
       const memberTheIdolsPlayoff = theIdolsPlayoffWinners.filter((w) => w.championId === member.id).length;
       const memberCompetitionTitles: Record<string, number> = {};
-      v5WinnerByCompetition.forEach((groups, competition) => {
-        memberCompetitionTitles[competition] = [...(groups.get(groupName)?.values() || [])]
-          .filter((winner) => winner.championId === member.id).length;
+      (v5TitleArchives || []).forEach((record) => {
+        if (record?.winnerId !== member.id) return;
+        const competitionName = String(record.competition || '').trim();
+        const competition = record.isDivision
+          ? 'Division 2'
+          : v5CompetitionNames.find(([label, matches]) => label !== 'Division 2' && matches(competitionName))?.[0];
+        if (competition) memberCompetitionTitles[competition] = (memberCompetitionTitles[competition] || 0) + 1;
       });
 
       groupMatches += st.matches;
