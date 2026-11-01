@@ -88,6 +88,7 @@ import {
   saveLeagueArchives,
   syncLeagueMatchesToArchivedMatches,
   archiveLeagueSeason,
+  initializeLeagueSeason,
   advanceLeagueSeason,
   resetLeagueSeasonMatchesOnly,
 } from './utils/leagueLogic';
@@ -266,11 +267,16 @@ export function App() {
     const loaded = loadAppState();
     const rosterSnapshot = loadRosterSnapshot();
     const loadedV5 = loaded.v5State || loadV5State();
+    const baseLeagueState = loaded.leagueState || (
+      rosterSnapshot?.division1
+        ? initializeLeagueSeason(loaded.idols, loaded.girlGroups, loaded.config.seasonNumber || 1)
+        : loaded.leagueState
+    );
     return {
       ...loaded,
-      leagueState: loaded.leagueState
-        ? { ...loaded.leagueState, leagues: restoreDivisionOneRoster(loaded.leagueState.leagues, rosterSnapshot) || loaded.leagueState.leagues }
-        : loaded.leagueState,
+      leagueState: baseLeagueState
+        ? { ...baseLeagueState, leagues: restoreDivisionOneRoster(baseLeagueState.leagues, rosterSnapshot) || baseLeagueState.leagues }
+        : baseLeagueState,
       v5State: {
         ...loadedV5,
         d2: restoreDivisionTwoRoster(loadedV5.d2, rosterSnapshot) || loadedV5.d2,
@@ -377,11 +383,12 @@ export function App() {
   const [selectedIdolId, setSelectedIdolId] = useState<string>('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [leagueState, setLeagueState] = useState<LeagueSeasonState | null>(() => {
-    const loaded = loadLeagueSeasonState();
+    const rosterSnapshot = loadRosterSnapshot();
+    const loaded = loadLeagueSeasonState() || appState.leagueState || null;
     if (!loaded) return loaded;
     return {
       ...loaded,
-      leagues: restoreDivisionOneRoster(loaded.leagues, loadRosterSnapshot()) || loaded.leagues,
+      leagues: restoreDivisionOneRoster(loaded.leagues, rosterSnapshot) || loaded.leagues,
     };
   });
   const [leagueArchives, setLeagueArchives] = useState<LeagueSeasonArchive[]>(() => loadLeagueArchives());
