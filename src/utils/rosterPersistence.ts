@@ -111,8 +111,11 @@ export function saveDivisionOneRosterSnapshot<T extends { id: number; memberIds:
 }
 
 export function saveDivisionTwoRosterSnapshot<T extends { id: number; memberIds: string[] }>(leagues: T[]): boolean {
-  if (!Array.isArray(leagues) || (leagues.length > 0 && new Set(leagues.map((league) => Number(league.id))).size !== leagues.length)) {
-    console.error('[Persistence] Division 2 roster snapshot rejected because the source is invalid.');
+  if (
+    !Array.isArray(leagues) ||
+    (leagues.length > 0 && (leagues.length !== 6 || new Set(leagues.map((league) => Number(league.id))).size !== 6))
+  ) {
+    console.error('[Persistence] Division 2 roster snapshot rejected because the six-league source is incomplete.');
     return false;
   }
   const current = loadRosterSnapshot();
