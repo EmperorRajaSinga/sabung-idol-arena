@@ -242,6 +242,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const [selectedLeagueTab, setSelectedLeagueTab] = useState<number>(1);
   const [selectedD2LeagueTab, setSelectedD2LeagueTab] = useState<number>(0);
   const [d2RosterSearch, setD2RosterSearch] = useState('');
+  const [editingD2RosterLeagueId, setEditingD2RosterLeagueId] = useState<number | null>(null);
+  const [d2RosterText, setD2RosterText] = useState('');
   const [rosterSearchQuery, setRosterSearchQuery] = useState<string>('');
   const [editingRosterLeagueId, setEditingRosterLeagueId] = useState<number | null>(null);
   const [rosterTextVal, setRosterTextVal] = useState<string>('');
@@ -274,6 +276,74 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     config.participantsPerGroup,
     config.qualifiedPerGroup,
   ]);
+
+  const handleOpenEditD2Roster = (leagueId: number, memberIds: string[]) => {
+    setD2RosterText(memberIds.map((id) => idolsMap.get(id)?.name || id).join('\n'));
+    setEditingD2RosterLeagueId(leagueId);
+  };
+
+  const handleSaveD2RosterText = (leagueId: number) => {
+    if (!v5State) return;
+    const rawNames = d2RosterText
+      .split('\n')
+      .flatMap((line) => (line.includes(',') ? line.split(',') : [line]))
+      .map((name) => name.replace(/^[0-9]+[.\-)]\s*/, '').trim())
+      .filter(Boolean);
+    const capacity = v5State.perLeague || 20;
+    if (rawNames.length > capacity) {
+      showSuccessMsg(`Maximum capacity is ${capacity} idols. Remove ${rawNames.length - capacity} name(s) before saving.`);
+      return;
+    }
+
+    const existingByName = new Map(appState.idols.map((idol) => [idol.name.trim().toLowerCase(), idol]));
+    const createdIdols: Idol[] = [];
+    const nextMemberIds: string[] = [];
+    const seen = new Set<string>();
+    const assignedElsewhere = new Set<string>();
+    (activeLeagueState.leagues || []).forEach((league) => league.memberIds.forEach((id) => assignedElsewhere.add(id)));
+    v5State.d2.forEach((league) => {
+      if (league.id !== leagueId) league.memberIds.forEach((id) => assignedElsewhere.add(id));
+    });
+
+    for (const name of rawNames) {
+      const key = name.toLowerCase();
+      let idol = existingByName.get(key);
+      if (!idol) {
+        idol = {
+          id: `idol-custom-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          name,
+          girlGroup: 'Solo / Independent',
+          seed: 'Seed 3',
+          nationality: 'South Korea',
+          photoUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`,
+          createdAt: Date.now(),
+        } as Idol;
+        createdIdols.push(idol);
+        existingByName.set(key, idol);
+      }
+      if (seen.has(idol.id)) continue;
+      seen.add(idol.id);
+      if (assignedElsewhere.has(idol.id)) continue;
+      nextMemberIds.push(idol.id);
+    }
+
+    const allIdols = [...appState.idols, ...createdIdols];
+    const nextD2 = v5State.d2.map((league) =>
+      league.id === leagueId
+        ? V5Engine.rebuildLeague({ ...league, memberIds: nextMemberIds }, allIdols)
+        : league
+    );
+    onUpdateV5State?.({ ...v5State, d2: nextD2 });
+    if (createdIdols.length) {
+      onImportState(
+        { ...appState, idols: allIdols },
+        activeLeagueState,
+        appState.leagueArchives
+      );
+    }
+    setEditingD2RosterLeagueId(null);
+    showSuccessMsg(`Division 2 roster saved: ${nextMemberIds.length} idol(s) assigned. ${createdIdols.length} new idol(s) added to the database.`);
+  };
 
   const showSuccessMsg = (msg: string) => {
     setActionSuccessMsg(msg);
@@ -2010,6 +2080,14 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       <div className="flex flex-wrap items-center gap-2">
                         <button
                           type="button"
+                          onClick={() => handleOpenEditD2Roster(currentLeague.id, currentLeague.memberIds || [])}
+                          className="flex items-center gap-1.5 rounded-xl border-2 border-black poster-pill-gold px-3 py-1.5 text-xs font-black text-amber-950 shadow transition-all hover:scale-[1.02]"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Edit / Paste Roster ({v5State.perLeague || 20} Idols)
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => {
                             if (window.confirm(`Clear the ${currentLeague.name} roster?`)) updateCurrentRoster([]);
                           }}
@@ -2128,6 +2206,57 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               })()}
             </>
           )}
+        </div>
+      )}
+
+      {activeSettingsTab === 'division2_roster' && editingD2RosterLeagueId !== null && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg space-y-4 rounded-3xl border-2 border-black bg-[#18110b] p-6 poster-shadow">
+            <div className="flex items-center justify-between border-b border-black pb-3">
+              <h4 className="font-poster-title text-base text-amber-400">
+                Edit / Paste Division 2 Roster
+              </h4>
+              <button
+                type="button"
+                onClick={() => setEditingD2RosterLeagueId(null)}
+                className="rounded-lg bg-slate-800 p-1 text-slate-300 hover:bg-slate-700"
+                aria-label="Close roster editor"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-xs font-medium text-slate-300">
+              Paste up to {v5State?.perLeague || 20} idol names. Use one name per line. Names that do not exist in the idol database will be created automatically as Solo / Independent idols.
+            </p>
+            <textarea
+              rows={10}
+              value={d2RosterText}
+              onChange={(e) => setD2RosterText(e.target.value)}
+              placeholder={'Paste idol names here, one name per line...\nExample:\nYour Name'}
+              className="w-full rounded-xl border border-slate-700 bg-black p-3 font-mono text-xs text-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+            <div className="flex items-center justify-between border-t border-black pt-2">
+              <span className="text-[11px] font-bold text-slate-400">
+                {d2RosterText.split('\n').filter((name) => name.trim()).length}/{v5State?.perLeague || 20} names
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingD2RosterLeagueId(null)}
+                  className="rounded-xl bg-slate-800 px-4 py-2 text-xs font-bold text-slate-300 hover:bg-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSaveD2RosterText(editingD2RosterLeagueId)}
+                  className="rounded-xl bg-amber-500 px-5 py-2 font-poster-title text-xs font-black text-black shadow hover:bg-amber-400"
+                >
+                  Save Division 2 Roster
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
