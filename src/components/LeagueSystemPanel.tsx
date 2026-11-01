@@ -25,6 +25,7 @@ import {
   loadLeagueArchives,
   saveSavedTop32Qualifiers,
   simulateLeagueMatch,
+  repairLeagueFixturesForSimulation,
   loadCustomLeagueBranding,
   DEFAULT_LEAGUE_DEFS,
   generateWildcardPlayIn,
@@ -493,22 +494,28 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
     }
   };
 
-  // Simulate entire active league (all 38 matchdays) chronologically with dynamic form progression
+  // Repair legacy roster/fixture references before simulating an entire league.
   const handleSimulateActiveLeague = () => {
     if (!activeLeague) return;
+    const repaired = repairLeagueFixturesForSimulation(activeLeague, idols);
+    if (repaired.unresolvedMemberIds.length > 0) {
+      const missing = repaired.unresolvedMemberIds
+        .map((id) => activeLeague.standings?.find((standing) => standing.idolId === id)?.idolName || id);
+      setSimAlertMessage(
+        `Simulation stopped for ${activeLeague.name}. These roster entries cannot be matched to the idol database: ${missing.join(', ')}. Restore or correct those idol records first.`
+      );
+      return;
+    }
 
+    const simulationLeague = repaired.league;
     let skippedFavoritesCount = 0;
-
-    // Build rolling form map initialized from currently completed matches
     const rollingFormMap = new Map<string, Array<'W' | 'D' | 'L'>>();
-    (activeLeague.standings || []).forEach((st) => {
+    (simulationLeague.standings || []).forEach((st) => {
       rollingFormMap.set(st.idolId, [...(st.form || [])]);
     });
 
-    // Group matches by matchday and sort chronologically
-    const allMatches = [...activeLeague.matches];
+    const allMatches = [...simulationLeague.matches];
     const matchdays = Array.from(new Set(allMatches.map((m) => m.matchday))).sort((a, b) => a - b);
-
     matchdays.forEach((md) => {
       const mdMatches = allMatches.filter((m) => m.matchday === md && !m.completed);
       mdMatches.forEach((match) => {
@@ -518,14 +525,108 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
         }
         const idolA = idolsMap.get(match.idolAId);
         const idolB = idolsMap.get(match.idolBId);
-        if (idolA && idolB) {
-          const formA = rollingFormMap.get(idolA.id) || [];
-          const formB = rollingFormMap.get(idolB.id) || [];
-          const sim = simulateLeagueMatch(idolA, idolB, formA, formB);
+        if (!idolA || !idolB) return;
+        const sim = simulateLeagueMatch(
+          idolA,
+          idolB,
+          rollingFormMap.get(idolA.id) || [],
+          rollingFormMap.get(idolB.id) || []
+        );
+        const idx = allMatches.findIndex((item) => item.id === match.id);
+        if (idx !== -1) {
+          allMatches[idx] = {
+            ...match,
+            scoreA: sim.scoreA,
+            scoreB: sim.scoreB,
+            winnerId: sim.scoreA === sim.scoreB ? null : sim.winnerId,
+            completed: true,
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        const curA = rollingFormMap.get(idolA.id) || [];
+        const curB = rollingFormMap.get(idolB.id) || [];
+        if (sim.scoreA > sim.scoreB) {
+          curA.push('W'); curB.push('L');
+        } else if (sim.scoreB > sim.scoreA) {
+          curA.push('L'); curB.push('W');
+        } else {
+          curA.push('D'); curB.push('D');
+        }
+        rollingFormMap.set(idolA.id, curA.slice(-5));
+        rollingFormMap.set(idolB.id, curB.slice(-5));
+      });
+    });
 
-          const idx = allMatches.findIndex((m) => m.id === match.id);
-          if (idx !== -1) {
-            allMatches[idx] = {
+    const updatedStandings = calculateLeagueStandings(
+      simulationLeague.id, simulationLeague.memberIds, allMatches, idols
+    );
+    const updatedLeagues = state.leagues.map((league) =>
+      league.id === simulationLeague.id
+        ? { ...simulationLeague, matches: allMatches, standings: updatedStandings }
+        : league
+    );
+    const newState: LeagueSeasonState = {
+      ...state,
+      leagues: updatedLeagues,
+      isCompleted: updatedLeagues.every((league) =>
+        league.matches.length > 0 && league.matches.every((match) => match.completed)
+      ),
+    };
+    onUpdateLeagueState(newState);
+    if (persistState) saveLeagueSeasonState(newState);
+
+    const remainingInvalid = allMatches.filter((match) =>
+      !match.completed && (!idolsMap.has(match.idolAId) || !idolsMap.has(match.idolBId))
+    ).length;
+    if (remainingInvalid > 0) {
+      setSimAlertMessage(`Simulation partially stopped: ${remainingInvalid} fixture(s) still reference missing idols. Check the roster database.`);
+    } else if (skippedFavoritesCount > 0) {
+      setSimAlertMessage(
+        `Simulation finished. ${skippedFavoritesCount} match(es) involving favorite idols require manual play.`
+      );
+    } else {
+      setSimAlertMessage(null);
+    }
+  };
+
+  // Simulate all six leagues. Repair legacy IDs and stale fixtures independently
+  // so one damaged league cannot silently prevent the other five from running.
+  const handleSimulateAllLeagues = () => {
+    let totalSkippedFavorites = 0;
+    const unresolvedLeagues: string[] = [];
+    const updatedLeagues = state.leagues.map((originalLeague) => {
+      const repaired = repairLeagueFixturesForSimulation(originalLeague, idols);
+      if (repaired.unresolvedMemberIds.length > 0) {
+        const missing = repaired.unresolvedMemberIds
+          .map((id) => originalLeague.standings?.find((standing) => standing.idolId === id)?.idolName || id);
+        unresolvedLeagues.push(`${originalLeague.name}: ${missing.join(', ')}`);
+        return originalLeague;
+      }
+
+      const league = repaired.league;
+      const rollingFormMap = new Map<string, Array<'W' | 'D' | 'L'>>();
+      (league.standings || []).forEach((st) => rollingFormMap.set(st.idolId, [...(st.form || [])]));
+      const allMatches = [...league.matches];
+      const matchdays = Array.from(new Set(allMatches.map((match) => match.matchday))).sort((a, b) => a - b);
+
+      matchdays.forEach((md) => {
+        allMatches.filter((match) => match.matchday === md && !match.completed).forEach((match) => {
+          if (favoriteSet.has(match.idolAId) || favoriteSet.has(match.idolBId)) {
+            totalSkippedFavorites++;
+            return;
+          }
+          const idolA = idolsMap.get(match.idolAId);
+          const idolB = idolsMap.get(match.idolBId);
+          if (!idolA || !idolB) return;
+          const sim = simulateLeagueMatch(
+            idolA,
+            idolB,
+            rollingFormMap.get(idolA.id) || [],
+            rollingFormMap.get(idolB.id) || []
+          );
+          const index = allMatches.findIndex((item) => item.id === match.id);
+          if (index !== -1) {
+            allMatches[index] = {
               ...match,
               scoreA: sim.scoreA,
               scoreB: sim.scoreB,
@@ -534,151 +635,46 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
               updatedAt: new Date().toISOString(),
             };
           }
-
-          // Update dynamic rolling form for both idols
-          const curA = rollingFormMap.get(idolA.id) || [];
-          const curB = rollingFormMap.get(idolB.id) || [];
+          const formA = rollingFormMap.get(idolA.id) || [];
+          const formB = rollingFormMap.get(idolB.id) || [];
           if (sim.scoreA > sim.scoreB) {
-            curA.push('W');
-            curB.push('L');
+            formA.push('W'); formB.push('L');
           } else if (sim.scoreB > sim.scoreA) {
-            curA.push('L');
-            curB.push('W');
+            formA.push('L'); formB.push('W');
           } else {
-            curA.push('D');
-            curB.push('D');
+            formA.push('D'); formB.push('D');
           }
-          rollingFormMap.set(idolA.id, curA.slice(-5));
-          rollingFormMap.set(idolB.id, curB.slice(-5));
-        }
-      });
-    });
-
-    const updatedStandings = calculateLeagueStandings(
-      activeLeague.id,
-      activeLeague.memberIds,
-      allMatches,
-      idols
-    );
-
-    const updatedLeagues = state.leagues.map((l) =>
-      l.id === activeLeague.id
-        ? { ...l, matches: allMatches, standings: updatedStandings }
-        : l
-    );
-
-    const isAllComplete = updatedLeagues.every((l) =>
-      l.matches.every((m) => m.completed)
-    );
-
-    const newState: LeagueSeasonState = {
-      ...state,
-      leagues: updatedLeagues,
-      isCompleted: isAllComplete,
-    };
-
-    onUpdateLeagueState(newState);
-    if (persistState) saveLeagueSeasonState(newState);
-
-    if (skippedFavoritesCount > 0) {
-      setSimAlertMessage(
-        `Simulation finished for other matches! ${skippedFavoritesCount} match(es) involving your favorite idol(s) in ${activeLeague.name} require manual play.`
-      );
-    } else {
-      setSimAlertMessage(null);
-    }
-  };
-
-  // Simulate all 6 leagues in the season chronologically with dynamic form progression
-  const handleSimulateAllLeagues = () => {
-    let totalSkippedFavorites = 0;
-
-    const updatedLeagues = state.leagues.map((l) => {
-      const rollingFormMap = new Map<string, Array<'W' | 'D' | 'L'>>();
-      (l.standings || []).forEach((st) => rollingFormMap.set(st.idolId, [...(st.form || [])]));
-
-      const allMatches = [...l.matches];
-      const matchdays = Array.from(new Set(allMatches.map((m) => m.matchday))).sort((a, b) => a - b);
-
-      matchdays.forEach((md) => {
-        const mdMatches = allMatches.filter((m) => m.matchday === md && !m.completed);
-        mdMatches.forEach((match) => {
-          if (favoriteSet.has(match.idolAId) || favoriteSet.has(match.idolBId)) {
-            totalSkippedFavorites++;
-            return;
-          }
-          const idolA = idolsMap.get(match.idolAId);
-          const idolB = idolsMap.get(match.idolBId);
-          if (idolA && idolB) {
-            const formA = rollingFormMap.get(idolA.id) || [];
-            const formB = rollingFormMap.get(idolB.id) || [];
-            const sim = simulateLeagueMatch(idolA, idolB, formA, formB);
-
-            const idx = allMatches.findIndex((m) => m.id === match.id);
-            if (idx !== -1) {
-              allMatches[idx] = {
-                ...match,
-                scoreA: sim.scoreA,
-                scoreB: sim.scoreB,
-                winnerId: sim.scoreA === sim.scoreB ? null : sim.winnerId,
-                completed: true,
-                updatedAt: new Date().toISOString(),
-              };
-            }
-
-            // Update dynamic rolling form
-            const curA = rollingFormMap.get(idolA.id) || [];
-            const curB = rollingFormMap.get(idolB.id) || [];
-            if (sim.scoreA > sim.scoreB) {
-              curA.push('W');
-              curB.push('L');
-            } else if (sim.scoreB > sim.scoreA) {
-              curA.push('L');
-              curB.push('W');
-            } else {
-              curA.push('D');
-              curB.push('D');
-            }
-            rollingFormMap.set(idolA.id, curA.slice(-5));
-            rollingFormMap.set(idolB.id, curB.slice(-5));
-          }
+          rollingFormMap.set(idolA.id, formA.slice(-5));
+          rollingFormMap.set(idolB.id, formB.slice(-5));
         });
       });
 
-      const updatedStandings = calculateLeagueStandings(
-        l.id,
-        l.memberIds,
-        allMatches,
-        idols
-      );
-
       return {
-        ...l,
+        ...league,
         matches: allMatches,
-        standings: updatedStandings,
+        standings: calculateLeagueStandings(league.id, league.memberIds, allMatches, idols),
       };
     });
-
-    const isAllComplete = updatedLeagues.every((l) =>
-      l.matches.every((m) => m.completed)
-    );
 
     const newState: LeagueSeasonState = {
       ...state,
       leagues: updatedLeagues,
-      isCompleted: isAllComplete,
+      isCompleted: updatedLeagues.every((league) =>
+        league.matches.length > 0 && league.matches.every((match) => match.completed)
+      ),
     };
-
     onUpdateLeagueState(newState);
     if (persistState) saveLeagueSeasonState(newState);
 
-    if (totalSkippedFavorites > 0) {
-      setSimAlertMessage(
-        `All leagues simulated! ${totalSkippedFavorites} fixture(s) involving your favorite idol(s) are waiting for you to play.`
-      );
-    } else {
-      setSimAlertMessage(null);
-    }
+    const incompleteFixtures = updatedLeagues.reduce((total, league) =>
+      total + league.matches.filter((match) =>
+        !match.completed && (!idolsMap.has(match.idolAId) || !idolsMap.has(match.idolBId))
+      ).length, 0);
+    const messages = [];
+    if (unresolvedLeagues.length) messages.push(`Roster IDs need correction: ${unresolvedLeagues.join(' | ')}`);
+    if (incompleteFixtures) messages.push(`${incompleteFixtures} fixture(s) still have missing idol references.`);
+    if (totalSkippedFavorites) messages.push(`${totalSkippedFavorites} favorite-idol match(es) need manual play.`);
+    setSimAlertMessage(messages.length ? messages.join(' ') : null);
   };
 
   // Wildcard Play-In Handlers
