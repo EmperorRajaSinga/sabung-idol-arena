@@ -148,8 +148,8 @@ export function buildChampsCup(champions: ChampionInfo[]): { matches: BNode[]; b
     node('cc_ur1_a', 'Upper Round 1', 5, S(drawn[0]), S(drawn[1])), node('cc_ur1_b', 'Upper Round 1', 5, S(drawn[2]), S(drawn[3])),
     node('cc_usf_a', 'Upper Semi Final', 5, S(byeIds[0]), W('cc_ur1_a')), node('cc_usf_b', 'Upper Semi Final', 5, S(byeIds[1]), W('cc_ur1_b')),
     node('cc_uf', 'Upper Final', 5, W('cc_usf_a'), W('cc_usf_b')),
-    node('cc_lr1', 'Lower Round 1', 5, L('cc_ur1_a'), L('cc_ur1_b')), node('cc_lr2', 'Lower Round 2', 5, L('cc_usf_a'), L('cc_usf_b')),
-    node('cc_lr3', 'Lower Round 3', 5, W('cc_lr1'), W('cc_lr2')), node('cc_lf', 'Lower Final', 7, W('cc_lr3'), L('cc_uf')),
+    node('cc_lr1', 'Lower Round 1', 5, L('cc_ur1_a'), L('cc_ur1_b')), node('cc_lr2', 'Lower Round 2', 5, W('cc_lr1'), L('cc_usf_a')),
+    node('cc_lr3', 'Lower Round 3', 5, W('cc_lr2'), L('cc_usf_b')), node('cc_lf', 'Lower Final', 7, W('cc_lr3'), L('cc_uf')),
     node('cc_gf', 'Grand Final', 7, W('cc_uf'), W('cc_lf')),
   ];
   advanceBracket(matches);
