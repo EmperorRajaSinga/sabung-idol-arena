@@ -162,8 +162,12 @@ export const SeasonProfilePanel: React.FC<SeasonProfilePanelProps> = ({
     ];
   }, [leagueState, leagueArchives]);
 
+  const latestV5SeasonNumber = safeMatchDatabase.reduce((latest, match) =>
+    String(match.stage || '').toLowerCase().startsWith('cups & divisions:')
+      ? Math.max(latest, Number(match.seasonId || 1))
+      : latest, 0);
   const [selectedLeagueSeasonNum, setSelectedLeagueSeasonNum] = useState<number>(
-    leagueState?.seasonNumber || 1
+    latestV5SeasonNumber || leagueState?.seasonNumber || 1
   );
   const [selectedDivisionTab, setSelectedDivisionTab] = useState<number>(1);
 
