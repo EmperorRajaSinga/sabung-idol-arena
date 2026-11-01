@@ -141,6 +141,93 @@ const Bracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (id: stri
   );
 };
 
+const CrownCupBracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (id: string | null) => string; sim: (ms: E.BNode[], id: string) => void; save: (ms: E.BNode[], id: string, a: number, b: number) => string | null; onChange: (ms: E.BNode[]) => void }> = ({ ms, idols, nm, sim, save, onChange }) => {
+  const upperRounds = [
+    { name: 'Upper Round 1', label: 'UPPER ROUND 1' },
+    { name: 'Upper Semi Final', label: 'UPPER SEMI-FINAL' },
+    { name: 'Upper Final', label: 'UPPER FINAL' },
+  ];
+  const lowerRounds = [
+    { name: 'Lower Round 1', label: 'LOWER ROUND 1' },
+    { name: 'Lower Round 2', label: 'LOWER ROUND 2' },
+    { name: 'Lower Round 3', label: 'LOWER ROUND 3' },
+    { name: 'Lower Final', label: 'LOWER FINAL' },
+  ];
+  const renderLane = (rounds: { name: string; label: string }[], tone: 'upper' | 'lower') => (
+    <div className="overflow-x-auto pb-4 custom-scrollbar">
+      <div className="flex min-w-max items-start gap-5">
+        {rounds.map((round) => {
+          const matches = ms.filter((m) => m.roundName === round.name);
+          return (
+            <div key={round.name} className="flex w-[320px] shrink-0 flex-col gap-4 sm:w-[340px]">
+              <div className={`rounded-xl border-2 px-4 py-3 text-center text-xs font-black uppercase tracking-widest shadow ${
+                tone === 'upper'
+                  ? 'border-emerald-500/40 bg-emerald-950/45 text-emerald-300'
+                  : 'border-purple-500/40 bg-purple-950/45 text-purple-300'
+              }`}>
+                <div>{round.label}</div>
+                <div className="mt-1 font-mono text-[10px] opacity-65">{matches.filter((m) => m.completed).length} / {matches.length} completed</div>
+              </div>
+              <div className="flex flex-1 flex-col justify-around gap-5">
+                {matches.map((m) => (
+                  <Row key={m.id} m={m} idols={idols} nm={nm}
+                    onSim={() => { const copy = clone(ms); sim(copy, m.id); onChange(copy); }}
+                    onSave={(a, b) => { const copy = clone(ms); const error = save(copy, m.id, a, b); if (!error) onChange(copy); return error; }}
+                  />
+                ))}
+                {matches.length === 0 && <div className="rounded-xl border border-dashed border-black/70 bg-black/15 px-4 py-8 text-center text-xs italic text-amber-100/30">Waiting for bracket progression</div>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+  const grandFinal = ms.find((m) => m.roundName === 'Grand Final');
+  const champion = grandFinal?.completed ? grandFinal.winnerId : null;
+  return (
+    <div className="w-full min-w-0 space-y-6">
+      <section className="rounded-2xl border-2 border-emerald-900/70 bg-[#17130f] p-4 sm:p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-emerald-900/60 pb-3">
+          <div>
+            <h3 className="text-base font-black uppercase tracking-wider text-emerald-300">Upper Bracket</h3>
+            <p className="mt-1 text-xs font-bold text-amber-100/45">Winners remain in the championship path</p>
+          </div>
+          <span className="rounded-lg border border-emerald-700/40 bg-emerald-950/40 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-300">Winner's path</span>
+        </div>
+        {renderLane(upperRounds, 'upper')}
+      </section>
+
+      <section className="rounded-2xl border-2 border-purple-900/70 bg-[#17110f] p-4 sm:p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-purple-900/60 pb-3">
+          <div>
+            <h3 className="text-base font-black uppercase tracking-wider text-purple-300">Lower Bracket</h3>
+            <p className="mt-1 text-xs font-bold text-amber-100/45">One more loss means elimination</p>
+          </div>
+          <span className="rounded-lg border border-purple-700/40 bg-purple-950/40 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-purple-300">Elimination path</span>
+        </div>
+        {renderLane(lowerRounds, 'lower')}
+      </section>
+
+      {grandFinal && (
+        <section className="rounded-2xl border-2 border-amber-500/60 bg-gradient-to-br from-[#291a0c] to-[#160d07] p-4 shadow-xl sm:p-6">
+          <div className="mb-4 text-center">
+            <h3 className="text-lg font-black uppercase tracking-widest text-amber-300">Grand Final</h3>
+            <p className="mt-1 text-xs font-bold text-amber-100/55">Upper Bracket Champion vs Lower Bracket Champion · Best of 7</p>
+          </div>
+          <div className="flex justify-center">
+            <Row m={grandFinal} idols={idols} nm={nm}
+              onSim={() => { const copy = clone(ms); sim(copy, grandFinal.id); onChange(copy); }}
+              onSave={(a, b) => { const copy = clone(ms); const error = save(copy, grandFinal.id, a, b); if (!error) onChange(copy); return error; }}
+            />
+          </div>
+          {champion && <div className="mt-4 border-t border-amber-500/25 pt-4 text-center text-sm font-black uppercase tracking-widest text-amber-300">Crown Cup Champion: {nm(champion)}</div>}
+        </section>
+      )}
+    </div>
+  );
+};
+
 export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, section = 'all', v5State, onUpdateV5State, onUpdateLeagueState, theIdolsChampionId, knockoutMatches }) => {
   const v5 = v5State;
   const [names, setNames] = useState<CompetitionNames>(() => loadNames());
@@ -225,7 +312,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
           <Btn onClick={() => commit({ champsCup: null })} disabled={!v5.champsCup} className="bg-rose-400">Reset</Btn>
         </div>
         {d1Done && (!grandChamp || !theIdolsChampionId) && <p className="text-xs text-amber-200 mb-2">Unzure Cup or The Idols is not finished yet, so byes would use league points only. Finish them first for the full rule.</p>}
-        {v5.champsCup && <><p className="text-xs mb-1">Byes: {v5.champsCup.byeIds.map(nm).join(', ')}</p><Bracket idols={by} nm={nm} sim={simOne} save={manual} ms={v5.champsCup.matches} onChange={(ms) => commit({ champsCup: { ...v5.champsCup!, matches: ms } })} /></>}
+        {v5.champsCup && <><p className="text-xs mb-1">Byes: {v5.champsCup.byeIds.map(nm).join(', ')}</p><CrownCupBracket idols={by} nm={nm} sim={simOne} save={manual} ms={v5.champsCup.matches} onChange={(ms) => commit({ champsCup: { ...v5.champsCup!, matches: ms } })} /></>}
       </Card> )}
 
       {(section === 'all' || section === 'open') && (<Card title={names.leagueCup} note="Every idol of every league. Division 2 starts in round 1. Stronger Division 1 idols (league position, then points) skip rounds. Best of 5, final Best of 7.">
