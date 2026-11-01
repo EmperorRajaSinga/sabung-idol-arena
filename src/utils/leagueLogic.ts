@@ -1065,22 +1065,21 @@ export function loadLeagueSeasonState(): LeagueSeasonState | null {
 }
 
 export function saveLeagueSeasonState(state: LeagueSeasonState): void {
-  // Persist an explicit revision so IndexedDB hydration cannot replace a newer roster
-  // with an older snapshot that happens to contain the same number of played matches.
+  // Keep one full active-season copy. A second full copy increased localStorage
+  // pressure and made roster writes fail. Roster membership has its own tiny
+  // independent snapshot in rosterPersistence.ts.
   const persistedState = { ...state, updatedAt: Date.now() };
-  const serialized = JSON.stringify(persistedState);
   let primarySaved = false;
-  let backupSaved = false;
   try {
-    localStorage.setItem(LEAGUE_STORAGE_KEY, serialized);
+    localStorage.setItem(LEAGUE_STORAGE_KEY, JSON.stringify(persistedState));
     primarySaved = true;
   } catch {
     try {
       const compactState = {
         ...persistedState,
-        leagues: (persistedState.leagues || []).map((l) => ({
-          ...l,
-          standings: (l.standings || []).map((standing) => ({
+        leagues: (persistedState.leagues || []).map((league) => ({
+          ...league,
+          standings: (league.standings || []).map((standing) => ({
             ...standing,
             photoUrl: standing.photoUrl && standing.photoUrl.length > 400 ? '' : standing.photoUrl,
           })),
@@ -1088,32 +1087,16 @@ export function saveLeagueSeasonState(state: LeagueSeasonState): void {
       };
       localStorage.setItem(LEAGUE_STORAGE_KEY, JSON.stringify(compactState));
       primarySaved = true;
-    } catch { /* try the independent recovery copy below */ }
+    } catch { /* retain the legacy recovery copy if primary storage is full */ }
   }
-  try {
-    localStorage.setItem(LEAGUE_STORAGE_BACKUP_KEY, serialized);
-    backupSaved = true;
-  } catch {
-    try {
-      const compactBackup = {
-        ...persistedState,
-        leagues: (persistedState.leagues || []).map((l) => ({
-          ...l,
-          standings: (l.standings || []).map((standing) => ({
-            ...standing,
-            photoUrl: standing.photoUrl && standing.photoUrl.length > 400 ? '' : standing.photoUrl,
-          })),
-        })),
-      };
-      localStorage.setItem(LEAGUE_STORAGE_BACKUP_KEY, JSON.stringify(compactBackup));
-      backupSaved = true;
-    } catch { /* report below */ }
-  }
-  if (!primarySaved || !backupSaved) {
-    console.error('[Persistence] League roster save incomplete. At least one storage copy could not be written.');
+
+  if (primarySaved) {
+    // The current primary is now the newest complete/compact snapshot.
+    try { localStorage.removeItem(LEAGUE_STORAGE_BACKUP_KEY); } catch { /* primary save succeeded */ }
+  } else {
+    console.error('[Persistence] Active league state could not be saved to localStorage. Roster membership remains protected by its independent snapshot.');
   }
 }
-
 export function loadLeagueArchives(): LeagueSeasonArchive[] {
   try {
     const raw = localStorage.getItem(LEAGUE_ARCHIVES_KEY);
