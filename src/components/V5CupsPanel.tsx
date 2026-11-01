@@ -278,7 +278,11 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
   const applyMoves = () => {
     if (!leagueState || !v5.pendingMoves) return;
     const r = E.applyMoves(d1, v5.d2, v5.pendingMoves, idols);
-    onUpdateLeagueState({ ...leagueState, leagues: r.d1 as any }); commit({ d2: r.d2, pendingMoves: null }); setMsg('Promotion and relegation applied to the new season rosters.');
+    onUpdateLeagueState({ ...leagueState, leagues: r.d1 as any });
+    const seasonNumber = Number(leagueState.seasonNumber || 1);
+    const history = [...(v5.promotionHistory || [])].filter((entry) => Number(entry.seasonNumber) !== seasonNumber);
+    history.push({ seasonNumber, seasonName: leagueState.seasonName || `Season ${seasonNumber}`, appliedAt: new Date().toISOString(), moves: clone(v5.pendingMoves) });
+    commit({ d2: r.d2, pendingMoves: null, promotionHistory: history }); setMsg('Promotion and relegation applied to the new season rosters.');
   };
   const champions = (): E.ChampionInfo[] => d1.map((l) => { const t = rankStandings(l.standings)[0]; return { idolId: t.idolId, leagueId: l.id, wonGrandCup: t.idolId === grandChamp, wonTheIdols: t.idolId === theIdolsChampionId, points: t.points || 0, gameDiff: t.gameDiff || 0 }; });
   const buildChamps = () => { if (d1.length !== 6) { setMsg('Champs Cup needs exactly 6 leagues.'); return; } commit({ champsCup: E.buildChampsCup(champions()) }); };
