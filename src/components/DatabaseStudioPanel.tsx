@@ -31,8 +31,7 @@ import {
   convertTheIdolsMatchesToArchived,
   initializeTheIdolsSeason,
 } from '../utils/theIdolsLogic';
-import { calculateLeagueStandings, generateRoundRobinMatches, saveCustomLeagueBranding, syncLeagueMatchesToArchivedMatches } from '../utils/leagueLogic';
-import { saveLeagueSeasonState } from '../utils/storage';
+import { calculateLeagueStandings, generateRoundRobinMatches, saveCustomLeagueBranding, saveLeagueSeasonState, syncLeagueMatchesToArchivedMatches } from '../utils/leagueLogic';
 import { CupStatsEditor } from './studio/CupStatsEditor';
 import { LeagueSystemEditor } from './studio/LeagueSystemEditor';
 import { TheIdolsEditor } from './studio/TheIdolsEditor';
