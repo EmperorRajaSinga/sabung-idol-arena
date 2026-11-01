@@ -2653,6 +2653,8 @@ export function getCompletedTournamentArchiveRecord(
     completedAt: new Date().toISOString(),
     championId,
     championName: champion?.name || 'Unknown',
+    championGroup: champion?.girlGroup || 'Solo / Independent',
+    championPhoto: champion?.photoUrl || '',
     runnerUpId: runnerUpId || '',
     runnerUpName: runnerUp?.name || 'Unknown',
     thirdPlaceId,
