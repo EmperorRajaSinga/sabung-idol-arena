@@ -1949,38 +1949,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   <Sparkles className="h-4 w-4" />
                   Auto-fill from Free Idols
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!v5State) return;
-                    onUpdateV5State?.({
-                      ...v5State,
-                      d2: v5State.d2.map((league) => V5Engine.rebuildLeague(league, appState.idols)),
-                    });
-                    showSuccessMsg('Division 2 fixtures rebuilt.');
-                  }}
-                  disabled={!v5State?.d2?.length || v5State.d2.some((league) => league.matches.some((match) => match.completed))}
-                  className="flex items-center gap-1.5 rounded-xl border-2 border-black bg-[#2a1d14] px-4 py-2.5 text-xs font-black text-amber-300 shadow transition-all hover:bg-[#38261b] disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Rebuild Fixtures
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!v5State) return;
-                    onUpdateV5State?.({
-                      ...v5State,
-                      d2: v5State.d2.map((league) => V5Engine.simulateLeagueMatches(league, appState.idols)),
-                    });
-                    showSuccessMsg('Division 2 matches simulated.');
-                  }}
-                  disabled={!v5State?.d2?.length || v5State.d2.every((league) => league.isCompleted)}
-                  className="flex items-center gap-1.5 rounded-xl border-2 border-black bg-[#2a1d14] px-4 py-2.5 text-xs font-black text-amber-300 shadow transition-all hover:bg-[#38261b] disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <Shuffle className="h-4 w-4" />
-                  Simulate {competitionNames.division2} Matches
-                </button>
               </div>
             </div>
 
