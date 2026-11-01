@@ -751,7 +751,7 @@ export function App() {
             });
           }
         }
-        dataAuditSnapshotRef.current = { idols: appState.idols, girlGroups: appState.girlGroups };
+        if (!idbState) dataAuditSnapshotRef.current = { idols: appState.idols, girlGroups: appState.girlGroups };
         isHydratedRef.current = true;
       })
       .catch((err) => {
