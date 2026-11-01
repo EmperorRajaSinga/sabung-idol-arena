@@ -2994,6 +2994,7 @@ export function App() {
               matchDatabase={allCombinedMatchDatabase}
               archives={appState.archives}
               v5TitleArchives={appState.v5TitleArchives || []}
+              v5PromotionHistory={v5State.promotionHistory || []}
               onSelectIdolProfile={(id) => {
                 setSelectedIdolId(id);
                 setActiveTab('idol_profile');
