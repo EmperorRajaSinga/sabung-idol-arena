@@ -2401,6 +2401,8 @@ export function App() {
               matchDatabase={allCombinedMatchDatabase}
               v5State={v5State}
               v5TitleArchives={appState.v5TitleArchives || []}
+              currentSeasonNumber={appState.config.seasonNumber}
+              currentSeasonName={appState.config.seasonName}
             />
           )}
 
