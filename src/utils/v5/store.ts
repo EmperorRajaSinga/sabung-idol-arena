@@ -4,7 +4,7 @@ export interface V5PromotionHistoryEntry { seasonNumber: number; seasonName: str
 export interface V5State {
   d2: DivisionTwoLeague[]; perLeague: number; promotionCount: number; pendingMoves: PromotionMove[] | null;
   promotionHistory?: V5PromotionHistoryEntry[];
-  champsCup: { matches: BNode[]; byeIds: string[] } | null; leagueCup: LeagueCupState | null;
+  champsCup: { matches: BNode[]; byeIds: string[]; seedOrder?: string[] } | null; leagueCup: LeagueCupState | null;
   miniCups: Record<string, BNode[]>; superA: BNode | null; superB: BNode[];
 }
 export const emptyV5 = (): V5State => ({ d2: [], perLeague: 20, promotionCount: 3, pendingMoves: null, promotionHistory: [], champsCup: null, leagueCup: null, miniCups: {}, superA: null, superB: [] });
