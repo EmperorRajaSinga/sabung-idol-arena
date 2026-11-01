@@ -950,6 +950,35 @@ export const MatchDatabasePanel: React.FC<MatchDatabasePanelProps> = ({
     setCurrentPage(1);
   };
 
+  const sectionStats = useMemo(() => {
+    const rows = filteredAndSortedMatches;
+    const completed = rows.filter((match) => match.isCompleted);
+    const draws = completed.filter((match) => match.isDraw).length;
+    const goals = completed.reduce((sum, match) => sum + Number(match.scoreA || 0) + Number(match.scoreB || 0), 0);
+    return {
+      total: rows.length,
+      completed: completed.length,
+      pending: rows.length - completed.length,
+      draws,
+      goals,
+      averageGoals: completed.length ? (goals / completed.length).toFixed(2) : '0.00',
+    };
+  }, [filteredAndSortedMatches]);
+
+  const selectedSectionLabel: Record<typeof typeFilter, string> = {
+    ALL: 'All Competitions',
+    TOURNAMENT: 'Tournament Cups',
+    LEAGUE: 'Other League Stages',
+    LEAGUE_DIV_1: 'Division 1',
+    LEAGUE_DIV_2: 'Division 2',
+    THE_IDOLS: 'The Idols Superleague',
+    CROWN_CUP: 'Crown Cup',
+    OPEN_ARENA_CUP: 'Open Arena Cup',
+    SPOTLIGHT_CUP: 'Spotlight Cup',
+    SUPER_CUP_A: 'Super Cup A',
+    SUPER_CUP_B: 'Super Cup B',
+  };
+
   const startIndex = totalMatches === 0 ? 0 : (safePage - 1) * rowsPerPage + 1;
   const endIndex =
     rowsPerPage === 0 ? totalMatches : Math.min(safePage * rowsPerPage, totalMatches);
@@ -1076,6 +1105,25 @@ export const MatchDatabasePanel: React.FC<MatchDatabasePanelProps> = ({
             <Trophy className="w-3 h-3" />
             <span>🏆 Tournament ({tournamentCount})</span>
           </button>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
+          {[
+            ['Total Matches', sectionStats.total, 'text-white'],
+            ['Completed', sectionStats.completed, 'text-emerald-300'],
+            ['Upcoming', sectionStats.pending, 'text-amber-300'],
+            ['Draws', sectionStats.draws, 'text-sky-300'],
+            ['Goals Scored', sectionStats.goals, 'text-amber-200'],
+            ['Avg. Goals / Match', sectionStats.averageGoals, 'text-violet-300'],
+          ].map(([label, value, tone]) => (
+            <div key={String(label)} className="rounded-xl border border-slate-800 bg-slate-950/80 px-3 py-2.5">
+              <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">{label}</div>
+              <div className={`mt-1 text-lg font-black ${tone}`}>{value}</div>
+            </div>
+          ))}
+        </div>
+        <div className="text-[11px] font-bold uppercase tracking-wider text-amber-300/80">
+          {selectedSectionLabel[typeFilter]} Match Statistics
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
