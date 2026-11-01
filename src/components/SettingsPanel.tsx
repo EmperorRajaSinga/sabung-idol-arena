@@ -757,9 +757,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       showSuccessMsg('This idol is already assigned to this division.');
       return;
     }
+    const selectedIdol = appState.idols.find((idol) => idol.id === idolId);
+    if (selectedIdol && showRosterConflicts([selectedIdol.name], { division: 'Division 1', leagueId: activeL.id, leagueName: activeL.name })) return;
 
     const updatedLeagues = activeLeagueState.leagues.map((l) => {
-      let newMembers = l.memberIds.filter((id) => id !== idolId);
+      let newMembers = [...l.memberIds];
       if (l.id === selectedLeagueTab) {
         newMembers.push(idolId);
       }
@@ -843,6 +845,14 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       .map((n) => n.replace(/^[0-9]+[.\-)]\s*/, '').trim())
       .filter(Boolean);
 
+    const targetLeague = activeLeagueState.leagues.find((league) => league.id === leagueId);
+    if (!targetLeague) return;
+    if (rawNames.length > 20) {
+      showSuccessMsg('Maximum capacity is 20 idols per Division 1 league.');
+      return;
+    }
+    if (showRosterConflicts(rawNames, { division: 'Division 1', leagueId, leagueName: targetLeague.name })) return;
+
     // Map names to idol IDs, creating any new idols if they don't exist
     const existingNamesMap = new Map<string, Idol>();
     appState.idols.forEach((i) => existingNamesMap.set(i.name.trim().toLowerCase(), i));
@@ -895,18 +905,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           standings,
         };
       }
-      // Remove newly assigned idols from other leagues so there are no duplicates
-      const filteredMembers = l.memberIds.filter((id) => !newMemberIds.includes(id));
-      if (filteredMembers.length !== l.memberIds.length) {
-        const matches = generateRoundRobinMatches(l.id, filteredMembers);
-        const standings = calculateLeagueStandings(l.id, filteredMembers, matches, allCombinedIdols);
-        return {
-          ...l,
-          memberIds: filteredMembers,
-          matches,
-          standings,
-        };
-      }
       return l;
     });
 
@@ -932,6 +930,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     }
 
     setEditingRosterLeagueId(null);
+    logDataChange({ action: 'roster_updated', entity: 'division_1_roster', entityName: targetLeague.name, source: 'Settings / League Roster Manager', details: `Saved ${newMemberIds.length} roster member(s). Newly created idol profiles: ${createdIdols.map((idol) => idol.name).join(', ') || 'none'}.` });
     showSuccessMsg(`Roster updated for Division #${leagueId} (${newMemberIds.length} idols)!`);
   };
 
