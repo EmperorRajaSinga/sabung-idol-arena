@@ -3013,6 +3013,7 @@ export function App() {
               leagueState={leagueState}
               theIdolsState={theIdolsState}
               theIdolsArchives={theIdolsArchives}
+              v5TitleArchives={appState.v5TitleArchives || []}
             />
             </GirlGroupStatsCrashBoundary>
           )}
