@@ -1005,6 +1005,22 @@ export const DashboardPanel: React.FC<DashboardPanelProps> = ({
             </button>
 
             <button
+              onClick={() => setActiveTab('division_two')}
+              className="flex items-center gap-2 rounded-xl bg-[#1f1712] hover:bg-[#2c2018] px-4 py-3 text-xs font-bold text-emerald-200 hover:text-white border border-black transition-all cursor-pointer"
+            >
+              <ArrowRight className="h-4 w-4 text-emerald-400" />
+              <span>Division 2</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('v5_cups')}
+              className="flex items-center gap-2 rounded-xl bg-[#1f1712] hover:bg-[#2c2018] px-4 py-3 text-xs font-bold text-amber-200 hover:text-white border border-black transition-all cursor-pointer"
+            >
+              <Trophy className="h-4 w-4 text-amber-400" />
+              <span>Cup Circuit</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('the_idols')}
               className="flex items-center gap-2 rounded-xl bg-[#1f1712] hover:bg-[#2c2018] px-4 py-3 text-xs font-bold text-amber-200 hover:text-white border border-black transition-all cursor-pointer"
             >
