@@ -446,7 +446,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
     const leagueCupWinners = groupLeagueCupWinnersMap.get(groupName) || [];
     const theIdolsLeagueWinners = groupTheIdolsLeagueWinnersMap.get(groupName) || [];
     const theIdolsPlayoffWinners = groupTheIdolsPlayoffWinnersMap.get(groupName) || [];
-    const totalTitles = seasonWinners.length;
+    const totalTournamentTitles = seasonWinners.length;
     const totalLeagueCups = leagueCupWinners.length;
     const totalTheIdolsLeague = theIdolsLeagueWinners.length;
     const totalTheIdolsPlayoff = theIdolsPlayoffWinners.length;
@@ -454,7 +454,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
     v5WinnerByCompetition.forEach((groups, competition) => {
       competitionTitles[competition] = groups.get(groupName)?.size || 0;
     });
-    const totalTitles = totalTitles + totalLeagueCups + totalTheIdolsLeague + totalTheIdolsPlayoff + Object.values(competitionTitles).reduce((sum, count) => sum + count, 0);
+    const totalTitles = totalTournamentTitles + totalLeagueCups + totalTheIdolsLeague + totalTheIdolsPlayoff + Object.values(competitionTitles).reduce((sum, count) => sum + count, 0);
 
     let groupMatches = 0;
     let groupWins = 0;
