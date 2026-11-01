@@ -323,23 +323,27 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
           <Btn onClick={() => { if (lc && window.confirm("Reset this tournament bracket and remove all match results?")) commit({ leagueCup: null }); }} disabled={!lc} className="bg-rose-400">Reset Bracket</Btn>
         </div>
         {lc && <p className="text-xs mb-2 font-mono">{lc.order.length} idols · {lc.plan.rounds} rounds · entering per round: {lc.plan.entrants.join(' / ')}{lc.championId ? ` · Champion: ${nm(lc.championId)}` : ''}</p>}
-        {lc && lc.rounds.map((r, i) => (
-          <details key={i} open={i === lc.rounds.length - 1} className="mb-2"><summary className="cursor-pointer text-sm font-black text-amber-300">{r[0]?.roundName} · {r.filter((m) => m.completed).length}/{r.length} played</summary>
-            <Bracket nm={nm} sim={simOne} save={manual} ms={r} onChange={(ms) => { const s = clone(lc); s.rounds[i] = ms; commit({ leagueCup: refreshLC(s) }); }} /></details>))}
+        {lc && <Bracket nm={nm} sim={simOne} save={manual} ms={lc.rounds.flat()} onChange={(updated) => { const next = clone(lc); const lookup = new Map(updated.map((m) => [m.id, m])); next.rounds = next.rounds.map((round) => round.map((m) => lookup.get(m.id) || m)); commit({ leagueCup: refreshLC(next) }); }} />}
         {lcMatches.length > 0 && <span className="sr-only">{lcMatches.length} matches</span>}
       </Card> )}
 
       {(section === 'all' || section === 'spotlight') && (<Card title={names.miniCup} note="Top 16 of each Division 1 final table, seeded 1 vs 16. Single elimination. Best of 5, final Best of 7.">
-        <div className="grid grid-cols-1 gap-5">
+        <div className="space-y-3">
           {d1.map((l) => { const ms = v5.miniCups[l.id]; const champ = champOf(ms, `mc${l.id}_final`); return (
-            <div key={l.id} className="rounded-xl border-2 border-black bg-black/30 p-3">
-              <div className="flex flex-wrap items-center gap-2 mb-1"><span className="font-black text-sm">{l.name}</span>
-                <Btn onClick={() => buildMini(l.id)} disabled={!!ms || l.memberIds.length < 16 || !l.matches.every((m: any) => m.completed)}>Build</Btn>
-                <Btn onClick={() => { const c = clone(ms); E.simulateBracket(c, by); commit({ miniCups: { ...v5.miniCups, [l.id]: c } }); }} disabled={!ms || !!champ}>Simulate all</Btn>
-                <Btn onClick={() => { if (ms && window.confirm(`Reset the ${l.name} Mini Cup bracket and remove all results?`)) { const next = { ...v5.miniCups }; delete next[l.id]; commit({ miniCups: next }); } }} disabled={!ms} className="bg-rose-400">Reset Bracket</Btn>
-                {champ && <span className="text-xs text-emerald-400 font-bold">Champion: {nm(champ)}</span>}</div>
-              {ms && <details><summary className="cursor-pointer text-xs text-amber-300">Show bracket</summary><Bracket nm={nm} sim={simOne} save={manual} ms={ms} onChange={(n) => commit({ miniCups: { ...v5.miniCups, [l.id]: n } })} /></details>}
-            </div>); })}
+            <details key={l.id} className="group overflow-hidden rounded-2xl border-2 border-black bg-[#2a190e] open:bg-[#24150c]">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 font-black text-amber-100 hover:bg-amber-900/20 [&::-webkit-details-marker]:hidden">
+                <span className="flex min-w-0 items-center gap-3"><span className="text-amber-400 transition-transform group-open:rotate-90">▸</span><span className="truncate">{l.name}</span></span>
+                <span className="shrink-0 text-xs text-amber-300/70">{champ ? `Champion: ${nm(champ)}` : ms ? `${ms.filter((m) => m.completed).length}/${ms.length} played` : 'Not started'}</span>
+              </summary>
+              <div className="border-t-2 border-black px-4 py-4">
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <Btn onClick={() => buildMini(l.id)} disabled={!!ms || l.memberIds.length < 16 || !l.matches.every((m: any) => m.completed)}>Build</Btn>
+                  <Btn onClick={() => { const next = clone(ms); E.simulateBracket(next, by); commit({ miniCups: { ...v5.miniCups, [l.id]: next } }); }} disabled={!ms || !!champ}>Simulate all</Btn>
+                  <Btn onClick={() => { if (ms && window.confirm(`Reset the ${l.name} Spotlight Cup bracket and remove all results?`)) { const next = { ...v5.miniCups }; delete next[l.id]; commit({ miniCups: next }); } }} disabled={!ms} className="bg-rose-400">Reset Bracket</Btn>
+                </div>
+                {ms ? <Bracket nm={nm} sim={simOne} save={manual} ms={ms} onChange={(n) => commit({ miniCups: { ...v5.miniCups, [l.id]: n } })} /> : <p className="text-xs text-amber-100/50">Build the bracket after the league season finishes.</p>}
+              </div>
+            </details>); })}
         </div>
       </Card> )}
 
