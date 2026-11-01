@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { V5CompetitionStatsPanel } from './V5CompetitionStatsPanel';
 import {
   CareerStat,
   LeagueSeasonState,
@@ -74,7 +75,7 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
   archives = [],
   onSelectIdolProfile,
 }) => {
-  const [activeSystem, setActiveSystem] = useState<'combined' | 'tournament' | 'league' | 'the_idols'>('combined');
+  const [activeSystem, setActiveSystem] = useState<'combined' | 'tournament' | 'league' | 'the_idols' | 'v5_competitions'>('combined');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<keyof CareerStat>('championships');
   const [leagueSortBy, setLeagueSortBy] = useState<keyof LeagueCareerStat>('points');
@@ -616,6 +617,9 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
             <Shield className="w-3.5 h-3.5" />
             <span>League Pyramid ({leagueCareerStats.length})</span>
           </button>
+          <button onClick={() => setActiveSystem('v5_competitions')} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${activeSystem === 'v5_competitions' ? 'bg-amber-500 text-slate-950 font-black shadow-lg' : 'text-amber-300 hover:text-white'}`}>
+            <Trophy className="w-3.5 h-3.5" /><span>New V5 Cups</span>
+          </button>
           <button
             onClick={() => setActiveSystem('the_idols')}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
@@ -630,6 +634,9 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
         </div>
       </div>
 
+      {activeSystem === 'v5_competitions' && <V5CompetitionStatsPanel matchDatabase={matchDatabase} idols={idols} compact />}
+
+      {activeSystem !== 'v5_competitions' && <>
       {/* Filter & Sort Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-900/80 p-4 rounded-2xl border border-slate-800">
         <div className="relative w-full sm:w-72">
@@ -1211,6 +1218,7 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
           </div>
         </div>
       )}
+      </>}
     </div>
   );
 };
