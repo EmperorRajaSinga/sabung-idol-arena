@@ -1,22 +1,34 @@
-SABUNG IDOL ARENA - DEPLOYMENT
+SABUNG IDOL ARENA - CLOUDFLARE WORKERS DEPLOYMENT
 
-1. Extract this entire ZIP file.
-2. Install GitHub Desktop (or Git for Windows) if you do not already have Git:
-   https://desktop.github.com/
-3. Sign in to GitHub when prompted.
-4. Double-click PUBLISH-TO-GITHUB-WINDOWS.bat.
-   It copies this project into your existing repository:
-   https://github.com/EmperorRajaSinga/sabung-idol-arena
-5. When the script finishes, Netlify will open. Sign in with GitHub.
-6. Choose Add new project > Import an existing project > GitHub.
-7. Select EmperorRajaSinga/sabung-idol-arena.
-8. Confirm build command: npm ci && npm run build
-   Publish directory: dist
-9. Click Deploy.
+PROJECT CONFIGURATION
+- GitHub repository: https://github.com/EmperorRajaSinga/sabung-idol-arena
+- Deployment branch: zip-update
+- Build command: npm ci && npm run build
+- Build output directory: dist
+- Worker configuration: wrangler.jsonc
 
-The Netlify build runs on Netlify's servers. You do not need to install npm packages
-or run a development server on your own computer.
+AUTOMATED DEPLOYMENT SETUP
+1. Open the GitHub repository settings.
+2. Open Secrets and variables, then Actions.
+3. Add these repository secrets:
+   - CLOUDFLARE_API_TOKEN
+   - CLOUDFLARE_ACCOUNT_ID
+4. Create a Cloudflare API token with permission to edit and deploy Workers.
+5. Copy the Cloudflare account ID from the Cloudflare dashboard.
+6. Push a commit to the zip-update branch.
+7. Open the Actions tab and verify the "Deploy to Cloudflare Workers" workflow completes.
 
-NOTE: This publishes source code to the GitHub repository. Do not put private
-API keys or real secrets in the repository. The included .env.example is safe
-as a template; configure actual environment values in Netlify if needed.
+The workflow runs the TypeScript checks, tests, production build, and Cloudflare Workers deployment.
+
+MANUAL DEPLOYMENT
+From the project directory, run:
+   npm ci
+   npm run lint
+   npm test
+   npm run build
+   npx wrangler deploy
+
+The worker serves the static assets from dist/ and uses single-page application routing.
+
+SECURITY
+Never commit API tokens or private credentials. Store deployment credentials only as encrypted repository secrets.
