@@ -6,7 +6,7 @@ type SectionKey = 'Crown Cup' | 'Open Arena Cup' | 'Spotlight Cup' | 'Super Cup 
 type Row = {
   idolId: string; idolName: string; group: string; photo?: string;
   events: Set<string>; matches: number; wins: number; draws: number; losses: number;
-  points: number; titles: number; runnerUps: number; topFour: number;
+  points: number; titles: number; runnerUps: number; thirdFourth: number;
   promotions: number; relegations: number;
 };
 const readSection = (match: ArchivedMatch): SectionKey | null => {
@@ -40,7 +40,7 @@ export const CareerV5StatsPanel: React.FC<{
         idolId: id, idolName: idol?.name || name || 'Unknown Idol',
         group: group || idol?.girlGroup || 'Solo', photo: photo || idol?.photoUrl,
         events: new Set<string>(), matches: 0, wins: 0, draws: 0, losses: 0,
-        points: 0, titles: 0, runnerUps: 0, topFour: 0, promotions: 0, relegations: 0,
+        points: 0, titles: 0, runnerUps: 0, thirdFourth: 0, promotions: 0, relegations: 0,
       };
       table.set(id, row);
       return row;
@@ -67,7 +67,7 @@ export const CareerV5StatsPanel: React.FC<{
 
       if (section !== 'Division 2') {
         const stage = String(match.stage || '').toLowerCase();
-        if (/semi[ -]?final/.test(stage)) { a.topFour += 1; b.topFour += 1; }
+        if (/semi[ -]?final/.test(stage)) { if (match.winnerId === a.idolId) b.thirdFourth += 1; else if (match.winnerId === b.idolId) a.thirdFourth += 1; }
       }
     });
 
@@ -117,7 +117,7 @@ export const CareerV5StatsPanel: React.FC<{
       winRate: row.matches ? row.wins / row.matches * 100 : 0,
     })).sort((a, b) => section === 'Division 2'
       ? b.points - a.points || b.wins - a.wins || a.idolName.localeCompare(b.idolName)
-      : b.titles - a.titles || b.runnerUps - a.runnerUps || b.topFour - a.topFour || b.participation - a.participation || a.idolName.localeCompare(b.idolName));
+      : b.titles - a.titles || b.runnerUps - a.runnerUps || b.thirdFourth - a.thirdFourth || b.participation - a.participation || a.idolName.localeCompare(b.idolName));
   }, [matchDatabase, section, idolMap, v5TitleArchives, promotionHistory]);
 
   const totals = useMemo(() => rows.reduce((sum, row) => ({
@@ -158,7 +158,7 @@ export const CareerV5StatsPanel: React.FC<{
               <th className="px-3 py-3 text-center">Relegated</th>
             </> : <>
               <th className="px-3 py-3 text-center">Part.</th><th className="px-3 py-3 text-center">Title</th>
-              <th className="px-3 py-3 text-center">2nd</th><th className="px-3 py-3 text-center">Top 4</th>
+              <th className="px-3 py-3 text-center">2nd</th><th className="px-3 py-3 text-center">3rd/4th</th>
             </>}
           </tr>
         </thead>
@@ -178,7 +178,7 @@ export const CareerV5StatsPanel: React.FC<{
             </> : <>
               <td className="px-3 py-3 text-center">{row.participation}</td>
               <td className="px-3 py-3 text-center font-black text-amber-300">{row.titles}</td>
-              <td className="px-3 py-3 text-center">{row.runnerUps}</td><td className="px-3 py-3 text-center">{row.topFour}</td>
+              <td className="px-3 py-3 text-center">{row.runnerUps}</td><td className="px-3 py-3 text-center">{row.thirdFourth}</td>
             </>}
           </tr>)}
           {rows.length === 0 && <tr><td colSpan={isDivision ? 9 : 6} className="px-3 py-10 text-center text-slate-500">No completed {section} records found.</td></tr>}
