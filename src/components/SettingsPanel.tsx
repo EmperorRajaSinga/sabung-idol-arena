@@ -603,10 +603,18 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       return;
     }
 
-    const assignedIds = new Set(leagues.flatMap((league) => league.memberIds || []));
-    const freeIdols = appState.idols.filter(
-      (idol) => isIdolActive(idol, appState.girlGroups) && !assignedIds.has(idol.id)
-    );
+    const assignedIds = new Set([
+      ...leagues.flatMap((league) => league.memberIds || []),
+      ...(v5State?.d2 || []).flatMap((league) => league.memberIds || []),
+    ]);
+    const assignedNames = new Set(getRosterEntries().map((entry) => entry.name.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase()));
+    const seenFreeNames = new Set<string>();
+    const freeIdols = appState.idols.filter((idol) => {
+      const normalizedName = idol.name.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
+      if (!isIdolActive(idol, appState.girlGroups) || assignedIds.has(idol.id) || assignedNames.has(normalizedName) || seenFreeNames.has(normalizedName)) return false;
+      seenFreeNames.add(normalizedName);
+      return true;
+    });
     const capacity = 20;
     const vacancies = leagues.reduce(
       (total, league) => total + Math.max(0, capacity - (league.memberIds?.length || 0)),
@@ -654,6 +662,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       nextState,
       appState.leagueArchives
     );
+    logDataChange({ action: 'roster_updated', entity: 'division_1_roster', entityName: 'All six Division 1 leagues', source: 'Settings / Division 1 Auto-fill', details: `Auto-assigned ${assigned} previously unassigned idol(s).` });
     showSuccessMsg(`Auto-fill complete: ${assigned} free idols assigned across six Division 1 leagues.`);
   };
 
