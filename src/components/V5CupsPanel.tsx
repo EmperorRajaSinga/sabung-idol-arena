@@ -126,6 +126,35 @@ const Bracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (id: stri
   </div>;
 };
 
+const OpenArenaMatchList: React.FC<{ matches: E.BNode[]; idols: Map<string, Idol>; nm: (id: string | null) => string; onSelect: (m: E.BNode) => void }> = ({ matches, idols, nm, onSelect }) => {
+  const rounds = Array.from(new Set(matches.map((m) => m.roundName)));
+  const [activeRound, setActiveRound] = useState(rounds[0] || '');
+  React.useEffect(() => { if (!rounds.includes(activeRound)) setActiveRound(rounds[0] || ''); }, [matches, activeRound]);
+  const current = matches.filter((m) => m.roundName === activeRound);
+  const completed = current.filter((m) => m.completed).length;
+  const competitor = (id: string | null, score: number | null, winner: boolean, side: 'left' | 'right') => {
+    const idol = id ? idols.get(id) : null;
+    return <div className={`flex min-w-0 flex-1 items-center gap-2 ${side === 'right' ? 'flex-row-reverse text-right' : ''}`}>
+      {idol?.photoUrl ? <img src={idol.photoUrl} alt={idol.name} referrerPolicy="no-referrer" className="h-10 w-10 shrink-0 rounded-xl border-2 border-black object-cover sm:h-11 sm:w-11" /> : <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-black bg-[#2a1b11] text-xs font-black text-amber-300 sm:h-11 sm:w-11">{idol?.name?.slice(0,2).toUpperCase() || 'TBD'}</div>}
+      <div className="min-w-0"><div className={`truncate text-xs font-black sm:text-sm ${winner ? 'text-amber-200' : 'text-amber-100'}`}>{idol?.name || nm(id)}</div><div className="truncate text-[10px] font-bold text-amber-200/45">{idol ? idol.girlGroup : 'Awaiting qualification'}</div></div>
+    </div>;
+  };
+  return <div className="mt-3">
+    <div className="mb-3 flex flex-wrap gap-2 rounded-xl border border-black/80 bg-black/25 p-2">
+      {rounds.map((round, i) => { const list = matches.filter((m) => m.roundName === round); const done = list.filter((m) => m.completed).length; const active = activeRound === round; return <button key={round} type="button" onClick={() => setActiveRound(round)} className={`min-w-[110px] flex-1 rounded-lg border px-3 py-2 text-left transition-colors ${active ? 'border-amber-400 bg-amber-500/15 text-amber-200' : 'border-black bg-[#17100a] text-amber-100/55 hover:border-amber-800'}`}><span className="block text-[10px] font-black uppercase tracking-wider">Round {i + 1}</span><span className="mt-0.5 block truncate text-xs font-black">{round}</span><span className="mt-0.5 block text-[10px] font-mono">{done}/{list.length} completed</span></button>; })}
+    </div>
+    <div className="mb-2 flex items-center justify-between"><h3 className="text-sm font-black uppercase tracking-wider text-amber-300">{activeRound}</h3><span className="text-[10px] font-mono font-bold text-amber-100/50">{completed}/{current.length} matches completed</span></div>
+    <div className="space-y-2">
+      {current.map((m) => <button key={m.id} type="button" onClick={() => onSelect(m)} className={`flex w-full min-w-0 items-center gap-2 rounded-2xl border-2 px-2.5 py-3 text-left transition-colors sm:gap-3 sm:px-4 ${m.completed ? 'border-black bg-[#130d09]' : 'border-amber-900/70 bg-[#1b110a] hover:border-amber-600'}`}>
+        {competitor(m.idolAId, m.scoreA, m.completed && m.winnerId === m.idolAId, 'left')}
+        <span className="flex h-9 min-w-[58px] shrink-0 items-center justify-center rounded-xl border-2 border-black bg-black/60 px-2 font-mono text-sm font-black tracking-wider text-amber-300 sm:min-w-[66px] sm:text-base">{m.completed ? `${m.scoreA} - ${m.scoreB}` : 'VS'}</span>
+        {competitor(m.idolBId, m.scoreB, m.completed && m.winnerId === m.idolBId, 'right')}
+      </button>)}
+    </div>
+    <p className="mt-2 text-[10px] text-amber-100/40">Select a match row to enter or edit its result.</p>
+  </div>;
+};
+
 const CrownCupBracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (id: string | null) => string; sim: (ms: E.BNode[], id: string) => void; save: (ms: E.BNode[], id: string, a: number, b: number) => string | null; onChange: (ms: E.BNode[]) => void }> = ({ ms, idols, nm, sim, save, onChange }) => {
   const upperRounds = [
     { name: 'Upper Round 1', label: 'UPPER ROUND 1' },
@@ -218,6 +247,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
   const [names, setNames] = useState<CompetitionNames>(() => loadNames());
   const [msg, setMsg] = useState('');
   const [selectedSpotlightLeague, setSelectedSpotlightLeague] = useState('');
+  const [selectedOpenRound, setSelectedOpenRound] = useState('');
   const by = useMemo(() => new Map(idols.map((i) => [i.id, i])), [idols]);
   const nm = (id: string | null) => (id ? by.get(id)?.name || id : 'TBD');
   const d1 = leagueState?.leagues || [];
@@ -323,7 +353,17 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
           <Btn onClick={() => { if (lc && window.confirm("Reset this tournament bracket and remove all match results?")) commit({ leagueCup: null }); }} disabled={!lc} className="bg-rose-400">Reset Bracket</Btn>
         </div>
         {lc && <p className="text-xs mb-2 font-mono">{lc.order.length} idols · {lc.plan.rounds} rounds · entering per round: {lc.plan.entrants.join(' / ')}{lc.championId ? ` · Champion: ${nm(lc.championId)}` : ''}</p>}
-        {lc && <Bracket nm={nm} idols={by} sim={simOne} save={manual} ms={lc.rounds.flat()} onChange={(updated) => { const next = clone(lc); const lookup = new Map(updated.map((m) => [m.id, m])); next.rounds = next.rounds.map((round) => round.map((m) => lookup.get(m.id) || m)); commit({ leagueCup: refreshLC(next) }); }} />}
+        {lc && <OpenArenaMatchList matches={lc.rounds.flat()} idols={by} nm={nm} onSelect={(current) => {
+          if (!current.idolAId || !current.idolBId) return;
+          const target = current.bestOf === 7 ? 4 : 3;
+          const result = window.prompt(`Enter score for ${nm(current.idolAId)} vs ${nm(current.idolBId)} (example: ${target}-1)`, current.completed ? `${current.scoreA}-${current.scoreB}` : '');
+          if (result === null) return;
+          const parsed = result.trim().match(/^(\\d+)\\s*[-:]\\s*(\\d+)$/);
+          if (!parsed) { window.alert('Invalid score. Use a format such as 3-1.'); return; }
+          const next = clone(lc); const error = manual(next.rounds.flat(), current.id, Number(parsed[1]), Number(parsed[2]));
+          if (error) { window.alert(error); return; }
+          commit({ leagueCup: refreshLC(next) });
+        }} />}
         {lcMatches.length > 0 && <span className="sr-only">{lcMatches.length} matches</span>}
       </Card> )}
 
