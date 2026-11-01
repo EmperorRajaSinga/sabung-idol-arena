@@ -173,31 +173,8 @@ export function buildChampsCup(champions: ChampionInfo[]): { matches: BNode[]; b
 export function advanceChampsCup(matches: BNode[], _seedOrder: string[] = []) {
   advanceBracket(matches);
 }
-/** Resolve the lower-bracket bye after both Upper Semi Finals finish.
- * The better-seeded semifinal loser receives the bye into Lower Round 3.
- * The other loser faces the Lower Round 1 winner in Lower Round 2.
- */
-export function advanceChampsCup(matches: BNode[], seedOrder: string[] = []) {
-  const by = new Map(matches.map((match) => [match.id, match]));
-  const semiA = by.get('cc_usf_a');
-  const semiB = by.get('cc_usf_b');
-  const lower2 = by.get('cc_lr2');
-  const lower3 = by.get('cc_lr3');
-  if (semiA && semiB && lower2 && lower3 && semiA.completed && semiB.completed && semiA.loserId && semiB.loserId) {
-    const seedRank = (id: string) => {
-      const index = seedOrder.indexOf(id);
-      return index < 0 ? Number.MAX_SAFE_INTEGER : index;
-    };
-    const loserA = semiA.loserId;
-    const loserB = semiB.loserId;
-    const byeId = seedRank(loserA) <= seedRank(loserB) ? loserA : loserB;
-    const playInId = byeId === loserA ? loserB : loserA;
-    lower2.b = { lose: playInId === loserA ? 'cc_usf_a' : 'cc_usf_b' };
-    lower3.b = { lose: byeId === loserA ? 'cc_usf_a' : 'cc_usf_b' };
-  } else {
-    lower2 && (lower2.b = { lose: 'cc_usf_a' });
-    lower3 && (lower3.b = { lose: 'cc_usf_b' });
-  }
+/** Crown Cup uses a fixed lower bracket: both Upper Semi Final losers meet in Lower Round 1. */
+export function advanceChampsCup(matches: BNode[], _seedOrder: string[] = []) {
   advanceBracket(matches);
 }
 
