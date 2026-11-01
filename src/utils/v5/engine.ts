@@ -150,7 +150,11 @@ export function rankChampionsForByes(c: ChampionInfo[]): ChampionInfo[] {
 export function buildChampsCup(champions: ChampionInfo[]): { matches: BNode[]; byeIds: string[]; seedOrder: string[] } {
   if (champions.length !== 6) throw new Error('Champs Cup needs exactly 6 league champions');
   const ranked = rankChampionsForByes(champions);
-  const seedOrder = ranked.map((c) => c.idolId);
+  // Crown Cup lower-bracket seeding is based on Division 1 league performance,
+  // not on which semifinal slot a losing idol occupied.
+  const seedOrder = [...champions]
+    .sort((a, b) => (b.points - a.points) || (b.gameDiff - a.gameDiff) || (a.leagueId - b.leagueId))
+    .map((champion) => champion.idolId);
   const byeIds = ranked.slice(0, 2).map((c) => c.idolId);
   const drawn = shuffle(ranked.slice(2).map((c) => c.idolId));
   const S = (id: string): Slot => ({ id }), W = (id: string): Slot => ({ win: id }), L = (id: string): Slot => ({ lose: id });
