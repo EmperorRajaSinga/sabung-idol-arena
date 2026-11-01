@@ -2541,8 +2541,14 @@ export function App() {
                   setLeagueState(newLeagueState);
                   if (newLeagueState) saveLeagueSeasonState(newLeagueState);
                 }
-                if (newState.v5State) {
-                  saveDivisionTwoRosterSnapshot(newState.v5State.d2 || []);
+                const incomingD2Roster = newState.v5State?.d2;
+                const currentD2Roster = appState.v5State?.d2;
+                if (
+                  Array.isArray(incomingD2Roster) &&
+                  JSON.stringify(incomingD2Roster.map((league) => ({ id: league.id, memberIds: league.memberIds }))) !==
+                    JSON.stringify((currentD2Roster || []).map((league) => ({ id: league.id, memberIds: league.memberIds })))
+                ) {
+                  saveDivisionTwoRosterSnapshot(incomingD2Roster);
                 }
                 if (newLeagueArchives !== undefined) {
                   setLeagueArchives(newLeagueArchives);
