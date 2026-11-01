@@ -37,18 +37,19 @@ export function createV5ArchiveSnapshot(
         !Number.isFinite(Number(match.scoreA)) || !Number.isFinite(Number(match.scoreB))) return;
     const a = byId.get(match.idolAId), b = byId.get(match.idolBId);
     if (!a || !b) return;
-    const winnerId = match.winnerId || (Number(match.scoreA) > Number(match.scoreB) ? a.id : b.id);
-    const winner = byId.get(winnerId);
-    if (!winner) return;
-    const loser = winner.id === a.id ? b : a;
+    const isDraw = match.isDraw === true || match.winnerId === 'DRAW' || Number(match.scoreA) === Number(match.scoreB);
+    const winnerId = isDraw ? '' : (match.winnerId || (Number(match.scoreA) > Number(match.scoreB) ? a.id : b.id));
+    const winner = winnerId ? byId.get(winnerId) : undefined;
+    if (!isDraw && !winner) return;
+    const loser = isDraw ? undefined : (winner!.id === a.id ? b : a);
     const matchId = `v5_s${seasonNumber}_${competition.replace(/[^a-z0-9]+/gi, '_')}_${match.id}`;
     matches.set(matchId, {
       matchId, seasonId: seasonNumber, seasonName,
       stage: `Cups & Divisions: ${competition} / ${roundName || match.roundName || 'Match'}`,
       idolAId: a.id, idolAName: a.name, idolAGroup: a.girlGroup, idolAPhoto: a.photoUrl,
       idolBId: b.id, idolBName: b.name, idolBGroup: b.girlGroup, idolBPhoto: b.photoUrl,
-      scoreA: Number(match.scoreA), scoreB: Number(match.scoreB), winnerId: winner.id,
-      winnerName: winner.name, loserId: loser.id, loserName: loser.name,
+      scoreA: Number(match.scoreA), scoreB: Number(match.scoreB), winnerId,
+      winnerName: isDraw ? 'Draw' : winner!.name, loserId: loser?.id || '', loserName: loser?.name || '', isDraw,
       date: match.updatedAt || new Date().toISOString(),
     });
   };
