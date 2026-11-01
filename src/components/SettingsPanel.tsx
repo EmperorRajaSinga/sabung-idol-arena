@@ -2205,18 +2205,21 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   type="button"
                   onClick={() => {
                     if (!v5State || !leagueState?.leagues?.length) return;
-                    onUpdateV5State?.({
-                      ...v5State,
-                      d2: V5Engine.autoFillDivisionTwo(
-                        leagueState.leagues,
-                        v5State.d2,
-                        appState.idols,
-                        appState.girlGroups,
-                        v5State.perLeague,
-                        competitionNames.division2
-                      ),
-                    });
-                    showSuccessMsg('Division 2 rosters filled from available idols.');
+                    const nextD2 = V5Engine.autoFillDivisionTwo(
+                      leagueState.leagues,
+                      v5State.d2,
+                      appState.idols,
+                      appState.girlGroups,
+                      v5State.perLeague,
+                      competitionNames.division2
+                    );
+                    const assignedCount = nextD2.reduce((total, league) => total + league.memberIds.length, 0) -
+                      v5State.d2.reduce((total, league) => total + league.memberIds.length, 0);
+                    onUpdateV5State?.({ ...v5State, d2: nextD2 });
+                    if (assignedCount > 0) {
+                      logDataChange({ action: 'roster_updated', entity: 'division_2_roster', entityName: 'All six Division 2 leagues', source: 'Settings / Division 2 Auto-fill', details: `Auto-assigned ${assignedCount} free idol(s), excluding names already present in any Division 1 or Division 2 roster.` });
+                    }
+                    showSuccessMsg(`Division 2 auto-fill complete: ${Math.max(0, assignedCount)} new idol(s) assigned.`);
                   }}
                   disabled={!v5State || !leagueState?.leagues?.length}
                   className="flex items-center gap-1.5 rounded-xl border-2 border-black poster-pill-gold px-4 py-2.5 text-xs font-black text-amber-950 shadow-lg transition-all hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-40"
