@@ -37,6 +37,7 @@ interface HeadToHeadPanelProps {
   leagueArchives?: LeagueSeasonArchive[];
   theIdolsState?: TheIdolsSeasonState | null;
   theIdolsArchives?: TheIdolsSeasonArchive[];
+  v5TitleArchives?: import('../utils/v5/store').V5TitleArchive[];
   archives?: TournamentArchive[];
 }
 
@@ -64,6 +65,7 @@ export const HeadToHeadPanel: React.FC<HeadToHeadPanelProps> = ({
   leagueArchives = [],
   theIdolsState,
   theIdolsArchives = [],
+  v5TitleArchives = [],
   archives = [],
 }) => {
   const [idolAId, setIdolAId] = useState<string>(idols[0]?.id || '');
@@ -80,7 +82,7 @@ export const HeadToHeadPanel: React.FC<HeadToHeadPanelProps> = ({
       leagueState,
       matchDatabase,
     });
-  }, [idols, careerStats, archives, leagueArchives, leagueState, matchDatabase]);
+  }, [idols, careerStats, archives, leagueArchives, leagueState, matchDatabase, v5TitleArchives]);
 
   // Compute Top 10 Most Matchups / Heated Rivalries
   const topRivalries = useMemo(() => {
@@ -404,57 +406,8 @@ export const HeadToHeadPanel: React.FC<HeadToHeadPanelProps> = ({
       else v5Losses += 1;
     });
 
-    // Cup titles come only from a recorded Final. Division 2 titles are calculated
-    // independently per season using its official points, goal-difference and goals-scored tiebreakers.
-    const v5CupTitleSeasons = new Set<string>();
-    const d2Tables = new Map<string, Map<string, { points: number; diff: number; scored: number }>>();
-    const seenTitleMatches = new Set<string>();
-    (Array.isArray(matchDatabase) ? matchDatabase : []).forEach((match) => {
-      const stage = String(match?.stage || '');
-      const lowerStage = stage.toLowerCase();
-      if (!lowerStage.startsWith('cups & divisions:')) return;
-      if (match.scoreA == null || match.scoreB == null || !match.idolAId || !match.idolBId) return;
-      const key = String(match.matchId || [match.seasonId, stage, match.idolAId, match.idolBId, match.scoreA, match.scoreB].join('|'));
-      if (seenTitleMatches.has(key)) return;
-      seenTitleMatches.add(key);
-      const scoreA = Number(match.scoreA), scoreB = Number(match.scoreB);
-      if (!Number.isFinite(scoreA) || !Number.isFinite(scoreB)) return;
-      const season = String(match.seasonId || 1);
-      if (lowerStage.includes('division 2')) {
-        const divisionKey = `${season}::${stage.split(' / ')[0].toLowerCase()}`;
-        if (!d2Tables.has(divisionKey)) d2Tables.set(divisionKey, new Map());
-        const table = d2Tables.get(divisionKey)!;
-        const update = (id: string, scored: number, conceded: number) => {
-          const row = table.get(id) || { points: 0, diff: 0, scored: 0 };
-          row.points += scored > conceded ? 3 : scored === conceded ? 1 : 0;
-          row.diff += scored - conceded;
-          row.scored += scored;
-          table.set(id, row);
-        };
-        update(match.idolAId, scoreA, scoreB);
-        update(match.idolBId, scoreB, scoreA);
-      } else if (
-        lowerStage.includes('league champions cup') ||
-        lowerStage.includes('all-league knockout cup') ||
-        lowerStage.includes('top 16 mini cup') ||
-        lowerStage.includes('super cup a') ||
-        lowerStage.includes('super cup b')
-      ) {
-        const detail = stage.split(' / ').slice(1).join(' / ').trim().toLowerCase();
-        if (/^(?:grand\\s+)?final(?:\\b|\\s|$)/.test(detail) || detail === 'super cup') {
-          const winnerId = match.winnerId || (scoreA > scoreB ? match.idolAId : scoreB > scoreA ? match.idolBId : '');
-          if (winnerId === idol.id) v5CupTitleSeasons.add(`${season}|${lowerStage.split(' / ')[0]}`);
-        }
-      }
-    });
-    let v5DivisionTitles = 0;
-    d2Tables.forEach((table) => {
-      const championId = [...table.entries()].sort((a, b) =>
-        b[1].points - a[1].points || b[1].diff - a[1].diff || b[1].scored - a[1].scored
-      )[0]?.[0];
-      if (championId === idol.id) v5DivisionTitles += 1;
-    });
-    const v5Titles = v5CupTitleSeasons.size + v5DivisionTitles;
+    // Archived V5 title records are the authoritative title source.
+    const v5Titles = (v5TitleArchives || []).filter((record) => record.winnerId === idol.id).length;
 
     const ov = overrides[idol.id];
     const isOverridden = ov && ov.enabled;
