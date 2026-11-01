@@ -424,14 +424,13 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
   const handleSaveAndApply = () => {
     // Never interpret an unavailable or partial source state as six empty rosters.
     const expectedLeagueIds = new Set([1, 2, 3, 4, 5, 6]);
-    const hasAllExpectedLeagues = Boolean(
-      leagueState &&
-      Array.isArray(leagueState.leagues) &&
-      leagueState.leagues.length === 6 &&
-      leagueState.leagues.every((league) => expectedLeagueIds.has(league.id)) &&
-      new Set(leagueState.leagues.map((league) => league.id)).size === 6
-    );
-    if (!hasAllExpectedLeagues) {
+    if (
+      !leagueState ||
+      !Array.isArray(leagueState.leagues) ||
+      leagueState.leagues.length !== 6 ||
+      !leagueState.leagues.every((league) => expectedLeagueIds.has(league.id)) ||
+      new Set(leagueState.leagues.map((league) => league.id)).size !== 6
+    ) {
       triggerFeedback('Save blocked. The saved Division 1 league data is incomplete or unavailable. Existing rosters were not changed.', 'error');
       return;
     }
