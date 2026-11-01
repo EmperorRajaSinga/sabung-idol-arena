@@ -385,6 +385,8 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
   const gf = knockoutMatches.find((m) => m.completed && /grand final/i.test(m.roundName));
   const grandChamp = gf?.winnerId || null, grandRunner = gf ? (gf.winnerId === gf.idolAId ? gf.idolBId : gf.idolAId) : null;
   const d2Count = v5.d2.reduce((a, l) => a + l.memberIds.length, 0);
+  const lc = v5.leagueCup;
+  const lcMatches = lc ? lc.rounds.flat() : [];
   const lcView = useMemo(() => lc || createEmptyLeagueCup(d1.reduce((sum, league) => sum + league.memberIds.length, 0), d2Count), [lc, d1, d2Count]);
   const lcViewMatches = lcView.rounds.flat();
   const lcKnockoutMatches = useMemo(() => toOpenArenaKnockoutMatches(lcView.rounds), [lcView.rounds]);
@@ -654,7 +656,6 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
     else commit({ superB: next });
   };
 
-  const lc = v5.leagueCup, lcMatches = lc ? lc.rounds.flat() : [];
   const panelTitle = section === 'crown' ? names.champsCup : section === 'open' ? names.leagueCup : section === 'spotlight' ? names.miniCup : 'Super Cups';
   const panelDescription = section === 'crown'
     ? 'The six Division 1 league champions compete in a double-elimination bracket.'
