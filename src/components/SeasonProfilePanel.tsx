@@ -100,8 +100,7 @@ export const SeasonProfilePanel: React.FC<SeasonProfilePanelProps> = ({
     return list.sort((a, b) => a.seasonId - b.seasonId);
   }, [archives, safeMatchDatabase, currentConfig, currentGroups, currentKnockoutMatches, idolsMap]);
 
-  const [activeTab, setActiveTab] = useState<'tournament' | 'league' | 'division_two' | 'new_competitions' | 'the_idols'>('tournament');
-  const [activeV5Competition, setActiveV5Competition] = useState<'crown' | 'open' | 'spotlight' | 'super_a' | 'super_b'>('crown');
+  const [activeTab, setActiveTab] = useState<'tournament' | 'league' | 'division_two' | 'crown' | 'open' | 'spotlight' | 'super_a' | 'super_b' | 'the_idols'>('tournament');
 
   const initialSeasonId =
     allArchives && allArchives.length > 0
@@ -342,8 +341,10 @@ export const SeasonProfilePanel: React.FC<SeasonProfilePanelProps> = ({
             <Shield className="h-4 w-4" />
             <span>League Division System</span>
           </button>
-          <button onClick={() => setActiveTab('division_two')} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-poster-body font-black ${activeTab==='division_two'?'poster-pill-gold text-amber-950':'text-amber-200 hover:text-white'}`}><Shield className="h-4 w-4"/><span>Division 2</span></button>
-          <button onClick={() => setActiveTab('new_competitions')} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-poster-body font-black ${activeTab==='new_competitions'?'poster-pill-gold text-amber-950':'text-amber-200 hover:text-white'}`}><Trophy className="h-4 w-4"/><span>New Competitions</span></button>
+          {(['division_two','crown','open','spotlight','super_a','super_b'] as const).map((tab) => {
+            const labels = { division_two: 'Division 2', crown: 'Crown Cup', open: 'Open Arena Cup', spotlight: 'Spotlight Cup', super_a: 'Super Cup A', super_b: 'Super Cup B' };
+            return <button key={tab} onClick={() => setActiveTab(tab)} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-poster-body font-black transition-all ${activeTab===tab?'poster-pill-gold text-amber-950 scale-105':'text-amber-200 hover:text-white'}`}>{tab==='division_two'?<Shield className="h-4 w-4"/>:<Trophy className="h-4 w-4"/>}<span>{labels[tab]}</span></button>;
+          })}
           <button
             onClick={() => setActiveTab('the_idols')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-poster-body font-black transition-all ${
@@ -931,10 +932,9 @@ export const SeasonProfilePanel: React.FC<SeasonProfilePanelProps> = ({
           <div><h5 className="mb-2 text-xs font-black uppercase text-amber-300">Division 2 Fixtures &amp; Results</h5><div className="space-y-1">{(l.matches||[]).map(m=><div key={m.id} className="flex justify-between gap-2 rounded-lg border border-black bg-black/20 p-2 text-xs"><span className="text-amber-200/50">MD {m.matchday}</span><span className="font-bold text-white">{idolsMap.get(m.idolAId)?.name||'TBD'} <b className="px-2 text-amber-300">{`${m.scoreA} - ${m.scoreB}`}</b> {idolsMap.get(m.idolBId)?.name||'TBD'}</span><span className="text-emerald-300">Final</span></div>)}</div></div>
         </section>) : <div className="rounded-xl border-2 border-black bg-[#1b130e] p-8 text-center text-xs text-amber-200/60">No Division 2 data available.</div>}
       </div>}
-      {activeTab === 'new_competitions' && <div className="space-y-5">
-        <div className="rounded-2xl border-2 border-black bg-[#1e1510] p-4"><h3 className="font-poster-title text-amber-300">Competition Season Profiles</h3><p className="mt-1 text-xs text-amber-100/60">Each cup has a dedicated report and its own archived match records.</p><select className="mt-3 rounded-lg border border-black bg-[#120d09] p-2 text-xs text-amber-200" value={selectedLeagueSeasonNum} onChange={e=>setSelectedLeagueSeasonNum(Number(e.target.value))}>{allLeagueSeasons.map(x=><option key={x.seasonNumber} value={x.seasonNumber}>{x.seasonName}</option>)}</select></div>
-        <div className="flex flex-wrap gap-2">{v5CompetitionData.map(c=><button key={c.key} onClick={()=>setActiveV5Competition(c.key as any)} className={`rounded-xl border-2 border-black px-3 py-2 text-xs font-black ${activeV5Competition===c.key?'bg-amber-400 text-black':'bg-[#251a13] text-amber-200'}`}>{c.label} ({c.matches.length})</button>)}</div>
-        {v5CompetitionData.filter(c=>c.key===activeV5Competition).map(c=><section key={c.key} className="space-y-4 rounded-2xl border-2 border-black bg-[#1b130e] p-5">
+      {(['crown','open','spotlight','super_a','super_b'] as const).includes(activeTab as any) && <div className="space-y-5">
+        <div className="rounded-2xl border-2 border-black bg-[#1e1510] p-4"><h3 className="font-poster-title text-amber-300">{v5CompetitionData.find(c=>c.key===activeTab)?.label || 'Competition'} Season Profile</h3><p className="mt-1 text-xs text-amber-100/60">Dedicated season report and archived match records.</p><select className="mt-3 rounded-lg border border-black bg-[#120d09] p-2 text-xs text-amber-200" value={selectedLeagueSeasonNum} onChange={e=>setSelectedLeagueSeasonNum(Number(e.target.value))}>{allLeagueSeasons.map(x=><option key={x.seasonNumber} value={x.seasonNumber}>{x.seasonName}</option>)}</select></div>
+        {v5CompetitionData.filter(c=>c.key===activeTab).map(c=><section key={c.key} className="space-y-4 rounded-2xl border-2 border-black bg-[#1b130e] p-5">
           <div className="flex items-center justify-between border-b border-black pb-3"><h3 className="font-poster-title text-lg text-amber-300">{c.label}</h3><span className="text-[10px] font-black text-amber-300">{c.matches.length&&c.completed===c.matches.length?'COMPLETED':c.matches.length?'IN PROGRESS':'NO DATA'}</span></div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">{[['Participants',c.participants],['Matches',c.matches.length],['Completed',c.completed],['Pending',c.pending],['Wins',c.wins],['Draws',c.draws],['Losses',c.losses],['Championships',c.titles.filter(t=>t.winnerId).length],['Runner-Up',c.titles.filter(t=>t.runnerUpId).length],['Points For',c.goalsFor],['Points Against',c.goalsAgainst]].map(([k,v])=><div key={String(k)} className="rounded-xl border border-black bg-[#24180f] p-3 text-center"><div className="text-[9px] uppercase font-black text-amber-200/60">{k}</div><div className="mt-1 text-xl font-black text-amber-300">{v}</div></div>)}</div>
           <div className="grid grid-cols-2 gap-3"><div className="rounded-xl border border-black bg-black/20 p-3"><div className="text-[10px] uppercase text-amber-200/50">Champion</div><div className="mt-1 font-bold text-amber-300">{c.champion?.winnerName||'Not decided'}</div></div><div className="rounded-xl border border-black bg-black/20 p-3"><div className="text-[10px] uppercase text-amber-200/50">Runner-Up</div><div className="mt-1 font-bold text-amber-300">{c.champion?.runnerUpName||c.runnerUp?.runnerUpName||'Not decided'}</div></div></div>
