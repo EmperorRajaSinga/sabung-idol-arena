@@ -634,14 +634,14 @@ export const DatabaseExportImport: React.FC<DatabaseExportImportProps> = ({
                   <Shield className="w-5 h-5" />
                 </span>
                 <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 font-mono font-bold border border-cyan-500/20">
-                  6 Divisions &bull; 120 Idols
+                  6 D1 + {v5State?.d2?.length || 0} D2
                 </span>
               </div>
               <h3 className="text-base font-black text-white font-mono uppercase">
                 3. League Branding & Rosters
               </h3>
               <p className="text-xs text-amber-200/60 leading-relaxed">
-                Division branding (IPL, Div 2–6) including customized league names, official logos, color schemes, and full 20-idol rosters for each league.
+                Complete league setup backup: all six Division 1 and six Division 2 branding records and rosters, plus the full idol and girl group databases, including newly added entries.
               </p>
             </div>
 
@@ -649,7 +649,7 @@ export const DatabaseExportImport: React.FC<DatabaseExportImportProps> = ({
               onClick={handleDownloadLeagueBrandingRosters}
               className="w-full py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs font-mono rounded-xl shadow-md flex items-center justify-center gap-2 transition-all"
             >
-              <Download className="w-4 h-4" /> Download League Rosters (.json)
+              <Download className="w-4 h-4" /> Download Complete League + Idol Backup (.json)
             </button>
           </div>
 
