@@ -9,6 +9,7 @@ interface TournamentBracketTreeProps {
   idolsMap: Map<string, Idol>;
   onSelectMatch?: (match: KnockoutMatch) => void;
   showTitleHeader?: boolean;
+  initialLayoutMode?: 'split' | 'linear';
 }
 
 interface SVGPathData {
@@ -23,8 +24,9 @@ export const TournamentBracketTree: React.FC<TournamentBracketTreeProps> = ({
   idolsMap,
   onSelectMatch,
   showTitleHeader = true,
+  initialLayoutMode,
 }) => {
-  const [layoutMode, setLayoutMode] = useState<'split' | 'linear'>('split');
+  const [layoutMode, setLayoutMode] = useState<'split' | 'linear'>(initialLayoutMode ?? (showTitleHeader ? 'split' : 'linear'));
   const [svgPaths, setSvgPaths] = useState<SVGPathData[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -49,8 +51,8 @@ export const TournamentBracketTree: React.FC<TournamentBracketTreeProps> = ({
       );
       if (!targetMatch) return;
 
-      const sourceEl = document.getElementById(`match-card-${match.id}`);
-      const targetEl = document.getElementById(`match-card-${targetMatch.id}`);
+      const sourceEl = container.querySelector<HTMLElement>(`[data-match-card-id="${CSS.escape(match.id)}"]`);
+      const targetEl = container.querySelector<HTMLElement>(`[data-match-card-id="${CSS.escape(targetMatch.id)}"]`);
 
       if (!sourceEl || !targetEl) return;
 
@@ -194,6 +196,7 @@ export const TournamentBracketTree: React.FC<TournamentBracketTreeProps> = ({
     return (
       <div
         id={`match-card-${m.id}`}
+        data-match-card-id={m.id}
         key={m.id}
         onClick={() => {
           if (isClickable) onSelectMatch(m);
