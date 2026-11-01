@@ -91,4 +91,23 @@ assert.equal(saveDivisionOneRosterSnapshot(d1.slice(0, 5)), false);
 assert.equal(saveDivisionTwoRosterSnapshot([]), false);
 assert.deepEqual(loadRosterSnapshot()?.division2, d2);
 
+// A stale D2 update with empty league membership must not erase saved idols.
+const staleD2 = d2.map((league, index) => ({
+  ...league,
+  memberIds: index === 1 || index === 4 ? [] : [...league.memberIds],
+}));
+assert.equal(saveDivisionTwoRosterSnapshot(staleD2), true);
+assert.deepEqual(
+  loadRosterSnapshot()?.division2?.map((league) => league.memberIds),
+  d2.map((league) => league.memberIds),
+);
+
+// A deliberate clear from the D2 roster manager must still be persisted.
+const clearedD2 = d2.map((league) => ({
+  ...league,
+  memberIds: league.id === 106 ? [] : [...league.memberIds],
+}));
+assert.equal(saveDivisionTwoRosterSnapshot(clearedD2, { allowEmptyRosterIds: [106] }), true);
+assert.deepEqual(loadRosterSnapshot()?.division2?.find((league) => league.id === 106)?.memberIds, []);
+
 console.log('Roster persistence tests passed.');
