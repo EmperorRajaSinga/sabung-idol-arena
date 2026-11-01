@@ -77,7 +77,10 @@ export const CareerV5StatsPanel: React.FC<{
         if (/^(?:grand\\s+)?final(?:\\b|\\s|$)/.test(detail) || detail === 'super cup') {
           const winner = match.winnerId || (scoreA > scoreB ? match.idolAId : scoreB > scoreA ? match.idolBId : '');
           const runner = match.loserId || (winner === match.idolAId ? match.idolBId : match.idolAId);
-          if (winner) finals.set(String(match.seasonId || 1), { winnerId: winner, runnerUpId: runner });
+          if (winner) {
+            const competitionKey = String(match.stage || '').split(' / ')[0].toLowerCase();
+            finals.set(`${String(match.seasonId || 1)}::${competitionKey}`, { winnerId: winner, runnerUpId: runner });
+          }
         }
       }
     });
@@ -98,7 +101,8 @@ export const CareerV5StatsPanel: React.FC<{
         const seasonMatchKey = String(match.matchId || [match.seasonId, match.idolAId, match.idolBId, match.scoreA, match.scoreB].join('|'));
         if (seasonSeen.has(seasonMatchKey)) return;
         seasonSeen.add(seasonMatchKey);
-        const season = String(match.seasonId || 1);
+        const competitionKey = String(match.stage || '').split(' / ')[0].toLowerCase();
+        const season = `${String(match.seasonId || 1)}::${competitionKey}`;
         if (!seasonTables.has(season)) seasonTables.set(season, new Map());
         const seasonTable = seasonTables.get(season)!;
         const a = Number(match.scoreA), b = Number(match.scoreB);
