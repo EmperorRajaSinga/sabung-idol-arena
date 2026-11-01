@@ -98,7 +98,7 @@ export const HallOfChampionsPanel: React.FC<HallOfChampionsPanelProps> = ({
   v5TitleArchives = [],
   onReconcileArchives,
 }) => {
-  const [activeTab, setActiveTab] = useState<'tournament' | 'league' | 'the_idols' | 'combined'>('tournament');
+  const [activeTab, setActiveTab] = useState<'tournament' | 'league' | 'division_two' | 'crown_cup' | 'open_arena_cup' | 'spotlight_cup' | 'super_cup_a' | 'super_cup_b' | 'the_idols' | 'combined'>('tournament');
   const [combinedSearch, setCombinedSearch] = useState('');
   const [combinedFilter, setCombinedFilter] = useState<'ALL_TITLE_HOLDERS' | 'TOURNAMENT_WINNERS' | 'LEAGUE_CHAMPS' | 'THE_IDOLS_CHAMPS' | 'ALL_PLAYERS'>('ALL_TITLE_HOLDERS');
   const [combinedSort, setCombinedSort] = useState<'TOTAL_TROPHIES' | 'HONOUR_POINTS' | 'TOURNAMENT_CUPS' | 'LEAGUE_TITLES' | 'THE_IDOLS_TITLES' | 'WIN_RATE' | 'TOTAL_WINS'>('TOTAL_TROPHIES');
@@ -803,6 +803,42 @@ export const HallOfChampionsPanel: React.FC<HallOfChampionsPanelProps> = ({
   }, [crownedArchives, effectiveLeagueArchives, leagueState, effectiveTheIdolsArchives, theIdolsState, matchDatabase, safeIdolsMap, v5State, v5TitleArchives, leagueState, currentConfig]);
 
   // 5. Build filtered & sorted Honours list for the Combined View
+  const v5CompetitionSections = useMemo(() => {
+    const definitions = [
+      { key: 'crown_cup', label: 'Crown Cup', matches: (stage: string) => stage.includes('league champions cup'), titles: (name: string) => name.toLowerCase() === 'league champions cup', division: false },
+      { key: 'open_arena_cup', label: 'Open Arena Cup', matches: (stage: string) => stage.includes('all-league knockout cup'), titles: (name: string) => name.toLowerCase() === 'all-league knockout cup', division: false },
+      { key: 'spotlight_cup', label: 'Spotlight Cup', matches: (stage: string) => stage.includes('top 16 mini cup'), titles: (name: string) => name.toLowerCase().startsWith('top 16 mini cup'), division: false },
+      { key: 'super_cup_a', label: 'Super Cup A', matches: (stage: string) => stage.includes('super cup a'), titles: (name: string) => name.toLowerCase() === 'super cup a', division: false },
+      { key: 'super_cup_b', label: 'Super Cup B', matches: (stage: string) => stage.includes('super cup b'), titles: (name: string) => name.toLowerCase().startsWith('super cup b'), division: false },
+      { key: 'division_two', label: 'Division 2', matches: (stage: string) => stage.includes('division 2'), titles: (name: string) => name.toLowerCase().startsWith('division 2'), division: true },
+    ];
+    return definitions.map((definition) => {
+      const titleRecords = (Array.isArray(v5TitleArchives) ? v5TitleArchives : []).filter((record) =>
+        Boolean(record) && record.isDivision === definition.division && definition.titles(String(record.competition || ''))
+      );
+      const matches = (Array.isArray(matchDatabase) ? matchDatabase : []).filter((match) => {
+        const stage = String(match?.stage || '').toLowerCase();
+        return stage.startsWith('cups & divisions:') && definition.matches(stage) &&
+          match.scoreA !== null && match.scoreA !== undefined && match.scoreB !== null && match.scoreB !== undefined;
+      });
+      const seasons = new Map<string, { seasonNumber: number; seasonName: string; champions: typeof titleRecords; matches: ArchivedMatch[] }>();
+      titleRecords.forEach((record) => {
+        const key = String(record.seasonNumber || 1);
+        const season = seasons.get(key) || { seasonNumber: Number(record.seasonNumber || 1), seasonName: record.seasonName || `Season ${key}`, champions: [], matches: [] };
+        season.champions.push(record);
+        seasons.set(key, season);
+      });
+      matches.forEach((match) => {
+        const key = String(match.seasonId || 1);
+        const season = seasons.get(key) || { seasonNumber: Number(match.seasonId || 1), seasonName: match.seasonName || `Season ${key}`, champions: [], matches: [] };
+        season.matches.push(match);
+        seasons.set(key, season);
+      });
+      const ordered = [...seasons.values()].sort((a,b) => b.seasonNumber-a.seasonNumber);
+      return { ...definition, seasons: ordered, totalMatches: matches.length, totalTitles: titleRecords.length };
+    });
+  }, [v5TitleArchives, matchDatabase]);
+
   const combinedHonoursList = useMemo(() => {
     let list: IdolHonourRecord[] = Array.from(idolHonoursMap.values()) as IdolHonourRecord[];
 
@@ -979,8 +1015,16 @@ export const HallOfChampionsPanel: React.FC<HallOfChampionsPanelProps> = ({
               }`}
             >
               <Table className="w-3.5 h-3.5" />
-              <span>League Divisions ({allLeagueSeasons.length})</span>
+              <span>Division 1 ({allLeagueSeasons.length})</span>
             </button>
+            {([
+              ['crown_cup', 'Crown Cup'], ['open_arena_cup', 'Open Arena Cup'],
+              ['spotlight_cup', 'Spotlight Cup'], ['super_cup_a', 'Super Cup A'],
+              ['super_cup_b', 'Super Cup B'], ['division_two', 'Division 2'],
+            ] as const).map(([key, label]) => {
+              const section = v5CompetitionSections.find((item) => item.key === key);
+              return <button key={key} onClick={() => setActiveTab(key)} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-poster-body font-black transition-all ${activeTab===key?'poster-pill-gold text-amber-950 shadow':'text-amber-200/70 hover:text-white'}`}><Trophy className="w-3.5 h-3.5"/><span>{label} ({section?.totalTitles || 0})</span></button>;
+            })}
             <button
               onClick={() => setActiveTab('the_idols')}
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-poster-body font-black transition-all ${
@@ -1001,7 +1045,7 @@ export const HallOfChampionsPanel: React.FC<HallOfChampionsPanelProps> = ({
               }`}
             >
               <Crown className="w-3.5 h-3.5" />
-              <span>Combined Hall &amp; Fact Leaders</span>
+              <span>Combined Title</span>
             </button>
           </div>
         </div>
@@ -1186,6 +1230,50 @@ export const HallOfChampionsPanel: React.FC<HallOfChampionsPanelProps> = ({
           )}
         </div>
       )}
+
+      {(['crown_cup','open_arena_cup','spotlight_cup','super_cup_a','super_cup_b','division_two'] as const).includes(activeTab as any) && (() => {
+        const section = v5CompetitionSections.find((item) => item.key === activeTab);
+        if (!section) return null;
+        const isDivision = section.key === 'division_two';
+        return <div className="space-y-5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              ['Seasons', section.seasons.length],
+              ['Recorded Matches', section.totalMatches],
+              ['Champions', section.totalTitles],
+              ['Runner-ups', section.seasons.reduce((sum, season) => sum + season.champions.filter((record) => Boolean(record.runnerUpId)).length, 0)],
+            ].map(([label,value]) => <div key={String(label)} className="rounded-2xl border-2 border-black bg-[#1b130e] p-4"><div className="text-[10px] font-black uppercase tracking-wider text-amber-200/60">{label}</div><div className="mt-1 text-2xl font-poster-title text-amber-300">{value}</div></div>)}
+          </div>
+          {section.seasons.length ? section.seasons.map((season) => {
+            const stats = new Map<string, { name:string; group:string; photo?:string; played:number; wins:number; draws:number; losses:number; scored:number; conceded:number }>();
+            season.matches.forEach((match) => {
+              const a = Number(match.scoreA), b = Number(match.scoreB);
+              if (!Number.isFinite(a) || !Number.isFinite(b)) return;
+              const sides = [
+                { id:match.idolAId, name:match.idolAName, group:match.idolAGroup, photo:match.idolAPhoto, scored:a, conceded:b },
+                { id:match.idolBId, name:match.idolBName, group:match.idolBGroup, photo:match.idolBPhoto, scored:b, conceded:a },
+              ];
+              sides.forEach((side) => {
+                if (!side.id) return;
+                const row = stats.get(side.id) || { name:side.name || 'Unknown Idol', group:side.group || 'Solo', photo:side.photo, played:0, wins:0, draws:0, losses:0, scored:0, conceded:0 };
+                row.played++; row.scored+=side.scored; row.conceded+=side.conceded;
+                if (side.scored>side.conceded) row.wins++; else if (side.scored===side.conceded) row.draws++; else row.losses++;
+                stats.set(side.id,row);
+              });
+            });
+            return <section key={season.seasonNumber} className="rounded-2xl border-2 border-black bg-[#1b130e] p-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-black pb-3"><h3 className="font-poster-title text-lg text-amber-300">{season.seasonName}</h3><span className="text-xs text-amber-100/60">{season.matches.length} matches</span></div>
+              {season.champions.length ? <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">{season.champions.map((record) => <div key={record.id} className="rounded-xl border border-amber-500/30 bg-[#120d09] p-4">
+                <div className="text-[10px] font-black uppercase tracking-wider text-amber-400">{isDivision ? record.competition : section.label} Champion</div>
+                <div className="mt-1 font-poster-title text-base text-white">{record.winnerName}</div>
+                <div className="text-xs text-amber-200/60">{record.winnerGroup || 'Solo'}</div>
+                {record.runnerUpName && <div className="mt-3 border-t border-white/10 pt-2 text-xs text-slate-300">Runner-up: <span className="font-bold text-white">{record.runnerUpName}</span></div>}
+              </div>)}</div> : <div className="rounded-xl bg-black/30 p-4 text-xs text-amber-100/50">No archived champion recorded for this season yet.</div>}
+              {stats.size>0 && <div className="overflow-x-auto rounded-xl border border-black"><table className="w-full min-w-[680px] text-xs text-amber-100/80"><thead className="bg-black/50 text-[10px] uppercase text-amber-300"><tr><th className="p-3 text-left">Idol</th><th className="p-3">Played</th><th className="p-3">W-D-L</th><th className="p-3">Win %</th><th className="p-3">Points For</th><th className="p-3">Points Against</th><th className="p-3">Difference</th></tr></thead><tbody>{[...stats.entries()].sort((a,b)=>b[1].wins-a[1].wins || (b[1].scored-b[1].conceded)-(a[1].scored-a[1].conceded)).map(([id,row])=><tr key={id} className="border-t border-black/60"><td className="p-3"><div className="font-bold text-white">{row.name}</div><div className="text-[10px] text-amber-200/50">{row.group}</div></td><td className="p-3 text-center">{row.played}</td><td className="p-3 text-center font-bold">{row.wins}-{row.draws}-{row.losses}</td><td className="p-3 text-center">{row.played ? (row.wins/row.played*100).toFixed(1) : '0.0'}%</td><td className="p-3 text-center">{row.scored}</td><td className="p-3 text-center">{row.conceded}</td><td className="p-3 text-center">{row.scored-row.conceded>0?'+':''}{row.scored-row.conceded}</td></tr>)}</tbody></table></div>}
+            </section>;
+          }) : <div className="rounded-2xl border-2 border-black bg-[#1b130e] p-10 text-center text-sm text-amber-100/60">No {section.label} records have been archived yet.</div>}
+        </div>;
+      })()}
 
       {/* 2b. THE IDOLS & MASTERS PLAYOFFS CHAMPIONS */}
       {activeTab === 'the_idols' && (
