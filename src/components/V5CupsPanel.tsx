@@ -337,7 +337,92 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
   /* ---------- actions */
 
   const champions = (): E.ChampionInfo[] => d1.map((l) => { const t = rankStandings(l.standings)[0]; return { idolId: t.idolId, leagueId: l.id, wonGrandCup: t.idolId === grandChamp, wonTheIdols: t.idolId === theIdolsChampionId, points: t.points || 0, gameDiff: t.gameDiff || 0 }; });
-  const buildChamps = () => { if (d1.length !== 6) { setMsg('Champs Cup needs exactly 6 leagues.'); return; } commit({ champsCup: E.buildChampsCup(champions()) }); };
+  const buildChamps = () => {
+    if (d1.length !== 6) { setMsg('Crown Cup needs exactly 6 Division 1 leagues.'); return; }
+    if (!d1Done) { setMsg('Complete every Division 1 match before automatically building Crown Cup from league champions.'); return; }
+    commit({ champsCup: E.buildChampsCup(champions()) });
+    setMsg('Crown Cup bracket created from the six Division 1 champions.');
+  };
+  const reseedCrownCup = () => {
+    const ids = [
+      ...crownCup.matches.filter((m) => m.roundName === 'Upper Round 1').flatMap((m) => [m.a, m.b].flatMap((slot) => ('id' in slot && slot.id ? [slot.id] : []))),
+      ...['cc_usf_a', 'cc_usf_b'].flatMap((id) => {
+        const match = crownCup.matches.find((m) => m.id === id);
+        return match && 'id' in match.a && match.a.id ? [match.a.id] : [];
+      }),
+    ];
+    const uniqueIds = [...new Set(ids)];
+    if (uniqueIds.length !== 6) { setMsg(`Auto re-seed needs six unique entrants in the opening bracket. Current count: ${uniqueIds.length}.`); return; }
+    const participants: E.ChampionInfo[] = uniqueIds.map((idolId, index) => ({
+      idolId, leagueId: index + 1, wonGrandCup: false, wonTheIdols: false, points: 0, gameDiff: 0,
+    }));
+    commit({ champsCup: E.buildChampsCup(participants) });
+    setMsg('Crown Cup opening matchups and bye order have been re-seeded.');
+  };
+  const saveCrownManualBracket = (updatedMatches: KnockoutMatch[]) => {
+    const next = clone(crownCup.matches);
+    const resetChangedMatch = (matchId: string) => {
+      const target = next.find((m) => m.id === matchId);
+      if (!target) return;
+      target.scoreA = null;
+      target.scoreB = null;
+      target.winnerId = null;
+      target.loserId = null;
+      target.completed = false;
+      E.invalidateDownstream(next, matchId);
+    };
+    updatedMatches.forEach((edited) => {
+      if (edited.id === 'cc_manual_bye_a' || edited.id === 'cc_manual_bye_b') {
+        const targetId = edited.id === 'cc_manual_bye_a' ? 'cc_usf_a' : 'cc_usf_b';
+        const target = next.find((m) => m.id === targetId);
+        if (!target) return;
+        if (edited.idolAId && edited.idolBId) {
+          setMsg('Each Crown Cup bye slot accepts one idol only. Clear one side and save again.');
+          return;
+        }
+        const newId = edited.idolAId || edited.idolBId || '';
+        const currentId = 'id' in target.a ? target.a.id : '';
+        if (newId !== currentId) {
+          target.a = { id: newId };
+          resetChangedMatch(targetId);
+        }
+        return;
+      }
+      const target = next.find((m) => m.id === edited.id);
+      if (!target || target.roundName !== 'Upper Round 1') return;
+      let changed = false;
+      if ((edited.idolAId || '') !== target.idolAId) {
+        target.a = { id: edited.idolAId || '' };
+        changed = true;
+      }
+      if ((edited.idolBId || '') !== target.idolBId) {
+        target.b = { id: edited.idolBId || '' };
+        changed = true;
+      }
+      if (changed) resetChangedMatch(target.id);
+    });
+    E.advanceBracket(next);
+    const byeIds = ['cc_usf_a', 'cc_usf_b'].flatMap((id) => {
+      const match = next.find((m) => m.id === id);
+      return match && 'id' in match.a && match.a.id ? [match.a.id] : [];
+    });
+    commit({ champsCup: { matches: next, byeIds } });
+    setMsg('Manual Crown Cup bracket changes saved.');
+  };
+  const commitCrownSimulcast = (updatedMatches: KnockoutMatch[]) => {
+    const next = clone(crownCup.matches);
+    updatedMatches.forEach((result) => {
+      const target = next.find((m) => m.id === result.id);
+      if (!target || target.completed || !result.completed || result.scoreA === null || result.scoreB === null || !result.winnerId) return;
+      target.scoreA = result.scoreA;
+      target.scoreB = result.scoreB;
+      target.winnerId = result.winnerId;
+      target.loserId = result.winnerId === target.idolAId ? target.idolBId : target.idolAId;
+      target.completed = true;
+    });
+    E.advanceBracket(next);
+    commit({ champsCup: { ...crownCup, matches: next } });
+  };
   const refreshLC = (s: E.LeagueCupState) => { if (s.rounds.length === s.plan.rounds && s.rounds[s.rounds.length - 1].every((m) => m.completed)) s.championId = s.rounds[s.rounds.length - 1][0].winnerId; return s; };
   const buildLC = () => {
     try {
