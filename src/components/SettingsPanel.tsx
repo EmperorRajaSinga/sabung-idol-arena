@@ -255,6 +255,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     return true;
   };
 
+  const getRosterDuplicateWarnings = () => {
+    const grouped = new Map<string, Array<{ name: string; location: RosterLocation }>>();
+    getRosterEntries().forEach((entry) => {
+      const key = normalizeDataName(entry.name);
+      if (!key) return;
+      grouped.set(key, [...(grouped.get(key) || []), entry]);
+    });
+    return Array.from(grouped.values()).filter((entries) => entries.length > 1);
+  };
+
   // League State Reference
   const activeLeagueState: LeagueSeasonState = useMemo(() => {
     if (leagueState && leagueState.leagues && leagueState.leagues.length === 6) {
@@ -1807,6 +1817,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       {/* TAB 2: LEAGUE ROSTER MANAGER (6 Leagues • 20 Idols Each) */}
       {activeSettingsTab === 'league_roster' && (
         <div className="space-y-6">
+          {getRosterDuplicateWarnings().length > 0 && (
+            <div className="rounded-2xl border-2 border-red-800 bg-red-950/50 p-4 text-red-100">
+              <div className="flex items-center gap-2 text-sm font-black"><AlertTriangle className="h-4 w-4" /> Existing duplicate roster assignments detected</div>
+              <p className="mt-1 text-xs text-red-200/80">These records already exist in more than one league or division. New duplicate assignments are blocked, but existing records must be removed from one roster manually.</p>
+              <ul className="mt-2 space-y-1 text-xs">{getRosterDuplicateWarnings().slice(0, 12).map((entries, index) => <li key={`${entries[0].name}-${index}`}><strong>{entries[0].name}</strong>: {Array.from(new Set(entries.map((entry) => `${entry.location.division} / ${entry.location.leagueName}`))).join(', ')}</li>)}</ul>
+            </div>
+          )}
           {/* Header Controls */}
           <div className="rounded-3xl border-2 border-black bg-[#18110b] p-6 poster-shadow flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -2260,6 +2277,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       {/* TAB: DATA MAKER & POT DRAW GENERATOR */}
       {activeSettingsTab === 'division2_roster' && (
         <div className="space-y-6 animate-in fade-in duration-200">
+          {getRosterDuplicateWarnings().length > 0 && (
+            <div className="rounded-2xl border-2 border-red-800 bg-red-950/50 p-4 text-red-100">
+              <div className="flex items-center gap-2 text-sm font-black"><AlertTriangle className="h-4 w-4" /> Existing duplicate roster assignments detected</div>
+              <p className="mt-1 text-xs text-red-200/80">These records already exist in more than one league or division. New duplicate assignments are blocked, but existing records must be removed from one roster manually.</p>
+              <ul className="mt-2 space-y-1 text-xs">{getRosterDuplicateWarnings().slice(0, 12).map((entries, index) => <li key={`${entries[0].name}-${index}`}><strong>{entries[0].name}</strong>: {Array.from(new Set(entries.map((entry) => `${entry.location.division} / ${entry.location.leagueName}`))).join(', ')}</li>)}</ul>
+            </div>
+          )}
           {/* Division 2 controls, styled to match League Roster Manager */}
           <div className="rounded-3xl border-2 border-black bg-[#18110b] p-6 poster-shadow space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
