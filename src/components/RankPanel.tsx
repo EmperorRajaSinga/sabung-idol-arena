@@ -371,8 +371,8 @@ export const RankPanel: React.FC<RankPanelProps> = ({
   const [personalRankings, setPersonalRankings] = useState<PersonalRankingEntry[]>(() => {
     const saved = loadPersonalRankings();
     if (saved && saved.length > 0) return saved;
-    // Default initial seed from top 5 idols
-    return idols.slice(0, 5).map((idol, idx) => ({
+    // Default initial seed from the five highest-ranked official idols.
+    return topIdols.slice(0, 5).map((idol, idx) => ({
       id: `pr_${idol.id}_${Date.now()}_${idx}`,
       idolId: idol.id,
       rank: idx + 1,
@@ -559,6 +559,8 @@ export const RankPanel: React.FC<RankPanelProps> = ({
       </div>
 
 
+      <p className="-mt-5 text-[10px] font-semibold tracking-wide text-amber-100/40">Official order: total titles, combined points, win rate, wins, then matches played. Personal tier rankings remain independent from this official leaderboard.</p>
+
       <section className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         <div className="rounded-2xl border-2 border-black bg-[#17100b] p-4 poster-shadow">
           <div className="text-[10px] font-black uppercase tracking-wider text-amber-200/55">Ranked Idols</div>
@@ -605,7 +607,7 @@ export const RankPanel: React.FC<RankPanelProps> = ({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[700px]">
+          <table className="w-full text-left border-collapse min-w-[880px]">
             <thead>
               <tr className="border-b border-black/80 bg-black/40 text-[11px] font-poster-title text-amber-400 uppercase tracking-wider">
                 <th className="py-3 px-4 text-center w-16">Rank</th>
@@ -621,26 +623,15 @@ export const RankPanel: React.FC<RankPanelProps> = ({
             <tbody className="divide-y divide-black/60 text-xs">
               {remaining4To10.map((item, idx) => {
                 const rankNum = idx + 4;
-                const isPodium = rankNum <= 3;
                 return (
                   <tr
                     key={item.id}
-                    className={`hover:bg-amber-950/20 transition-colors ${
-                      isPodium ? 'bg-amber-950/10' : ''
-                    }`}
+                    className="hover:bg-amber-950/20 transition-colors"
                   >
                     {/* Rank Badge */}
                     <td className="py-3 px-4 text-center">
                       <span
-                        className={`inline-flex items-center justify-center w-7 h-7 rounded-xl font-poster-title text-xs font-black border ${
-                          rankNum === 1
-                            ? 'bg-amber-500 text-black border-amber-300 ring-2 ring-amber-400/40'
-                            : rankNum === 2
-                            ? 'bg-slate-300 text-black border-slate-200'
-                            : rankNum === 3
-                            ? 'bg-amber-800 text-white border-amber-600'
-                            : 'bg-black/60 text-amber-300/80 border-black'
-                        }`}
+                        className="inline-flex items-center justify-center w-7 h-7 rounded-xl font-poster-title text-xs font-black border bg-black/60 text-amber-300/80 border-black"
                       >
                         {rankNum}
                       </span>
