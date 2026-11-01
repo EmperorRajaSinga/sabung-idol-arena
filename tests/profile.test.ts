@@ -13,6 +13,7 @@ for (const l of ls.leagues) for (const id of l.memberIds) {
     const other = mid.startsWith('the_idols') || mid.startsWith('swiss_') || stage.startsWith('the idols') || stage.includes('swiss') || stage.includes('last chance') || stage.includes('superleague') || stage.includes('masters');
     if (isLeague && !other) map.set(m.matchId, m);
   });
+  if (checked === 0) console.log('DEBUG first idol map size', id, idol?.name, map.size, rows.filter((m: any) => m.idolAId === id || m.idolBId === id).slice(0,8).map((m: any) => ({id:m.matchId,stage:m.stage})));
   checked++; if (map.size !== 38) bad++;
 }
 console.log('DEBUG league records', (s.syncedMatchDatabase || []).filter((m: any) => /league|division/i.test(String(m.stage || ''))).length, 'first league', (s.syncedMatchDatabase || []).find((m: any) => /league|division/i.test(String(m.stage || ''))), 'first standings', ls.leagues[0]?.standings?.slice(0,2));
