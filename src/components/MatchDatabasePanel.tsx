@@ -30,6 +30,7 @@ import {
 import { getCountryFlag } from '../utils/nationalityHelper';
 import { exportMatchDatabaseToJSON, exportMatchDatabaseToCSV } from '../utils/storage';
 import { getMatchChronologicalWeight, compareMatchesNewestFirst } from '../utils/leagueLogic';
+import { isLeagueDivisionMatch, isTheIdolsMatch } from '../utils/matchClassification';
 
 interface MatchDatabasePanelProps {
   matchDatabase: ArchivedMatch[];
@@ -180,15 +181,10 @@ export const MatchDatabasePanel: React.FC<MatchDatabasePanelProps> = ({
       const idolA = idolsMap.get(idolAId);
       const idolB = idolsMap.get(idolBId);
 
-      const stageLower = stageText.toLowerCase();
-      const isTheIdols =
-        Boolean(stageLower.includes('the idols') || stageLower.includes('superleague') || stageLower.includes('masters playoff')) ||
-        Boolean(sourceMatchId.startsWith('ti_') || sourceMatchId.includes('the_idols'));
-
-      const isLeague =
-        !isTheIdols &&
-        (Boolean(['league', 'wildcard', 'division', 'swiss', 'last chance', 'premier', 'championship'].some((term) => stageLower.includes(term))) ||
-          Boolean(['league', 'wildcard', 'wm_', 'swiss', 'arch_l_'].some((term) => sourceMatchId.includes(term))) ||
+      const classificationRecord = { ...m, stage: stageText, matchId: sourceMatchId, groupName: groupText } as ArchivedMatch;
+      const isTheIdols = isTheIdolsMatch(classificationRecord);
+      const isLeague = isLeagueDivisionMatch(classificationRecord) ||
+        (!stageText.toLowerCase().startsWith('cups & divisions:') && !isTheIdols &&
           Boolean(['Division', 'Wildcard', 'League', 'Pool'].some((term) => groupText.includes(term))));
 
       const stageName = stageText || (groupText ? `Group ${groupText}` : isTheIdols ? 'Superleague Match' : isLeague ? 'League Match' : 'Tournament Match');
