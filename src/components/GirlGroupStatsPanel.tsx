@@ -761,27 +761,19 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
                         { label: 'League divisions', winners: group.leagueCupWinners.map((w) => ({ key: `l-${w.seasonNumber}-${w.leagueId}-${w.championId}`, season: `Season ${w.seasonNumber} · ${w.leagueName}`, name: w.championName, photo: w.championPhoto })) },
                         { label: 'The Idols League', winners: group.theIdolsLeagueWinners.map((w) => ({ key: `il-${w.seasonNumber}-${w.championId}`, season: w.seasonName, name: w.championName, photo: w.championPhoto })) },
                         { label: 'The Idols Playoff', winners: group.theIdolsPlayoffWinners.map((w) => ({ key: `ip-${w.seasonNumber}-${w.championId}`, season: w.seasonName, name: w.championName, photo: w.championPhoto })) },
+                        { label: 'Crown Cup', winners: (group.competitionWinners['Crown Cup'] || []).map((w) => ({ key: w.id, season: w.seasonName, name: w.championName, photo: w.championPhoto })) },
+                        { label: 'Open Arena Cup', winners: (group.competitionWinners['Open Arena Cup'] || []).map((w) => ({ key: w.id, season: w.seasonName, name: w.championName, photo: w.championPhoto })) },
+                        { label: 'Spotlight Cup', winners: (group.competitionWinners['Spotlight Cup'] || []).map((w) => ({ key: w.id, season: w.seasonName, name: w.championName, photo: w.championPhoto })) },
+                        { label: 'Super Cup A', winners: (group.competitionWinners['Super Cup A'] || []).map((w) => ({ key: w.id, season: w.seasonName, name: w.championName, photo: w.championPhoto })) },
+                        { label: 'Super Cup B', winners: (group.competitionWinners['Super Cup B'] || []).map((w) => ({ key: w.id, season: w.seasonName, name: w.championName, photo: w.championPhoto })) },
+                        { label: 'Division 2', winners: (group.competitionWinners['Division 2'] || []).map((w) => ({ key: w.id, season: w.seasonName, name: w.championName, photo: w.championPhoto })) },
                       ].map((section) => (
                         <section key={section.label} className="rounded-xl border border-black bg-[#1b140f] p-3">
                           <div className="mb-3 flex items-center justify-between"><h6 className="text-xs font-semibold text-amber-100">{section.label}</h6><span className="text-xs font-bold text-amber-300">{section.winners.length}</span></div>
                           {section.winners.length ? <div className="space-y-2">{section.winners.map((winner) => <div key={winner.key} className="flex items-center gap-2 rounded-lg bg-[#120e0b] p-2">{winner.photo ? <img src={winner.photo} alt={winner.name} className="h-8 w-8 rounded-md object-cover" /> : <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#282018] text-xs font-bold text-amber-200/70">{winner.name.slice(0, 1)}</div>}<div className="min-w-0"><p className="truncate text-xs font-semibold text-white">{winner.name}</p><p className="truncate text-[10px] text-amber-200/50">{winner.season}</p></div></div>)}</div> : <p className="py-3 text-xs text-amber-200/30">No titles recorded.</p>}
                         </section>
                       ))}
-                      <section className="rounded-xl border border-black bg-[#1b140f] p-3 sm:col-span-2 xl:col-span-3">
-                        <div className="mb-3 flex items-center justify-between"><h6 className="text-xs font-semibold text-amber-100">V5 cups and divisions</h6><span className="text-xs font-bold text-amber-300">{['Crown Cup','Open Arena Cup','Spotlight Cup','Super Cup A','Super Cup B','Division 2'].reduce((sum, name) => sum + (group.competitionTitles[name] || 0), 0)}</span></div>
-                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                          {['Crown Cup','Open Arena Cup','Spotlight Cup','Super Cup A','Super Cup B','Division 2'].map((name) => {
-                            const winners = group.competitionWinners[name] || [];
-                            return <section key={name} className="rounded-lg bg-[#120e0b] p-3">
-                              <div className="mb-2 flex items-center justify-between"><p className="text-[10px] font-semibold text-amber-200/70">{name}</p><span className="text-xs font-bold text-amber-300">{winners.length}</span></div>
-                              {winners.length ? <div className="space-y-2">{winners.map((winner) => <div key={winner.id} className="flex items-center gap-2 rounded-md bg-[#1b140f] p-2">
-                                {winner.championPhoto ? <img src={winner.championPhoto} alt={winner.championName} className="h-8 w-8 shrink-0 rounded-md object-cover" /> : <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#282018] text-xs font-bold text-amber-200/70">{winner.championName.slice(0,1)}</div>}
-                                <div className="min-w-0"><p className="truncate text-xs font-semibold text-white">{winner.championName}</p><p className="truncate text-[10px] text-amber-200/50">{winner.seasonName} · {winner.competitionName}</p></div>
-                              </div>)}</div> : <p className="py-2 text-[10px] text-amber-200/30">No titles recorded.</p>}
-                            </section>;
-                          })}
-                        </div>
-                      </section>
+>
                     </div>
 
                     <section className="mt-5">
