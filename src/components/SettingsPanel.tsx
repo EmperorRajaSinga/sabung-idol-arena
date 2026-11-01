@@ -41,6 +41,7 @@ import { compressImage } from '../utils/imageHelper';
 import { LeagueRosterModal } from './LeagueRosterModal';
 import type { V5State } from '../utils/v5/store';
 import * as V5Engine from '../utils/v5/engine';
+import { loadNames, saveNames, type CompetitionNames } from '../utils/v5/names';
 import { DataMakerPanel } from './DataMakerPanel';
 import { DatabaseExportImport } from './studio/DatabaseExportImport';
 import {
@@ -142,9 +143,25 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onUpdateV5State,
 }) => {
   const [activeSettingsTab, setActiveSettingsTab] = useState<
-    'general' | 'league_branding' | 'league_roster' | 'division2_roster' | 'data_maker' | 'data'
+    'general' | 'league_branding' | 'league_roster' | 'division2_roster' | 'competition_names' | 'data_maker' | 'data'
   >('general');
   const [isRosterModalOpen, setIsRosterModalOpen] = useState<boolean>(false);
+  const [competitionNames, setCompetitionNames] = useState<CompetitionNames>(() => loadNames());
+  const updateCompetitionName = (key: keyof CompetitionNames, value: string) => {
+    const nextNames = { ...competitionNames, [key]: value };
+    setCompetitionNames(nextNames);
+    saveNames(nextNames);
+    if (key === 'division2' && v5State && onUpdateV5State && leagueState?.leagues?.length) {
+      const parentById = new Map(leagueState.leagues.map((league) => [league.id, league]));
+      onUpdateV5State({
+        ...v5State,
+        d2: v5State.d2.map((league) => {
+          const parent = parentById.get(league.parentLeagueId);
+          return parent ? { ...league, name: `${parent.name} ${value}`.trim(), tierName: value } : league;
+        }),
+      });
+    }
+  };
   const { config } = appState;
   const activeSeasonNumber = config.seasonNumber || config.seasonId || 1;
   const [seasonName, setSeasonName] = useState<string>(() => {
@@ -1022,6 +1039,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             <span>League Roster Manager</span>
           </button>
           <button onClick={() => setActiveSettingsTab('division2_roster')} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 font-poster-title text-xs font-black transition-all ${activeSettingsTab === 'division2_roster' ? 'bg-amber-500 text-black border-amber-300' : 'bg-black/40 text-amber-200 border-black hover:bg-black/60'}`}><Users className="w-3.5 h-3.5"/><span>Division 2 Roster Manager</span></button>
+          <button onClick={() => setActiveSettingsTab('competition_names')} className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-poster-title transition-all ${activeSettingsTab === 'competition_names' ? 'bg-amber-500 text-black font-black shadow-lg' : 'text-amber-300 hover:text-white'}`}>
+            <Trophy className="w-3.5 h-3.5" />
+            <span>Competition Names</span>
+          </button>
           <button
             onClick={() => setActiveSettingsTab('data_maker')}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-poster-title transition-all ${
@@ -1901,7 +1922,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   <span>DIVISION 2 ROSTER MANAGER</span>
                 </h3>
                 <p className="mt-1 text-xs font-semibold text-amber-200/70">
-                  Manage the six Challenger Division rosters. Promotion and relegation remain linked to their corresponding Division 1 leagues.
+                  Manage the six {competitionNames.division2} rosters. Promotion and relegation are reviewed in the Division 2 League System.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -1917,7 +1938,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                         appState.idols,
                         appState.girlGroups,
                         v5State.perLeague,
-                        'Challenger Division'
+                        competitionNames.division2
                       ),
                     });
                     showSuccessMsg('Division 2 rosters filled from available idols.');
@@ -1958,7 +1979,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   className="flex items-center gap-1.5 rounded-xl border-2 border-black bg-[#2a1d14] px-4 py-2.5 text-xs font-black text-amber-300 shadow transition-all hover:bg-[#38261b] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Shuffle className="h-4 w-4" />
-                  Simulate Challenger Division
+                  Simulate {competitionNames.division2} Matches
                 </button>
               </div>
             </div>
@@ -2004,7 +2025,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             <div className="rounded-3xl border-2 border-black bg-[#16100b] p-8 text-center poster-shadow">
               <Users className="mx-auto mb-3 h-8 w-8 text-amber-400" />
               <h4 className="font-poster-title text-lg text-amber-300">NO DIVISION 2 ROSTERS YET</h4>
-              <p className="mt-2 text-xs text-amber-100/60">Use Auto-fill from Free Idols to generate the six Challenger Division rosters.</p>
+              <p className="mt-2 text-xs text-amber-100/60">Use Auto-fill from Free Idols to generate the six {competitionNames.division2} rosters.</p>
             </div>
           ) : (
             <>
@@ -2256,6 +2277,40 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {activeSettingsTab === 'competition_names' && (
+        <div className="space-y-5 animate-in fade-in duration-200">
+          <div className="rounded-3xl border-2 border-black bg-[#18110b] p-6 poster-shadow">
+            <h3 className="font-poster-title text-xl font-black text-amber-400">COMPETITION NAMES</h3>
+            <p className="mt-1 text-xs font-semibold text-amber-100/60">Rename V5 competitions in one place. Changes apply to their tournament panels and future records. Existing historical archives remain unchanged.</p>
+            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {([
+                ['division2', 'Division 2 label'],
+                ['champsCup', 'Crown Cup'],
+                ['leagueCup', 'Open Arena Cup'],
+                ['miniCup', 'Spotlight Cup'],
+                ['superCupA', 'Super Cup A'],
+                ['superCupB', 'Super Cup B'],
+              ] as Array<[keyof CompetitionNames, string]>).map(([key, label]) => (
+                <label key={key} className="block text-xs font-bold text-amber-100/80">
+                  <span>{label}</span>
+                  <input
+                    type="text"
+                    value={competitionNames[key]}
+                    maxLength={48}
+                    onChange={(event) => updateCompetitionName(key, event.target.value)}
+                    onBlur={() => {
+                      if (!competitionNames[key].trim()) updateCompetitionName(key, loadNames()[key]);
+                    }}
+                    className="mt-1.5 w-full rounded-xl border-2 border-black bg-black/55 px-3 py-2 text-sm font-semibold text-amber-100 outline-none focus:border-amber-500"
+                  />
+                </label>
+              ))}
+            </div>
+            <p className="mt-4 text-[11px] font-semibold text-amber-100/45">Division 2 capacity and promotion/relegation count remain configurable in Division 2 Roster Manager. Promotion reviews and roster changes are handled in the Division 2 League System.</p>
           </div>
         </div>
       )}
