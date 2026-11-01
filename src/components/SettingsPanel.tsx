@@ -40,7 +40,8 @@ import { isIdolActive } from '../utils/tournamentLogic';
 import { getCountryFlag } from '../utils/nationalityHelper';
 import { compressImage } from '../utils/imageHelper';
 import { LeagueRosterModal } from './LeagueRosterModal';
-import type { V5State } from '../utils/v5/store';
+import { saveV5State, type V5State } from '../utils/v5/store';
+import { saveDivisionTwoRosterSnapshot } from '../utils/rosterPersistence';
 import * as V5Engine from '../utils/v5/engine';
 import { DEFAULT_NAMES, loadNames, saveNames, type CompetitionNames } from '../utils/v5/names';
 import { DataMakerPanel } from './DataMakerPanel';
@@ -450,6 +451,19 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     config.qualifiedPerGroup,
   ]);
 
+  const commitDivisionTwoState = (next: V5State, allowEmptyRosterIds: number[] = []) => {
+    // Write the compact D2 membership snapshot and full V5 state synchronously
+    // in the same user action, before React state propagation or navigation.
+    const rosterSaved = saveDivisionTwoRosterSnapshot(next.d2 || [], { allowEmptyRosterIds });
+    const stateSaved = saveV5State(next);
+    if (!rosterSaved || !stateSaved) {
+      showSuccessMsg('Division 2 save failed. Do not refresh. Export a backup before continuing.');
+      return false;
+    }
+    onUpdateV5State?.(next);
+    return true;
+  };
+
   const handleOpenEditD2Roster = (leagueId: number, memberIds: string[]) => {
     setD2RosterText(memberIds.map((id) => idolsMap.get(id)?.name || id).join('\n'));
     setEditingD2RosterLeagueId(leagueId);
@@ -524,7 +538,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         appState.leagueArchives
       );
     }
-    onUpdateV5State?.(nextV5State);
+    if (!commitDivisionTwoState(nextV5State, nextMemberIds.length === 0 ? [leagueId] : [])) return;
     setEditingD2RosterLeagueId(null);
     logDataChange({ action: 'roster_updated', entity: 'division_2_roster', entityName: targetLeague.name, source: 'Settings / Division 2 Roster Manager', details: `Saved ${nextMemberIds.length} roster member(s). Newly created idol profiles: ${createdIdols.map((idol) => idol.name).join(', ') || 'none'}.` });
     showSuccessMsg(`Division 2 roster saved: ${nextMemberIds.length} idol(s) assigned. ${createdIdols.length} new idol(s) added to the database.`);
@@ -2354,7 +2368,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     });
                     const assignedCount = nextD2.reduce((total, league) => total + league.memberIds.length, 0) -
                       v5State.d2.reduce((total, league) => total + league.memberIds.length, 0);
-                    onUpdateV5State?.({ ...v5State, d2: nextD2 });
+                    commitDivisionTwoState({ ...v5State, d2: nextD2 });
                     if (assignedCount > 0) {
                       logDataChange({ action: 'roster_updated', entity: 'division_2_roster', entityName: 'All six Division 2 leagues', source: 'Settings / Division 2 Auto-fill', details: `Auto-assigned ${assignedCount} free idol(s), excluding names already present in any Division 1 or Division 2 roster.` });
                     }
@@ -2472,14 +2486,15 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   }
                   if (showRosterConflicts(addedNames, { division: 'Division 2', leagueId: currentLeague.id, leagueName: currentLeague.name })) return;
                   const removedNames = beforeIds.filter((id) => !memberIds.includes(id)).map((id) => appState.idols.find((idol) => idol.id === id)?.name || id);
-                  onUpdateV5State?.({
-                    ...v5State,
-                    d2: v5State.d2.map((league) =>
-                      league.id === currentLeague.id
-                        ? rebuildDivisionTwoRosterPreservingResults(league, memberIds, appState.idols)
-                        : league
-                    ),
-                  });
+                  const nextD2 = v5State.d2.map((league) =>
+                    league.id === currentLeague.id
+                      ? rebuildDivisionTwoRosterPreservingResults(league, memberIds, appState.idols)
+                      : league
+                  );
+                  if (!commitDivisionTwoState(
+                    { ...v5State, d2: nextD2 },
+                    memberIds.length === 0 ? [currentLeague.id] : []
+                  )) return;
                   if (addedNames.length || removedNames.length) {
                     logDataChange({ action: 'roster_updated', entity: 'division_2_roster', entityName: currentLeague.name, source: 'Settings / Division 2 Quick Editor', details: `Added: ${addedNames.join(', ') || 'none'}. Removed: ${removedNames.join(', ') || 'none'}.` });
                   }
@@ -2582,15 +2597,17 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                           ? { ...league, memberIds: [...league.memberIds, idolId] }
                                           : league
                                     );
-                                    onUpdateV5State?.({
-                                      ...v5State,
-                                      d2: nextD2.map((league) => {
-                                        const previous = v5State.d2.find((item) => item.id === league.id);
-                                        return previous
-                                          ? rebuildDivisionTwoRosterPreservingResults(previous, league.memberIds, appState.idols)
-                                          : league;
-                                      }),
+                                    const rebuiltD2 = nextD2.map((league) => {
+                                      const previous = v5State.d2.find((item) => item.id === league.id);
+                                      return previous
+                                        ? rebuildDivisionTwoRosterPreservingResults(previous, league.memberIds, appState.idols)
+                                        : league;
                                     });
+                                    const emptiedSource = rebuiltD2.filter((league) =>
+                                      league.memberIds.length === 0 &&
+                                      (v5State.d2.find((item) => item.id === league.id)?.memberIds.length || 0) > 0
+                                    ).map((league) => league.id);
+                                    commitDivisionTwoState({ ...v5State, d2: rebuiltD2 }, emptiedSource);
                                     logDataChange({ action: 'roster_updated', entity: 'division_2_roster', entityName: target.name, source: 'Settings / Division 2 Roster Transfer', details: `Moved ${movingIdol?.name || idolId} from ${currentLeague.name}.` });
                                   }}
                                   className="rounded-lg border border-slate-700 bg-black px-2 py-0.5 text-[10px] font-bold text-amber-300"
