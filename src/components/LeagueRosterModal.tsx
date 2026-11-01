@@ -55,6 +55,7 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
   });
 
   // Working copy of 6 division rosters (leagueId 1..6 -> array of idolIds)
+  const [explicitlyClearedDivisions, setExplicitlyClearedDivisions] = useState<number[]>([]);
   const [divisionMembers, setDivisionMembers] = useState<Record<number, string[]>>(() => {
     const map: Record<number, string[]> = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
     for (let d = 1; d <= 6; d++) {
@@ -95,6 +96,7 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
         map[d] = found ? [...(found.memberIds || [])] : [];
       }
       setDivisionMembers(map);
+      setExplicitlyClearedDivisions([]);
       setCreatedIdolsAccumulator([]);
     }
   }, [isOpen]);
@@ -249,6 +251,7 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
 
   // --- CLEAR ACTIVE DIVISION ---
   const handleClearDivision = () => {
+    setExplicitlyClearedDivisions((prev) => prev.includes(activeDivisionTab) ? prev : [...prev, activeDivisionTab]);
     setDivisionMembers((prev) => ({
       ...prev,
       [activeDivisionTab]: [],
@@ -516,11 +519,8 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
     // Commit the compact roster snapshot directly from the Save & Apply action.
     // This avoids relying only on parent React state updates or the larger app-state
     // write, either of which may be delayed or rejected by browser storage limits.
-    const explicitlyClearedRosterIds = updatedLeagues
-      .filter((league) => (divisionMembers[league.id] || []).length === 0)
-      .map((league) => league.id);
     const rosterSnapshotSaved = saveDivisionOneRosterSnapshot(updatedLeagues, {
-      allowEmptyRosterIds: explicitlyClearedRosterIds,
+      allowEmptyRosterIds: explicitlyClearedDivisions,
     });
     if (!rosterSnapshotSaved) {
       triggerFeedback('Save failed. The roster snapshot could not be written. Keep this window open and do not refresh.', 'error');
