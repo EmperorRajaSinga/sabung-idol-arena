@@ -100,6 +100,7 @@ interface LeagueSystemPanelProps {
   divisionLabel?: string;
   hidePostseason?: boolean;
   promotionCount?: number;
+  skipFavoriteMatchesOnBulkSimulation?: boolean;
 }
 
 export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
@@ -118,6 +119,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
   divisionLabel = 'Division 1',
   hidePostseason = false,
   promotionCount = 3,
+  skipFavoriteMatchesOnBulkSimulation = true,
 }) => {
   // Ensure we have a valid state
   const state: LeagueSeasonState = useMemo(() => {
@@ -519,7 +521,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
     matchdays.forEach((md) => {
       const mdMatches = allMatches.filter((m) => m.matchday === md && !m.completed);
       mdMatches.forEach((match) => {
-        if (favoriteSet.has(match.idolAId) || favoriteSet.has(match.idolBId)) {
+        if (skipFavoriteMatchesOnBulkSimulation && (favoriteSet.has(match.idolAId) || favoriteSet.has(match.idolBId))) {
           skippedFavoritesCount++;
           return;
         }
@@ -611,7 +613,7 @@ export const LeagueSystemPanel: React.FC<LeagueSystemPanelProps> = ({
 
       matchdays.forEach((md) => {
         allMatches.filter((match) => match.matchday === md && !match.completed).forEach((match) => {
-          if (favoriteSet.has(match.idolAId) || favoriteSet.has(match.idolBId)) {
+          if (skipFavoriteMatchesOnBulkSimulation && (favoriteSet.has(match.idolAId) || favoriteSet.has(match.idolBId))) {
             totalSkippedFavorites++;
             return;
           }
