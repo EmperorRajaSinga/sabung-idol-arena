@@ -299,48 +299,75 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   };
 
   const handleSaveD2RosterText = (leagueId: number) => {
-    if (!v5State) return;
+    if (!v5State) {
+      showSuccessMsg('Division 2 state is unavailable. Reload the roster manager and try again.');
+      return;
+    }
+    const targetLeague = v5State.d2.find((league) => league.id === leagueId);
+    if (!targetLeague) {
+      showSuccessMsg('The selected Division 2 league could not be found. Select the division again.');
+      return;
+    }
+
     const rawNames = d2RosterText
       .split('\n')
       .flatMap((line) => (line.includes(',') ? line.split(',') : [line]))
       .map((name) => name.replace(/^[0-9]+[.\-)]\s*/, '').trim())
       .filter(Boolean);
     const capacity = v5State.perLeague || 20;
-    if (rawNames.length > capacity) {
-      showSuccessMsg(`Maximum capacity is ${capacity} idols. Remove ${rawNames.length - capacity} name(s) before saving.`);
+    const normalizedNames = rawNames.filter((name, index) =>
+      rawNames.findIndex((candidate) => candidate.toLowerCase() === name.toLowerCase()) === index
+    );
+    if (normalizedNames.length > capacity) {
+      showSuccessMsg(\`Maximum capacity is \${capacity} idols. Remove \${normalizedNames.length - capacity} name(s) before saving.\`);
       return;
     }
 
     const existingByName = new Map(appState.idols.map((idol) => [idol.name.trim().toLowerCase(), idol]));
-    const createdIdols: Idol[] = [];
-    const nextMemberIds: string[] = [];
-    const seen = new Set<string>();
-    const assignedElsewhere = new Set<string>();
-    (activeLeagueState.leagues || []).forEach((league) => league.memberIds.forEach((id) => assignedElsewhere.add(id)));
+    const assignedElsewhere = new Map<string, string>();
+    (activeLeagueState.leagues || []).forEach((league) =>
+      (league.memberIds || []).forEach((id) => assignedElsewhere.set(id, league.name))
+    );
     v5State.d2.forEach((league) => {
-      if (league.id !== leagueId) league.memberIds.forEach((id) => assignedElsewhere.add(id));
+      if (league.id !== leagueId) {
+        (league.memberIds || []).forEach((id) => assignedElsewhere.set(id, league.name));
+      }
     });
 
-    for (const name of rawNames) {
+    const createdIdols: Idol[] = [];
+    const nextMemberIds: string[] = [];
+    const blockedNames: string[] = [];
+    const seenIds = new Set<string>();
+    for (const name of normalizedNames) {
       const key = name.toLowerCase();
       let idol = existingByName.get(key);
       if (!idol) {
         idol = {
-          id: `idol-custom-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          id: \`idol-custom-\${Date.now()}-\${Math.random().toString(36).substring(2, 9)}-\${createdIdols.length}\`,
           name,
           girlGroup: 'Solo / Independent',
           seed: 'Seed 3',
           nationality: 'South Korea',
-          photoUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`,
+          photoUrl: \`https://api.dicebear.com/7.x/avataaars/svg?seed=\${encodeURIComponent(name)}\`,
           createdAt: Date.now(),
         } as Idol;
         createdIdols.push(idol);
         existingByName.set(key, idol);
       }
-      if (seen.has(idol.id)) continue;
-      seen.add(idol.id);
-      if (assignedElsewhere.has(idol.id)) continue;
+      if (seenIds.has(idol.id)) continue;
+      seenIds.add(idol.id);
+      const assignedTo = assignedElsewhere.get(idol.id);
+      if (assignedTo) {
+        blockedNames.push(\`\${name} (already assigned to \${assignedTo})\`);
+        continue;
+      }
       nextMemberIds.push(idol.id);
+    }
+
+    if (blockedNames.length) {
+      const extra = blockedNames.length > 4 ? ', and ' + (blockedNames.length - 4) + ' more' : '';
+      showSuccessMsg('Roster not saved. Remove or transfer these idols first: ' + blockedNames.slice(0, 4).join(', ') + extra + '.');
+      return;
     }
 
     const allIdols = [...appState.idols, ...createdIdols];
@@ -349,7 +376,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         ? V5Engine.rebuildLeague({ ...league, memberIds: nextMemberIds }, allIdols)
         : league
     );
-    onUpdateV5State?.({ ...v5State, d2: nextD2 });
+    const nextV5State = { ...v5State, d2: nextD2 };
+    // Apply the idol database update first. Calling it after the V5 update would
+    // overwrite the new roster with the stale v5State captured in appState.
     if (createdIdols.length) {
       onImportState(
         { ...appState, idols: allIdols },
@@ -357,8 +386,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         appState.leagueArchives
       );
     }
+    onUpdateV5State?.(nextV5State);
     setEditingD2RosterLeagueId(null);
-    showSuccessMsg(`Division 2 roster saved: ${nextMemberIds.length} idol(s) assigned. ${createdIdols.length} new idol(s) added to the database.`);
+    showSuccessMsg(\`Division 2 roster saved: \${nextMemberIds.length} idol(s) assigned. \${createdIdols.length} new idol(s) added to the database.\`);
   };
 
   const showSuccessMsg = (msg: string) => {
