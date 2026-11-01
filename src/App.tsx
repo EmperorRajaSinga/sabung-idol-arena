@@ -41,7 +41,7 @@ import {
 
 import { Sidebar } from './components/Sidebar';
 import { DashboardPanel } from './components/DashboardPanel';
-const SettingsPanel = React.lazy(() => import('./components/SettingsPanel').then((module) => ({ default: module.SettingsPanel })));
+import { SettingsPanel } from './components/SettingsPanel';
 const IdolDatabasePanel = React.lazy(() => import('./components/IdolDatabasePanel').then((module) => ({ default: module.IdolDatabasePanel })));
 const GirlGroupManagerPanel = React.lazy(() => import('./components/GirlGroupManagerPanel').then((module) => ({ default: module.GirlGroupManagerPanel })));
 const RatingPanel = React.lazy(() => import('./components/RatingPanel').then((module) => ({ default: module.RatingPanel })));
