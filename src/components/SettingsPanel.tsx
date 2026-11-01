@@ -2799,14 +2799,15 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       )}
 
       {/* Universal Floating Toast Notification */}
-      {(actionSuccessMsg || savedSuccess || brandingSavedSuccess) && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-emerald-500 text-slate-950 font-poster-title font-black text-sm shadow-2xl border-2 border-black animate-in slide-in-from-bottom-5 duration-300">
-          <CheckCircle2 className="w-5 h-5 text-slate-950 flex-shrink-0" />
-          <span>
-            {actionSuccessMsg || (savedSuccess ? 'Tournament settings saved successfully!' : 'Changes saved successfully!')}
-          </span>
-        </div>
-      )}
+      {(actionSuccessMsg || savedSuccess || brandingSavedSuccess) && (() => {
+        const isWarning = Boolean(actionSuccessMsg && /duplicate|roster blocked|already assigned/i.test(actionSuccessMsg));
+        return (
+          <div className={`fixed bottom-6 right-6 z-50 flex max-w-[min(92vw,620px)] items-start gap-3 rounded-2xl border-2 border-black px-5 py-3.5 font-poster-title text-sm font-black shadow-2xl animate-in slide-in-from-bottom-5 duration-300 ${isWarning ? 'bg-red-500 text-white' : 'bg-emerald-500 text-slate-950'}`}>
+            {isWarning ? <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0" /> : <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0" />}
+            <span className="whitespace-pre-line">{actionSuccessMsg || (savedSuccess ? 'Tournament settings saved successfully!' : 'Changes saved successfully!')}</span>
+          </div>
+        );
+      })()}
     </div>
   );
 };
