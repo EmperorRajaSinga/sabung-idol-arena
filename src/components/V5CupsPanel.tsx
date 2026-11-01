@@ -352,6 +352,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
   const [superSimulcast, setSuperSimulcast] = useState<'a' | 'b' | null>(null);
   const [isOpenManualOpen, setIsOpenManualOpen] = useState(false);
   const [isOpenSimulcastOpen, setIsOpenSimulcastOpen] = useState(false);
+  const [selectedOpenMatch, setSelectedOpenMatch] = useState<E.BNode | null>(null);
   const emptyCrownCup = useMemo(() => createEmptyCrownCup(), []);
   const [selectedSpotlightLeague, setSelectedSpotlightLeague] = useState('');
   const [selectedOpenRound, setSelectedOpenRound] = useState('');
@@ -526,6 +527,16 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
       commit({ leagueCup: next });
     } catch (error) { setMsg(error instanceof Error ? 'Open Arena Cup simulation failed: ' + error.message : 'Open Arena Cup simulation failed.'); }
     finally { setSimulatingOpenCup(false); }
+  };
+  const saveOpenArenaResult = (id: string, scoreA: number, scoreB: number): string | null => {
+    const next = clone(lc || lcView);
+    const roundIndex = next.rounds.findIndex((round) => round.some((match) => match.id === id));
+    if (roundIndex < 0) return 'Match not found in Open Arena Cup.';
+    const error = manual(next.rounds.flat(), id, scoreA, scoreB);
+    if (error) return error;
+    next.rounds = next.rounds.slice(0, roundIndex + 1); next.championId = null; refreshLC(next);
+    if (next.rounds[roundIndex].every((match) => match.completed) && !next.championId) E.stepLeagueCup(next);
+    commit({ leagueCup: next }); return null;
   };
   const saveOpenManualBracket = (updatedMatches: KnockoutMatch[]) => {
     const next = clone(lcView);
@@ -720,13 +731,13 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
               <div><p className="text-[10px] font-black uppercase tracking-[0.24em] text-indigo-400">Tournament Workspace</p>
                 <h2 className="mt-1 text-2xl font-black tracking-tight text-white">{names.leagueCup}</h2>
                 <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-400">All Division 1 and Division 2 idols enter a tiered single-elimination competition. The full bracket remains visible before participants are assigned.</p>
-                <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">{leagueState?.seasonName || \`Season \${leagueState?.seasonNumber || 1}\`}</p></div>
+                <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">{leagueState?.seasonName || `Season ${leagueState?.seasonNumber || 1}`}</p></div>
               <div className="flex flex-wrap items-center gap-2">
                 <Btn onClick={buildLC} disabled={!d1Done || !d2Done || !!lc} className="border-slate-700 bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-500">Build Bracket</Btn>
                 <Btn onClick={lcAll} disabled={!lc || !!lc.championId || lcPlayableCount === 0 || simulatingOpenCup} className="border-slate-700 bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-500">{simulatingOpenCup ? 'Simulating...' : 'Simulate All Matches'}</Btn>
                 <Btn onClick={() => setIsOpenManualOpen(true)} className="border-slate-700 bg-slate-800 px-4 py-2 text-white hover:bg-slate-700">Edit Bracket Manually</Btn>
                 <Btn onClick={() => setIsOpenSimulcastOpen(true)} disabled={!lc || lcPlayableCount === 0 || !!lc?.championId} className="border-slate-700 bg-fuchsia-700 px-4 py-2 text-white hover:bg-fuchsia-600">Live Simulcast</Btn>
-                <Btn onClick={() => { if (lc && window.confirm(\`Reset \${names.leagueCup} bracket and every match result? Historical records remain unchanged.\`)) commit({ leagueCup: null }); }} disabled={!lc} className="border-slate-700 bg-rose-700 px-4 py-2 text-white hover:bg-rose-600">Reset Bracket / Matches</Btn>
+                <Btn onClick={() => { if (lc && window.confirm(`Reset ${names.leagueCup} bracket and every match result? Historical records remain unchanged.`)) commit({ leagueCup: null }); }} disabled={!lc} className="border-slate-700 bg-rose-700 px-4 py-2 text-white hover:bg-rose-600">Reset Bracket / Matches</Btn>
               </div>
             </div>
             <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -741,19 +752,13 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><p className="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-300">Competition Bracket</p><h3 className="mt-1 text-lg font-black text-white">Championship Progression</h3></div>
               {lc?.championId && <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-black text-emerald-300">Champion: {nm(lc.championId)}</span>}</div>
             {lcRoundOf16Index >= 0 ? <>
-              {lcView.rounds.slice(0, lcRoundOf16Index).map((round, index) => <div key={index} className="mb-5 rounded-xl border border-slate-800 bg-slate-900/40 p-3">
-                <div className="mb-3 flex items-center justify-between gap-2"><h4 className="text-xs font-black uppercase tracking-wider text-slate-300">{round[0]?.roundName || \`Round \${index + 1}\`}</h4><span className="text-[10px] font-mono text-slate-500">{round.filter((match) => match.completed).length}/{round.length} completed</span></div>
-                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{round.map((match) => <div key={match.id} className="rounded-lg border border-slate-800 bg-black/30 px-3 py-2 text-xs"><div className="font-bold text-slate-200">{nm(match.idolAId)} <span className="text-amber-400">vs</span> {nm(match.idolBId)}</div><div className="mt-1 font-mono text-[10px] text-slate-500">{match.completed ? \`\${match.scoreA} - \${match.scoreB}\` : 'Awaiting result'}</div></div>)}</div>
-              </div>)}
+              <OpenArenaMatchList matches={lcView.rounds.slice(0, lcRoundOf16Index).flat()} idols={by} nm={nm} onSave={saveOpenArenaResult} />
               <div className="rounded-2xl border border-indigo-500/25 bg-gradient-to-br from-indigo-950/30 via-slate-950 to-slate-950 p-3 sm:p-5">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><p className="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-300">Round of 16 · Single Elimination</p><h4 className="mt-1 text-lg font-black text-white">Knockout Championship Bracket</h4></div><span className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-indigo-200">{lcKnockoutStage.reduce((sum, round) => sum + round.length, 0)} matches</span></div>
-                <TournamentBracketTree knockoutMatches={lcKnockoutTreeMatches} idolsMap={by} showTitleHeader={false} initialLayoutMode="split" />
+                <TournamentBracketTree knockoutMatches={lcKnockoutTreeMatches} idolsMap={by} onSelectMatch={(match) => { const selected = lcKnockoutStage.flat().find((item) => item.id === match.id); if (selected?.idolAId && selected?.idolBId) setSelectedOpenMatch(selected); }} showTitleHeader={false} initialLayoutMode="split" />
               </div>
-            </> : <div className="space-y-4">{lcView.rounds.map((round, index) => <div key={index} className="rounded-xl border border-slate-800 bg-slate-900/40 p-3">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h4 className="text-xs font-black uppercase tracking-wider text-indigo-200">{round[0]?.roundName || \`Round \${index + 1}\`}</h4><span className="text-[10px] font-mono text-slate-500">{round.filter((match) => match.completed).length}/{round.length} completed</span></div>
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{round.map((match) => <button key={match.id} type="button" disabled={!match.idolAId || !match.idolBId} onClick={() => setSelectedOpenRound(match.id)} className="flex items-center justify-between gap-2 rounded-xl border border-slate-800 bg-black/30 px-3 py-3 text-left hover:border-indigo-500/50 disabled:cursor-default"><span className="min-w-0 truncate text-xs font-bold text-slate-200">{nm(match.idolAId)} <span className="text-indigo-300">vs</span> {nm(match.idolBId)}</span><span className="shrink-0 font-mono text-sm font-black text-amber-300">{match.completed ? \`\${match.scoreA}-\${match.scoreB}\` : 'VS'}</span></button>)}</div>
-            </div>)}</div>}
-          </section>}
+            </> : <OpenArenaMatchList matches={lcViewMatches} idols={by} nm={nm} onSave={saveOpenArenaResult} />}
+          </section>
           {isOpenManualOpen && <ManualBracketModal key={lcViewMatches.map((match) => match.id).join('|')} isOpen onClose={() => setIsOpenManualOpen(false)} knockoutMatches={lcKnockoutMatches} idolsMap={by} onSaveKnockoutMatches={saveOpenManualBracket} onRegenerateAutoBracket={buildLC} />}
           {isOpenSimulcastOpen && lc && <KnockoutLiveSimulatorModal isOpen onClose={() => setIsOpenSimulcastOpen(false)} knockoutMatches={toOpenArenaKnockoutMatches([lc.rounds[lc.rounds.length - 1] || []])} idolsMap={by} config={crownSimConfig} onCommitMatches={commitOpenSimulcast} />}
         </div>
