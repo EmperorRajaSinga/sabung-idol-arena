@@ -51,7 +51,7 @@ export const V5CompetitionStatsPanel: React.FC<{ matchDatabase: ArchivedMatch[];
       });
     });
     finalWinnersBySeason.forEach((winnerId, titleKey) => {
-      const [seasonId, competition] = titleKey.split('::');
+      const competition = titleKey.split('::')[1];
       const winnerRow = map.get(competition + '::' + winnerId);
       if (winnerRow) winnerRow.titles += 1;
     });
