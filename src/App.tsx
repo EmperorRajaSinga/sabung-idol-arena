@@ -86,6 +86,8 @@ import {
   archiveLeagueSeason,
   advanceLeagueSeason,
   resetLeagueSeasonMatchesOnly,
+  generateRoundRobinMatches as generateLeagueRoundRobinMatches,
+  calculateLeagueStandings,
 } from './utils/leagueLogic';
 import {
   loadTheIdolsState,
@@ -1700,7 +1702,7 @@ export function App() {
         const divisionOne = nextDivisionSystem!.divisions.find((division) => division.leagueId === league.id && division.tier === 1);
         if (!divisionOne) return league;
         const memberIds = [...divisionOne.memberIds];
-        const matches = generateRoundRobinMatches(league.id, memberIds);
+        const matches = generateLeagueRoundRobinMatches(league.id, memberIds);
         return { ...league, memberIds, matches, standings: calculateLeagueStandings(league.id, memberIds, matches, appState.idols) };
       });
       nextLeagueStateForRollover = { ...nextLeagueStateForRollover, leagues: syncedLeagues };
@@ -1845,7 +1847,7 @@ export function App() {
           const divisionOne = nextDivisionSystemForNewTournament!.divisions.find((division) => division.leagueId === league.id && division.tier === 1);
           if (!divisionOne) return league;
           const memberIds = [...divisionOne.memberIds];
-          const matches = generateRoundRobinMatches(league.id, memberIds);
+          const matches = generateLeagueRoundRobinMatches(league.id, memberIds);
           return { ...league, memberIds, matches, standings: calculateLeagueStandings(league.id, memberIds, matches, prev.idols) };
         });
         nextLeagueStateForNewTournament = { ...nextLeagueStateForNewTournament, leagues: syncedLeagues };
