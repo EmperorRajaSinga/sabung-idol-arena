@@ -9,13 +9,11 @@ for (const l of ls.leagues) for (const id of l.memberIds) {
   const map = new Map<string, any>();
   rows.forEach((m: any) => {
     const stage = String(m.stage || '').toLowerCase(); const mid = String(m.matchId || '').toLowerCase();
-    const isLeague = /league|division|wildcard|premier|championship|md |matchday/.test(stage) || mid.includes('league');
+    const isLeague = (/^league - (?!.*(?:swiss|wildcard|last chance|play-in))/i.test(stage) || mid.startsWith('league_s')) && !mid.startsWith('the_idols');
     const other = mid.startsWith('the_idols') || mid.startsWith('swiss_') || stage.startsWith('the idols') || stage.includes('swiss') || stage.includes('last chance') || stage.includes('superleague') || stage.includes('masters');
     if (isLeague && !other) map.set(m.matchId, m);
   });
-  if (checked === 0) console.log('DEBUG first idol map size', id, idol?.name, map.size, rows.filter((m: any) => m.idolAId === id || m.idolBId === id).slice(0,8).map((m: any) => ({id:m.matchId,stage:m.stage})));
   checked++; if (map.size !== 38) bad++;
 }
-console.log('DEBUG league records', (s.syncedMatchDatabase || []).filter((m: any) => /league|division/i.test(String(m.stage || ''))).length, 'first league', (s.syncedMatchDatabase || []).find((m: any) => /league|division/i.test(String(m.stage || ''))), 'first standings', ls.leagues[0]?.standings?.slice(0,2));
 console.log(bad === 0 ? 'PASS' : 'FAIL', `idols checked ${checked}, idols not at 38 league matches: ${bad}, of which also in The Idols: ${[...inIdols].length}`);
 process.exit(bad ? 1 : 0);
