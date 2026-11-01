@@ -2670,6 +2670,7 @@ export function App() {
               theIdolsState={theIdolsState}
               theIdolsArchives={theIdolsArchives}
               v5State={v5State}
+              v5TitleArchives={appState.v5TitleArchives || []}
               onReconcileArchives={handleReconcileArchives}
             />
           )}
