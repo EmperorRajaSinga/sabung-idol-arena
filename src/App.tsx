@@ -1,7 +1,7 @@
 import { loadV5State, saveV5State, V5State, V5TitleArchive } from './utils/v5/store';
 import { loadNames } from './utils/v5/names';
-import { V5CupsPanel } from './components/V5CupsPanel';
-import { DivisionTwoLeaguePanel } from './components/DivisionTwoLeaguePanel';
+
+
 import { getUnfinishedCompetitions } from './utils/seasonGuard';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
@@ -51,21 +51,21 @@ import { GroupDrawPanel } from './components/GroupDrawPanel';
 import { GroupStagePanel } from './components/GroupStagePanel';
 import { KnockoutBracketPanel } from './components/KnockoutBracketPanel';
 import { PublicResultsPanel } from './components/PublicResultsPanel';
-import { MatchDatabasePanel } from './components/MatchDatabasePanel';
-import { CareerStatsPanel } from './components/CareerStatsPanel';
+
+
 import { GirlGroupStatsPanel } from './components/GirlGroupStatsPanel';
 import { SeasonProfilePanel } from './components/SeasonProfilePanel';
-import { IdolProfilePanel } from './components/IdolProfilePanel';
-import { HeadToHeadPanel } from './components/HeadToHeadPanel';
-import { HallOfChampionsPanel } from './components/HallOfChampionsPanel';
-import { AllTimeRecordsPanel } from './components/AllTimeRecordsPanel';
-import { TournamentBrowserPanel } from './components/TournamentBrowserPanel';
-import { SystemInfoPanel } from './components/SystemInfoPanel';
+
+
+
+
+
+
 import { LeagueSystemPanel } from './components/LeagueSystemPanel';
-import { SeasonSimulatorPanel } from './components/SeasonSimulatorPanel';
+
 import { TheIdolsPanel } from './components/TheIdolsPanel';
 import { RankPanel } from './components/RankPanel';
-import { DatabaseStudioPanel } from './components/DatabaseStudioPanel';
+
 import { incrementSeasonName, extractBaseTournamentName } from './utils/seasonNameHelper';
 import {
   loadCareerOverrides,
@@ -105,6 +105,19 @@ import {
 } from './utils/theIdolsLogic';
 import { recoverMissingSeasonArchives } from './utils/archiveRecoveryEngine';
 import { Menu, Trophy } from 'lucide-react';
+
+const CareerStatsPanel = React.lazy(() => import('./components/CareerStatsPanel').then((module) => ({ default: module.CareerStatsPanel })));
+const IdolProfilePanel = React.lazy(() => import('./components/IdolProfilePanel').then((module) => ({ default: module.IdolProfilePanel })));
+const HallOfChampionsPanel = React.lazy(() => import('./components/HallOfChampionsPanel').then((module) => ({ default: module.HallOfChampionsPanel })));
+const AllTimeRecordsPanel = React.lazy(() => import('./components/AllTimeRecordsPanel').then((module) => ({ default: module.AllTimeRecordsPanel })));
+const TournamentBrowserPanel = React.lazy(() => import('./components/TournamentBrowserPanel').then((module) => ({ default: module.TournamentBrowserPanel })));
+const SystemInfoPanel = React.lazy(() => import('./components/SystemInfoPanel').then((module) => ({ default: module.SystemInfoPanel })));
+const DatabaseStudioPanel = React.lazy(() => import('./components/DatabaseStudioPanel').then((module) => ({ default: module.DatabaseStudioPanel })));
+const SeasonSimulatorPanel = React.lazy(() => import('./components/SeasonSimulatorPanel').then((module) => ({ default: module.SeasonSimulatorPanel })));
+const V5CupsPanel = React.lazy(() => import('./components/V5CupsPanel').then((module) => ({ default: module.V5CupsPanel })));
+const DivisionTwoLeaguePanel = React.lazy(() => import('./components/DivisionTwoLeaguePanel').then((module) => ({ default: module.DivisionTwoLeaguePanel })));
+const MatchDatabasePanel = React.lazy(() => import('./components/MatchDatabasePanel').then((module) => ({ default: module.MatchDatabasePanel })));
+const HeadToHeadPanel = React.lazy(() => import('./components/HeadToHeadPanel').then((module) => ({ default: module.HeadToHeadPanel })));
 
 export function App() {
   const [appState, setAppState] = useState<AppState>(() => loadAppState());
@@ -2209,6 +2222,7 @@ export function App() {
         <div className="h-2 w-full checkered-banner border-b border-red-950/80 flex-shrink-0" />
         
         <div className="flex-1 p-3 sm:p-5 md:p-8">
+          <React.Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center text-sm font-bold text-amber-300">Loading section...</div>}>
           <div className="max-w-7xl mx-auto space-y-6">
           {activeTab === 'dashboard' && (
             <DashboardPanel
@@ -2805,6 +2819,7 @@ export function App() {
             />
           )}
         </div>
+          </React.Suspense>
       </div>
     </main>
     </div>
