@@ -66,6 +66,26 @@ assert.deepEqual(
   changedD1.map((league) => league.memberIds),
 );
 
+// Legacy league records with empty memberIds but populated standings must recover.
+const legacyWithStandings = d1.map((league) => ({
+  ...league,
+  memberIds: [],
+  standings: [{ idolId: `standing-idol-${league.id}` }],
+}));
+const recoveredLegacy = restoreDivisionOneRoster(legacyWithStandings, null);
+assert.deepEqual(
+  recoveredLegacy?.map((league) => league.memberIds),
+  d1.map((league) => [`standing-idol-${league.id}`]),
+);
+
+// Explicitly clearing one division must be allowed to persist as empty.
+const explicitlyCleared = changedD1.map((league) => ({
+  ...league,
+  memberIds: league.id === 6 ? [] : [...league.memberIds],
+}));
+assert.equal(saveDivisionOneRosterSnapshot(explicitlyCleared, { allowEmptyRosterIds: [6] }), true);
+assert.deepEqual(loadRosterSnapshot()?.division1?.find((league) => league.id === 6)?.memberIds, []);
+
 // Partial data and accidental empty Division 2 state must not erase a complete roster.
 assert.equal(saveDivisionOneRosterSnapshot(d1.slice(0, 5)), false);
 assert.equal(saveDivisionTwoRosterSnapshot([]), false);
