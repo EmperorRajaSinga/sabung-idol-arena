@@ -388,14 +388,14 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       .map((name) => name.replace(/^[0-9]+[.\-)]\s*/, '').trim())
       .filter(Boolean);
     const capacity = v5State.perLeague || 20;
+    if (showRosterConflicts(rawNames, { division: 'Division 2', leagueId, leagueName: targetLeague.name })) return;
     const normalizedNames = rawNames.filter((name, index) =>
-      rawNames.findIndex((candidate) => candidate.toLowerCase() === name.toLowerCase()) === index
+      rawNames.findIndex((candidate) => normalizeDataName(candidate) === normalizeDataName(name)) === index
     );
     if (normalizedNames.length > capacity) {
       showSuccessMsg(`Maximum capacity is ${capacity} idols. Remove ${normalizedNames.length - capacity} name(s) before saving.`);
       return;
     }
-    if (showRosterConflicts(normalizedNames, { division: 'Division 2', leagueId, leagueName: targetLeague.name })) return;
 
     const existingByName = new Map(appState.idols.map((idol) => [normalizeDataName(idol.name), idol]));
 
