@@ -41,6 +41,7 @@ import { saveLeagueSeasonState, saveLeagueArchives } from '../utils/leagueLogic'
 import { saveTheIdolsState, saveTheIdolsArchives } from '../utils/theIdolsLogic';
 import { saveTournamentArchives, calculateCurrentSeasonNumber, flushAppStateToIndexedDB } from '../utils/storage';
 import { getIdolRating, getRatingTierInfo } from '../utils/ratingHelper';
+import type { V5State } from '../utils/v5/store';
 
 interface SeasonSimulatorPanelProps {
   appState: AppState;
@@ -55,6 +56,9 @@ interface SeasonSimulatorPanelProps {
   onUpdateTheIdolsArchives?: (newArchives: TheIdolsSeasonArchive[]) => void;
   setActiveTab: (tab: ActiveTab) => void;
   onCrownChampionAndArchive: () => void;
+  v5State?: V5State | null;
+  onUpdateV5State?: (state: V5State) => void;
+  v5TitleArchives?: import('../utils/v5/store').V5TitleArchive[];
 }
 
 export const SeasonSimulatorPanel: React.FC<SeasonSimulatorPanelProps> = ({
@@ -70,6 +74,9 @@ export const SeasonSimulatorPanel: React.FC<SeasonSimulatorPanelProps> = ({
   onUpdateTheIdolsArchives,
   setActiveTab,
   onCrownChampionAndArchive,
+  v5State,
+  onUpdateV5State,
+  v5TitleArchives = [],
 }) => {
   const seasonStats = useMemo(() => {
     return calculateCurrentSeasonNumber(
@@ -233,7 +240,9 @@ export const SeasonSimulatorPanel: React.FC<SeasonSimulatorPanelProps> = ({
           seasonNameInput.trim(),
           selectedFormat,
           leagueArchives,
-          theIdolsArchives
+          theIdolsArchives,
+          v5State,
+          v5TitleArchives
         );
 
         // Update active season workspace state for interactive inspection without archiving prematurely
@@ -253,6 +262,8 @@ export const SeasonSimulatorPanel: React.FC<SeasonSimulatorPanelProps> = ({
 
         onUpdateTheIdolsState(summary.updatedTheIdolsState);
         saveTheIdolsState(summary.updatedTheIdolsState);
+
+        if (summary.updatedV5State && onUpdateV5State) onUpdateV5State(summary.updatedV5State);
 
         setSimulationResult(summary);
         setSelectedFormat(summary.postseasonFormat);
