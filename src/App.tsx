@@ -680,8 +680,8 @@ export function App() {
     const seasonName = leagueState?.seasonName || appState.config.seasonName || `Season ${seasonId}`;
     const addV5Match = (competition: string, match: any) => {
       if (!match?.completed || !match.idolAId || !match.idolBId || !Number.isFinite(Number(match.scoreA)) || !Number.isFinite(Number(match.scoreB))) return;
-      const a = appState.idols.find((idol) => idol.id === match.idolAId);
-      const b = appState.idols.find((idol) => idol.id === match.idolBId);
+      const a = safeIdols.find((idol) => idol.id === match.idolAId);
+      const b = safeIdols.find((idol) => idol.id === match.idolBId);
       if (!a || !b) return;
       const winnerId = match.winnerId || (Number(match.scoreA) > Number(match.scoreB) ? a.id : b.id);
       const winner = winnerId === a.id ? a : b;
@@ -697,11 +697,11 @@ export function App() {
       });
     };
     (Array.isArray(v5State.d2) ? v5State.d2 : []).filter((league) => league && typeof league === 'object').forEach((league) => (Array.isArray(league.matches) ? league.matches : []).forEach((match: any) => addV5Match(`Division 2 ${league.name}`, { ...match, roundName: `Matchday ${match.matchday}` })));
-    (v5State.champsCup?.matches || []).forEach((match) => addV5Match('League Champions Cup', match));
-    (v5State.leagueCup?.rounds || []).flat().forEach((match) => addV5Match('All-League Knockout Cup', match));
-    Object.entries(v5State.miniCups || {}).forEach(([leagueId, matches]) => matches.forEach((match) => addV5Match(`Top 16 Mini Cup League ${leagueId}`, match)));
+    (Array.isArray(v5State.champsCup?.matches) ? v5State.champsCup.matches : []).forEach((match) => addV5Match('League Champions Cup', match));
+    (Array.isArray(v5State.leagueCup?.rounds) ? v5State.leagueCup.rounds : []).filter(Array.isArray).flat().forEach((match) => addV5Match('All-League Knockout Cup', match));
+    Object.entries(v5State.miniCups && typeof v5State.miniCups === 'object' ? v5State.miniCups : {}).forEach(([leagueId, matches]) => (Array.isArray(matches) ? matches : []).forEach((match) => addV5Match(`Top 16 Mini Cup League ${leagueId}`, match)));
     if (v5State.superA) addV5Match('Super Cup A', v5State.superA);
-    (v5State.superB || []).forEach((match) => addV5Match('Super Cup B', match));
+    (Array.isArray(v5State.superB) ? v5State.superB : []).forEach((match) => addV5Match('Super Cup B', match));
     const map = new Map<string, ArchivedMatch>();
     (Array.isArray(appState.matchDatabase) ? appState.matchDatabase : [])
       .filter((match): match is ArchivedMatch => Boolean(match && typeof match === 'object' && match.matchId))
