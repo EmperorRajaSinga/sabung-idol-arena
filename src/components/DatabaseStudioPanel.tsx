@@ -30,7 +30,8 @@ import {
   saveTheIdolsState,
   convertTheIdolsMatchesToArchived,
 } from '../utils/theIdolsLogic';
-import { syncLeagueMatchesToArchivedMatches } from '../utils/leagueLogic';
+import { calculateLeagueStandings, generateRoundRobinMatches, saveCustomLeagueBranding, syncLeagueMatchesToArchivedMatches } from '../utils/leagueLogic';
+import { saveLeagueSeasonState } from '../utils/storage';
 import { CupStatsEditor } from './studio/CupStatsEditor';
 import { LeagueSystemEditor } from './studio/LeagueSystemEditor';
 import { TheIdolsEditor } from './studio/TheIdolsEditor';
@@ -944,16 +945,96 @@ export const DatabaseStudioPanel: React.FC<DatabaseStudioPanelProps> = ({
         const importedTheIdolsArchives = Array.isArray(data.theIdolsArchives) ? data.theIdolsArchives : [];
         const importedTheIdolsState = data.theIdolsSeasonState || data.theIdolsState || null;
 
-        if (Array.isArray(data.idols)) {
+        // Setup-only database imports must never inherit stale match records from
+        // the browser's previous dataset.
+        if (validation.format === 'idols_groups') {
+          if (!Array.isArray(data.idols) || !Array.isArray(data.girlGroups)) {
+            showToast('Idol database is missing idols or girlGroups arrays.', 'error');
+            return;
+          }
           onUpdateAppState((prev) => ({
             ...prev,
             idols: data.idols,
-            girlGroups: data.girlGroups || prev.girlGroups,
-            archives: data.tournamentArchives || data.archives || prev.archives,
-            matchDatabase: data.matchDatabase || prev.matchDatabase,
-            theIdolsArchives: importedTheIdolsArchives,
-            theIdolsState: importedTheIdolsState,
+            girlGroups: data.girlGroups,
+            matchDatabase: [],
+            groups: [],
+            knockoutMatches: [],
+            selectedParticipantIds: [],
+            config: { ...prev.config, isStarted: false, isGroupStageFinished: false, isKnockoutFinished: false },
           }));
+          showToast(`Idol database imported: ${data.idols.length} idols and ${data.girlGroups.length} groups. Old active match records cleared.`, 'success');
+        } else if (validation.format === 'league_branding_rosters') {
+          if (!Array.isArray(data.divisions) || data.divisions.length !== 6) {
+            showToast('League database must contain exactly six divisions.', 'error');
+            return;
+          }
+          const branding = data.divisions.map((division: any) => ({
+            id: Number(division.leagueId),
+            name: String(division.name || `Division ${division.leagueId}`),
+            tierName: String(division.tierName || `Division ${division.leagueId}`),
+            color: String(division.color || '#64748b'),
+            logoUrl: String(division.logoUrl || ''),
+            description: String(division.description || ''),
+          }));
+          if (branding.some((item: any) => !Number.isInteger(item.id) || item.id < 1 || item.id > 6)) {
+            showToast('League database contains an invalid division ID.', 'error');
+            return;
+          }
+          const incomingIdols = appState.idols;
+          const leagueDefs = [...branding].sort((a: any, b: any) => a.id - b.id);
+          const importedSeason = Math.max(1, Number(data.seasonNumber) || 1);
+          saveCustomLeagueBranding(leagueDefs);
+          const baseLeague = {
+            seasonNumber: importedSeason,
+            seasonName: `League Season ${importedSeason}`,
+            isStarted: false,
+            isCompleted: false,
+            currentMatchday: 1,
+            postseasonFormat: 'grand_cup_64' as const,
+            championsAdvancementDone: false,
+            leagues: leagueDefs.map((division: any) => {
+              const source = data.divisions.find((item: any) => Number(item.leagueId) === division.id);
+              const roster = Array.isArray(source?.memberIds)
+                ? source.memberIds
+                : Array.isArray(source?.roster)
+                  ? source.roster.map((idol: any) => String(idol.id || idol.idolId || '')).filter(Boolean)
+                  : [];
+              const memberIds = Array.from(new Set(roster)).filter((id: string) => incomingIdols.some((idol) => idol.id === id)).slice(0, 20);
+              const matches = generateRoundRobinMatches(division.id, memberIds);
+              const standings = calculateLeagueStandings(division.id, memberIds, matches, incomingIdols);
+              return {
+                id: division.id,
+                name: division.name,
+                tierName: division.tierName,
+                color: division.color,
+                logoUrl: division.logoUrl,
+                description: division.description,
+                memberIds,
+                matches: [],
+                standings,
+              };
+            }),
+          };
+          onUpdateLeagueState(baseLeague);
+          saveLeagueSeasonState(baseLeague);
+          onUpdateAppState((prev) => ({
+            ...prev,
+            customLeagueBranding: leagueDefs,
+            matchDatabase: [],
+          }));
+          showToast('League branding and six rosters imported. League fixtures and previous match records reset to an unplayed state.', 'success');
+        } else {
+          if (Array.isArray(data.idols)) {
+            onUpdateAppState((prev) => ({
+              ...prev,
+              idols: data.idols,
+              girlGroups: data.girlGroups || prev.girlGroups,
+              archives: data.tournamentArchives || data.archives || prev.archives,
+              matchDatabase: Array.isArray(data.matchDatabase) ? data.matchDatabase : prev.matchDatabase,
+              theIdolsArchives: importedTheIdolsArchives,
+              theIdolsState: importedTheIdolsState,
+            }));
+          }
         }
         if (Array.isArray(data.leagueArchives)) {
           onUpdateLeagueArchives(data.leagueArchives);
