@@ -57,6 +57,7 @@ import {
 import { getEffectiveIdolRating } from './formHelper';
 import type { V5State, V5TitleArchive } from './v5/store';
 import { simulateV5Season } from './v5/engine';
+import { createV5ArchiveSnapshot } from './v5/archive';
 
 export interface SeasonSimulationSummary {
   seasonNumber: number;
@@ -758,6 +759,17 @@ export function simulateEntireSeason(
   });
   const finalMatchDatabase = Array.from(unifiedDbMap.values());
 
+  const v5ArchiveSnapshot = updatedV5State
+    ? createV5ArchiveSnapshot(
+        updatedV5State,
+        finalMatchDatabase,
+        externalV5TitleArchives || currentAppState.v5TitleArchives || [],
+        idols,
+        seasonNumber,
+        resolvedSeasonName
+      )
+    : null;
+
   const updatedAppState: AppState = {
     ...currentAppState,
     archives: updatedTournamentArchives,
@@ -915,11 +927,16 @@ export function simulateEntireSeason(
     updatedTournamentArchives,
     updatedLeagueArchives,
     updatedTheIdolsArchives,
-    updatedAppState,
+    updatedAppState: v5ArchiveSnapshot ? {
+      ...updatedAppState,
+      matchDatabase: v5ArchiveSnapshot.matches,
+      v5State: updatedV5State,
+      v5TitleArchives: v5ArchiveSnapshot.titles,
+    } : updatedAppState,
     updatedLeagueState: leagueSeason,
     updatedTheIdolsState: theIdolsSeason,
-    syncedMatchDatabase: finalMatchDatabase,
+    syncedMatchDatabase: v5ArchiveSnapshot?.matches || finalMatchDatabase,
     updatedV5State,
-    updatedV5TitleArchives: externalV5TitleArchives || currentAppState.v5TitleArchives || [],
+    updatedV5TitleArchives: v5ArchiveSnapshot?.titles || externalV5TitleArchives || currentAppState.v5TitleArchives || [],
   };
 }
