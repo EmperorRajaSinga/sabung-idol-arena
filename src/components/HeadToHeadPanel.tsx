@@ -421,8 +421,9 @@ export const HeadToHeadPanel: React.FC<HeadToHeadPanelProps> = ({
       if (!Number.isFinite(scoreA) || !Number.isFinite(scoreB)) return;
       const season = String(match.seasonId || 1);
       if (lowerStage.includes('division 2')) {
-        if (!d2Tables.has(season)) d2Tables.set(season, new Map());
-        const table = d2Tables.get(season)!;
+        const divisionKey = `${season}::${stage.split(' / ')[0].toLowerCase()}`;
+        if (!d2Tables.has(divisionKey)) d2Tables.set(divisionKey, new Map());
+        const table = d2Tables.get(divisionKey)!;
         const update = (id: string, scored: number, conceded: number) => {
           const row = table.get(id) || { points: 0, diff: 0, scored: 0 };
           row.points += scored > conceded ? 3 : scored === conceded ? 1 : 0;
@@ -440,8 +441,8 @@ export const HeadToHeadPanel: React.FC<HeadToHeadPanelProps> = ({
         lowerStage.includes('super cup b')
       ) {
         const detail = stage.split(' / ').slice(1).join(' / ').trim().toLowerCase();
-        if (/^final(?:\\b|\\s|$)/.test(detail) && scoreA !== scoreB) {
-          const winnerId = scoreA > scoreB ? match.idolAId : match.idolBId;
+        if (/^(?:grand\\s+)?final(?:\\b|\\s|$)/.test(detail) || detail === 'super cup') {
+          const winnerId = match.winnerId || (scoreA > scoreB ? match.idolAId : scoreB > scoreA ? match.idolBId : '');
           if (winnerId === idol.id) v5CupTitleSeasons.add(`${season}|${lowerStage.split(' / ')[0]}`);
         }
       }
