@@ -18,7 +18,13 @@ export function createV5ArchiveSnapshot(
   seasonName: string
 ): V5ArchiveSnapshot {
   const byId = new Map(idols.map((idol) => [idol.id, idol]));
-  const matches = new Map<string, ArchivedMatch>((existingMatches || []).map((match) => [match.matchId, match]));
+  const matches = new Map<string, ArchivedMatch>();
+  (existingMatches || []).forEach((match) => {
+    const stage = String(match.stage || '').toLowerCase();
+    const legacySuperB = Number(match.seasonId) === Number(seasonNumber) &&
+      stage.startsWith('cups & divisions: super cup b /');
+    if (!legacySuperB) matches.set(match.matchId, match);
+  });
   const titles = new Map<string, V5TitleArchive>((existingTitles || []).map((title) => [title.id, title]));
   const addTitle = (competition: string, winnerId?: string | null, runnerUpId?: string | null, isDivision = false) => {
     if (!winnerId || !byId.has(winnerId)) return;
@@ -82,7 +88,7 @@ export function createV5ArchiveSnapshot(
     if (state.superA.completed) addTitle('Super Cup A', state.superA.winnerId, state.superA.loserId);
   }
   (state.superB || []).forEach((match, index) => {
-    addMatch('Super Cup B', match, match.roundName || `League ${index + 1} Super Cup`);
+    addMatch(`Super Cup B ${index + 1}`, match, match.roundName || `League ${index + 1} Super Cup`);
     if (match.completed) addTitle(`Super Cup B ${index + 1}`, match.winnerId, match.loserId);
   });
 
