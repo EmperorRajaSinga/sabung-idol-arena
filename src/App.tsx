@@ -1034,9 +1034,9 @@ export function App() {
       return;
     }
     setAppState((prev) => {
-      const lowerName = idol.name.trim().toLowerCase();
+      const lowerName = normalizeDataName(idol.name);
       const existingIdx = prev.idols.findIndex(
-        (i) => i.name.trim().toLowerCase() === lowerName
+        (i) => normalizeDataName(i.name) === lowerName
       );
       if (existingIdx >= 0) {
         const updated = [...prev.idols];
@@ -1098,14 +1098,14 @@ export function App() {
 
       // Create new idol entries for members that don't exist yet
       const existingIdolNames = new Set(
-        prev.idols.map((i) => i.name.trim().toLowerCase())
+        prev.idols.map((i) => normalizeDataName(i.name))
       );
       const newIdolObjects: Idol[] = [];
 
       memberNames.forEach((rawName) => {
         const name = rawName.trim();
         if (!name) return;
-        const lower = name.toLowerCase();
+        const lower = normalizeDataName(name);
         if (!existingIdolNames.has(lower)) {
           newIdolObjects.push({
             id: `idol-custom-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -1121,10 +1121,10 @@ export function App() {
       });
 
       const nameSet = new Set(
-        memberNames.map((n) => n.trim().toLowerCase()).filter(Boolean)
+        memberNames.map(normalizeDataName).filter(Boolean)
       );
       const updatedExistingIdols = prev.idols.map((idol) => {
-        if (nameSet.has(idol.name.trim().toLowerCase())) {
+        if (nameSet.has(normalizeDataName(idol.name))) {
           return { ...idol, girlGroup: groupName };
         }
         return idol;
@@ -1168,6 +1168,13 @@ export function App() {
   };
 
   const handleUpdateGroupMembers = (groupId: string, memberNames: string[]) => {
+    const normalizedNames = memberNames.map(normalizeDataName).filter(Boolean);
+    if (new Set(normalizedNames).size !== normalizedNames.length) {
+      const group = appState.girlGroups.find((item) => item.id === groupId);
+      recordDataHistory({ action: 'duplicate_blocked', entity: 'girl_group', entityName: group?.name || groupId, source: 'Girl Group Manager / Edit Members', details: 'Blocked member update because the list contains duplicate idol names.' });
+      window.alert('This group contains duplicate member names. Remove repeated names before saving.');
+      return;
+    }
     setAppState((prev) => {
       const targetGroup = prev.girlGroups.find((g) => g.id === groupId);
       if (!targetGroup) return prev;
@@ -1178,17 +1185,17 @@ export function App() {
       );
 
       const existingNamesSet = new Set(
-        prev.idols.map((i) => i.name.trim().toLowerCase())
+        prev.idols.map((i) => normalizeDataName(i.name))
       );
       const newIdolObjects: Idol[] = [];
       const newNamesSet = new Set(
-        memberNames.map((n) => n.trim().toLowerCase()).filter(Boolean)
+        memberNames.map(normalizeDataName).filter(Boolean)
       );
 
       memberNames.forEach((rawName) => {
         const name = rawName.trim();
         if (!name) return;
-        const lower = name.toLowerCase();
+        const lower = normalizeDataName(name);
         if (!existingNamesSet.has(lower)) {
           newIdolObjects.push({
             id: `idol-custom-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
