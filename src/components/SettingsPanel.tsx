@@ -184,6 +184,40 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const [dataHistory, setDataHistory] = useState<DataHistoryEntry[]>(() => loadDataHistory());
   const [historySearch, setHistorySearch] = useState('');
   const [historyActionFilter, setHistoryActionFilter] = useState('all');
+  const [duplicateScan, setDuplicateScan] = useState<string[] | null>(null);
+  const runDuplicateScan = () => {
+    const findings: string[] = [];
+    const collectProfileDuplicates = (items: Array<{ name: string }>, label: string) => {
+      const groups = new Map<string, string[]>();
+      items.forEach((item) => {
+        const key = normalizeDataName(item.name);
+        if (!key) return;
+        const values = groups.get(key) || [];
+        values.push(item.name);
+        groups.set(key, values);
+      });
+      groups.forEach((names) => {
+        if (names.length > 1) findings.push(`${label} duplicate: ${names[0]} (${names.length} records)`);
+      });
+    };
+    collectProfileDuplicates(appState.idols, 'Idol profile');
+    collectProfileDuplicates(appState.girlGroups, 'Girl group');
+    const rosterGroups = new Map<string, Array<{ name: string; location: RosterLocation }>>();
+    getRosterEntries().forEach((entry) => {
+      const key = normalizeDataName(entry.name);
+      const values = rosterGroups.get(key) || [];
+      values.push(entry);
+      rosterGroups.set(key, values);
+    });
+    rosterGroups.forEach((entries) => {
+      const locations = Array.from(new Set(entries.map((entry) => `${entry.location.division} / ${entry.location.leagueName}`)));
+      if (entries.length > 1) {
+        findings.push(`Roster duplicate: ${entries[0].name} assigned ${entries.length} time(s) in ${locations.join(', ')}`);
+      }
+    });
+    setDuplicateScan(findings);
+    return findings;
+  };
   const refreshDataHistory = () => setDataHistory(loadDataHistory());
   const logDataChange = (entry: Omit<DataHistoryEntry, 'id' | 'timestamp'>) => {
     recordDataHistory(entry);
@@ -2106,6 +2140,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => runDuplicateScan()} className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-500/20">
+                  <Search className="mr-1 inline h-3.5 w-3.5" /> Scan for Duplicates
+                </button>
                 <button type="button" onClick={() => {
                   const blob = new Blob([JSON.stringify(dataHistory, null, 2)], { type: 'application/json' });
                   const url = URL.createObjectURL(blob);
@@ -2126,6 +2163,20 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 </button>
               </div>
             </div>
+            {duplicateScan !== null && (
+              <div className="mt-5 rounded-2xl border border-red-900/60 bg-red-950/20 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h4 className="font-poster-title text-sm font-black text-red-300">DATABASE INTEGRITY SCAN</h4>
+                  <button type="button" onClick={() => setDuplicateScan(null)} className="text-[10px] font-bold text-slate-400 hover:text-white">Dismiss</button>
+                </div>
+                {duplicateScan.length ? (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs font-bold text-red-300">Found {duplicateScan.length} possible duplicate issue(s).</p>
+                    {duplicateScan.map((finding, index) => <div key={index} className="rounded-lg border border-red-950 bg-black/40 px-3 py-2 text-xs text-amber-100">{finding}</div>)}
+                  </div>
+                ) : <p className="mt-3 text-xs font-bold text-emerald-300">No duplicate idol names, girl group names, or league roster assignments found.</p>}
+              </div>
+            )}
             <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
                 { label: 'Total Events', value: dataHistory.length },
