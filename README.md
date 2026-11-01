@@ -1,20 +1,30 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Sabung Idol Arena
 
-# Run and deploy your AI Studio app
+Sabung Idol Arena is a tournament management application for idol competitions. It includes league management, Division 2 promotion and relegation, cup competitions, match simulation, career statistics, and historical archives.
 
-This contains everything you need to run your app locally.
+## Development
 
-View your app in AI Studio: https://ai.studio/apps/5bf76c70-7402-4c22-8848-efa8aeb031aa
+**Requirements:** Node.js 22 or later.
 
-## Run Locally
+```bash
+npm ci
+npm run dev
+```
 
-**Prerequisites:**  Node.js
+Open the local development URL shown in the terminal.
 
+## Verification
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+```bash
+npm run lint
+npm test
+npm run build
+```
+
+## Production deployment
+
+The production application runs on **Cloudflare Workers** and serves the Vite build output from `dist/`.
+
+Deployment configuration lives in `wrangler.jsonc`. The GitHub Actions workflow in `.github/workflows/deploy-cloudflare.yml` builds and deploys the `zip-update` branch.
+
+Configure the repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` before enabling automated deployment. The API token needs permission to deploy Workers.
