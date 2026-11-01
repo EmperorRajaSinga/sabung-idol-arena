@@ -1970,6 +1970,18 @@ export function App() {
 
   // --- HANDLERS: CROWN CHAMPION & ARCHIVE ---
   const handleCrownChampionAndArchive = () => {
+    const unfinished = getUnfinishedCompetitions({
+      groups: appState.groups,
+      knockoutMatches: appState.knockoutMatches,
+      leagueState,
+      theIdolsState,
+      v5: appState.v5State || loadV5State(),
+      v5Names: loadNames(),
+    });
+    if (unfinished.length > 0) {
+      alert('Season archive blocked. Finish every started competition first:\\n\\n- ' + unfinished.join('\\n- '));
+      return;
+    }
     const currentSeasonId = Number(appState.config.seasonId || appState.config.seasonNumber || 1);
     let archiveRecord = getCompletedTournamentArchiveRecord(
       appState.config,
