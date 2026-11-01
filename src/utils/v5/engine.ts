@@ -139,6 +139,119 @@ export function simulateLeagueMatches<T extends LeagueInfo>(l: T, idols: Idol[])
   return { ...l, matches, standings, isCompleted: true, championId: ranked[0]?.idolId, championName: ranked[0]?.idolName };
 }
 
+/**
+ * Runs every Division 2 and V5 cup competition for the current season.
+ * Existing brackets/results are retained; missing brackets are generated from
+ * the completed Division 1/2 standings before simulation.
+ */
+export function simulateV5Season<T extends {
+  d2: DivisionTwoLeague[];
+  perLeague: number;
+  promotionCount: number;
+  pendingMoves: PromotionMove[] | null;
+  promotionHistory?: any[];
+  champsCup: { matches: BNode[]; byeIds: string[]; seedOrder?: string[] } | null;
+  leagueCup: LeagueCupState | null;
+  miniCups: Record<string, BNode[]>;
+  superA: BNode | null;
+  superB: BNode[];
+}>(
+  source: T,
+  d1: LeagueInfo[],
+  idols: Idol[],
+  grandCupMatches: Array<{ id: string; roundName: string; idolAId: string | null; idolBId: string | null; winnerId: string | null; completed: boolean }>,
+  theIdolsChampionId?: string
+): T {
+  const by = new Map(idols.map((idol) => [idol.id, idol]));
+  const d2 = (source.d2 || []).map((league) => simulateLeagueMatches(league, idols));
+  const completedD1 = d1.map((league) => {
+    const standings = calculateLeagueStandings(league.id, league.memberIds, league.matches, idols);
+    return { ...league, standings };
+  });
+
+  const champions = completedD1.map((league) => {
+    const ranked = rankStandings(league.standings);
+    const top = ranked[0];
+    return top ? {
+      idolId: top.idolId,
+      leagueId: league.id,
+      wonGrandCup: false,
+      wonTheIdols: false,
+      points: top.points || 0,
+      gameDiff: top.gameDiff || 0,
+    } : null;
+  }).filter((item): item is ChampionInfo => Boolean(item));
+
+  let champsCup = source.champsCup;
+  if (champions.length === 6) {
+    if (!champsCup?.matches?.length) champsCup = buildChampsCup(champions);
+    const matches = champsCup.matches.map((match) => ({ ...match }));
+    simulateChampsCup(matches, by, champsCup.seedOrder || []);
+    champsCup = { ...champsCup, matches };
+  }
+
+  let leagueCup = source.leagueCup;
+  const cupOrder = leagueCupOrder(completedD1, d2);
+  if (!leagueCup && cupOrder.length >= 2) {
+    const leagueOf: Record<string, number> = {};
+    [...completedD1, ...d2].forEach((league) => league.memberIds.forEach((id) => { leagueOf[id] = league.id; }));
+    leagueCup = createLeagueCup(cupOrder, leagueOf, d2.reduce((sum, league) => sum + league.memberIds.length, 0));
+  }
+  if (leagueCup) {
+    leagueCup = JSON.parse(JSON.stringify(leagueCup)) as LeagueCupState;
+    simulateLeagueCup(leagueCup, by);
+  }
+
+  const miniCups: Record<string, BNode[]> = { ...(source.miniCups || {}) };
+  completedD1.forEach((league) => {
+    const top16 = rankStandings(league.standings).slice(0, 16).map((standing) => standing.idolId);
+    if (top16.length !== 16) return;
+    const bracket = (miniCups[String(league.id)] || []).map((match) => ({ ...match }));
+    const ready = bracket.length ? bracket : buildMiniCup(league.id, top16);
+    simulateBracket(ready, by);
+    miniCups[String(league.id)] = ready;
+  });
+
+  const finalMatch = [...grandCupMatches].reverse().find((match) =>
+    match.completed && match.winnerId &&
+    (/grand final|^final$/i.test(match.roundName || ''))
+  );
+  const grandWinner = finalMatch?.winnerId || null;
+  const grandRunner = finalMatch
+    ? (finalMatch.winnerId === finalMatch.idolAId ? finalMatch.idolBId : finalMatch.idolAId)
+    : null;
+
+  let superA = source.superA ? { ...source.superA } : null;
+  if (!superA && theIdolsChampionId && grandWinner) {
+    superA = buildSuperCup('sc_a', theIdolsChampionId, grandWinner, grandRunner);
+  }
+  if (superA) {
+    const bracket = [superA];
+    simulateBracket(bracket, by);
+    superA = bracket[0];
+  }
+
+  const superB = completedD1.map((league) => {
+    const miniFinal = miniCups[String(league.id)]?.find((match) => match.id === `mc${league.id}_final`);
+    const ranked = rankStandings(league.standings);
+    const leagueWinner = ranked[0]?.idolId || '';
+    const miniWinner = miniFinal?.winnerId || '';
+    const miniRunner = miniFinal
+      ? (miniFinal.winnerId === miniFinal.idolAId ? miniFinal.idolBId : miniFinal.idolAId)
+      : null;
+    const existing = source.superB?.find((match) => match.id === `sc_b${league.id}`);
+    const match = existing ? { ...existing } : (leagueWinner && miniWinner
+      ? buildSuperCup(`sc_b${league.id}`, leagueWinner, miniWinner, miniRunner)
+      : null);
+    if (!match) return null;
+    const bracket = [match];
+    simulateBracket(bracket, by);
+    return bracket[0];
+  }).filter((match): match is BNode => Boolean(match));
+
+  return { ...source, d2, champsCup, leagueCup, miniCups, superA, superB };
+}
+
 /* ------------------------------------------------------------------ Promotion and relegation */
 export interface PromotionMove { leagueId: number; relegated: string[]; promoted: string[]; }
 export function computePromotionRelegation(d1: LeagueInfo, d2: LeagueInfo, count: number): PromotionMove {
