@@ -1,4 +1,4 @@
-import { loadV5State, saveV5State, V5State, V5TitleArchive } from './utils/v5/store';
+import { loadV5State, saveV5State, hasStoredV5State, V5State, V5TitleArchive } from './utils/v5/store';
 import { loadNames } from './utils/v5/names';
 
 
@@ -367,6 +367,11 @@ export function App() {
         if (idbState) {
           setAppState((prev) => {
             const merged: AppState = { ...prev };
+            // Recover V5 competitions from IndexedDB when the dedicated synchronous key is unavailable.
+            if (!hasStoredV5State() && idbState.v5State) {
+              merged.v5State = idbState.v5State;
+              saveV5State(idbState.v5State);
+            }
             if (Array.isArray(idbState.idols) && idbState.idols.length > 0) {
               merged.idols = idbState.idols;
             }
