@@ -2535,6 +2535,46 @@ export function App() {
 
   return (
     <div className="flex h-screen bg-[#120e0b] text-amber-50 overflow-hidden font-poster-body antialiased selection:bg-red-700 selection:text-white">
+      {promotionArchiveModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <section role="dialog" aria-modal="true" aria-labelledby="promotion-archive-title" className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-3xl border-2 border-amber-500/60 bg-[#18110b] p-5 text-amber-50 shadow-2xl sm:p-7">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-amber-900/60 pb-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Next season roster updated</p>
+                <h2 id="promotion-archive-title" className="mt-1 text-2xl font-black text-amber-300">Promotion &amp; Relegation Results</h2>
+                <p className="mt-1 text-xs text-amber-100/60">Season archived. The roster changes below have already been applied to the next season.</p>
+              </div>
+              <button type="button" onClick={() => setPromotionArchiveModal(null)} className="rounded-xl border border-slate-700 px-3 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800">Close</button>
+            </div>
+            <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {promotionArchiveModal.map((division) => (
+                <article key={division.leagueName} className="rounded-2xl border border-slate-700 bg-black/25 p-4">
+                  <h3 className="mb-3 text-sm font-black text-white">{division.leagueName}</h3>
+                  <div>
+                    <div className="mb-2 text-[10px] font-black uppercase tracking-wider text-emerald-400">Promoted to Division 1</div>
+                    {division.promoted.length ? division.promoted.map((idol) => (
+                      <div key={idol.id} className="mb-1 flex items-center justify-between gap-2 text-xs">
+                        <span className="font-bold text-emerald-100">{idol.name}</span><span className="text-[10px] text-slate-500">{idol.group}</span>
+                      </div>
+                    )) : <p className="text-xs text-slate-500">No promotions</p>}
+                  </div>
+                  <div className="mt-4 border-t border-slate-800 pt-3">
+                    <div className="mb-2 text-[10px] font-black uppercase tracking-wider text-rose-400">Relegated to Division 2</div>
+                    {division.relegated.length ? division.relegated.map((idol) => (
+                      <div key={idol.id} className="mb-1 flex items-center justify-between gap-2 text-xs">
+                        <span className="font-bold text-rose-100">{idol.name}</span><span className="text-[10px] text-slate-500">{idol.group}</span>
+                      </div>
+                    )) : <p className="text-xs text-slate-500">No relegations</p>}
+                  </div>
+                </article>
+              ))}
+            </div>
+            <div className="mt-5 flex justify-end">
+              <button type="button" onClick={() => setPromotionArchiveModal(null)} className="rounded-xl bg-amber-500 px-6 py-3 text-xs font-black text-black hover:bg-amber-400">Continue to Next Season</button>
+            </div>
+          </section>
+        </div>
+      )}
       {/* Sidebar Navigation (Desktop Fixed + Mobile Slide-out Drawer) */}
       <Sidebar
         activeTab={activeTab}
