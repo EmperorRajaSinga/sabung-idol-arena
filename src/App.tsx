@@ -677,7 +677,12 @@ export function App() {
     appState.matchDatabase.forEach((m) => map.set(m.matchId, m));
     leagueMatches.forEach((m) => map.set(m.matchId, m));
     theIdolsAllMatches.forEach((m) => map.set(m.matchId, m));
-    v5Matches.forEach((m) => map.set(m.matchId, m));
+    v5Matches.forEach((m) => {
+      const legacyMatchId = m.matchId.replace(/^v5_s\d+_/, 'v5_');
+      const legacy = map.get(legacyMatchId);
+      if (legacy && Number(legacy.seasonId) === Number(m.seasonId)) map.delete(legacyMatchId);
+      map.set(m.matchId, m);
+    });
     return Array.from(map.values());
   }, [appState.matchDatabase, leagueState, leagueArchives, theIdolsState, theIdolsArchives, appState.idols, appState.config.seasonNumber, appState.config.seasonName, v5State]);
 
