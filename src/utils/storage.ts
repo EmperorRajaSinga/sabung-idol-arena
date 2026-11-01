@@ -13,7 +13,7 @@ import {
   TheIdolsSeasonArchive,
 } from '../types';
 import { INITIAL_IDOLS, INITIAL_GIRL_GROUPS } from '../data/initialData';
-import { loadV5State } from './v5/store';
+import { loadV5State, saveV5State } from './v5/store';
 import type { V5State, V5TitleArchive } from './v5/store';
 import {
   loadPersonalRankings,
@@ -848,6 +848,8 @@ function saveToLocalStorageSafely(fullState: AppState & { _savedAt: number }): v
       leagueArchives: compactedLeagueArchives,
       theIdolsState: baseState.theIdolsState,
       theIdolsArchives: compactedTheIdolsArchives,
+      v5State: baseState.v5State,
+      v5TitleArchives: baseState.v5TitleArchives || [],
       _savedAt: baseState._savedAt,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tier3State));
@@ -896,6 +898,8 @@ function saveToLocalStorageSafely(fullState: AppState & { _savedAt: number }): v
       theIdolsArchives: compactedTheIdolsArchives,
       leagueState: compactedActiveLeagueState,
       theIdolsState: baseState.theIdolsState,
+      v5State: baseState.v5State,
+      v5TitleArchives: baseState.v5TitleArchives || [],
       _savedAt: baseState._savedAt,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tier4State));
@@ -985,6 +989,9 @@ export function saveAppState(
     personalRankings: currentRankings,
     _savedAt: timestamp,
   };
+
+  // Keep the dedicated V5 store synchronized with the main persisted snapshot.
+  if (fullState.v5State) saveV5State(fullState.v5State);
 
   // 1. Primary storage: Asynchronously save full complete state (with all base64 photos, entire match history, archives) to IndexedDB
   saveAppStateToIndexedDB(fullState, immediate);
