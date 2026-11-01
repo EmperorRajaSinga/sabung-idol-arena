@@ -5,7 +5,7 @@ import type { V5PromotionHistoryEntry, V5TitleArchive } from '../utils/v5/store'
 type SectionKey = 'Crown Cup' | 'Open Arena Cup' | 'Spotlight Cup' | 'Super Cup A' | 'Super Cup B' | 'Division 2';
 type Row = {
   idolId: string; idolName: string; group: string; photo?: string;
-  seasons: Set<number>; matches: number; wins: number; draws: number; losses: number;
+  events: Set<string>; matches: number; wins: number; draws: number; losses: number;
   points: number; titles: number; runnerUps: number; topFour: number;
   promotions: number; relegations: number;
 };
@@ -39,7 +39,7 @@ export const CareerV5StatsPanel: React.FC<{
       const row = table.get(id) || {
         idolId: id, idolName: idol?.name || name || 'Unknown Idol',
         group: group || idol?.girlGroup || 'Solo', photo: photo || idol?.photoUrl,
-        seasons: new Set<number>(), matches: 0, wins: 0, draws: 0, losses: 0,
+        events: new Set<string>(), matches: 0, wins: 0, draws: 0, losses: 0,
         points: 0, titles: 0, runnerUps: 0, topFour: 0, promotions: 0, relegations: 0,
       };
       table.set(id, row);
@@ -54,11 +54,13 @@ export const CareerV5StatsPanel: React.FC<{
       if (seenMatches.has(key)) return;
       seenMatches.add(key);
       const season = Number(match.seasonId);
+      const eventName = String(match.stage || '').split('/')[0].trim();
+      const eventKey = `${Number.isFinite(season) ? season : 'unknown'}:${eventName}`;
       const scoreA = Number(match.scoreA), scoreB = Number(match.scoreB);
       if (!Number.isFinite(scoreA) || !Number.isFinite(scoreB)) return;
       const a = getRow(match.idolAId, match.idolAName, match.idolAGroup, match.idolAPhoto);
       const b = getRow(match.idolBId, match.idolBName, match.idolBGroup, match.idolBPhoto);
-      [a, b].forEach((row) => { if (Number.isFinite(season)) row.seasons.add(season); row.matches += 1; });
+      [a, b].forEach((row) => { row.events.add(eventKey); row.matches += 1; });
       if (scoreA > scoreB) { a.wins += 1; b.losses += 1; if (section === 'Division 2') a.points += 3; }
       else if (scoreB > scoreA) { b.wins += 1; a.losses += 1; if (section === 'Division 2') b.points += 3; }
       else { a.draws += 1; b.draws += 1; if (section === 'Division 2') { a.points += 1; b.points += 1; } }
@@ -85,12 +87,12 @@ export const CareerV5StatsPanel: React.FC<{
       if (record.winnerId) {
         const row = getRow(record.winnerId, record.winnerName, record.winnerGroup, record.winnerPhoto);
         row.titles += 1;
-        if (Number.isFinite(season)) row.seasons.add(season);
+        row.events.add(`${Number.isFinite(season) ? season : 'unknown'}:${record.competition}`);
       }
       if (record.runnerUpId) {
         const row = getRow(record.runnerUpId, record.runnerUpName, record.runnerUpGroup, record.runnerUpPhoto);
         row.runnerUps += 1;
-        if (Number.isFinite(season)) row.seasons.add(season);
+        row.events.add(`${Number.isFinite(season) ? season : 'unknown'}:${record.competition}`);
       }
     });
 
@@ -101,7 +103,7 @@ export const CareerV5StatsPanel: React.FC<{
           (move.promoted || []).forEach((id) => {
             const row = getRow(id);
             row.promotions += 1;
-            if (Number.isFinite(season)) row.seasons.add(season);
+            row.events.add(`${Number.isFinite(season) ? season : 'unknown'}:Division 2`);
           });
           (move.relegated || []).forEach((id) => {
             const row = getRow(id);
@@ -113,7 +115,7 @@ export const CareerV5StatsPanel: React.FC<{
     }
 
     return [...table.values()].map((row) => ({
-      ...row, participation: row.seasons.size,
+      ...row, participation: row.events.size,
       winRate: row.matches ? row.wins / row.matches * 100 : 0,
     })).sort((a, b) => section === 'Division 2'
       ? b.points - a.points || b.wins - a.wins || a.idolName.localeCompare(b.idolName)
