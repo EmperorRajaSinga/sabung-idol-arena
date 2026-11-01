@@ -190,7 +190,10 @@ export function simulateV5Season<T extends {
 
   let champsCup = source.champsCup;
   if (champions.length === 6) {
-    if (!champsCup?.matches?.length) champsCup = buildChampsCup(champions);
+    const currentChampionIds = new Set(champions.map((champion) => champion.idolId));
+    const existingChampionIds = new Set((champsCup?.matches || []).flatMap((match) => [match.idolAId, match.idolBId]).filter((id): id is string => Boolean(id)));
+    const bracketMatchesCurrentChampions = existingChampionIds.size === 6 && [...currentChampionIds].every((id) => existingChampionIds.has(id));
+    if (!champsCup?.matches?.length || !bracketMatchesCurrentChampions) champsCup = buildChampsCup(champions);
     const matches = champsCup.matches.map((match) => ({ ...match }));
     simulateChampsCup(matches, by, champsCup.seedOrder || []);
     champsCup = { ...champsCup, matches };
@@ -213,7 +216,9 @@ export function simulateV5Season<T extends {
     const top16 = rankStandings(league.standings).slice(0, 16).map((standing) => standing.idolId);
     if (top16.length !== 16) return;
     const bracket = (miniCups[String(league.id)] || []).map((match) => ({ ...match }));
-    const ready = bracket.length ? bracket : buildMiniCup(league.id, top16);
+    const existingMiniIds = new Set(bracket.filter((match) => match.roundName === 'Round of 16').flatMap((match) => [match.idolAId, match.idolBId]).filter((id): id is string => Boolean(id)));
+    const miniCupMatchesCurrentTop16 = existingMiniIds.size === 16 && top16.every((id) => existingMiniIds.has(id));
+    const ready = bracket.length && miniCupMatchesCurrentTop16 ? bracket : buildMiniCup(league.id, top16);
     simulateBracket(ready, by);
     miniCups[String(league.id)] = ready;
   });
@@ -228,8 +233,9 @@ export function simulateV5Season<T extends {
     : null;
 
   let superA = source.superA ? { ...source.superA } : null;
-  if (!superA && theIdolsChampionId && grandWinner) {
-    superA = buildSuperCup('sc_a', theIdolsChampionId, grandWinner, grandRunner);
+  if (theIdolsChampionId && grandWinner) {
+    const expectedSuperA = buildSuperCup('sc_a', theIdolsChampionId, grandWinner, grandRunner);
+    if (!superA || superA.idolAId !== expectedSuperA.idolAId || superA.idolBId !== expectedSuperA.idolBId) superA = expectedSuperA;
   }
   if (superA) {
     const bracket = [superA];
@@ -246,9 +252,12 @@ export function simulateV5Season<T extends {
       ? (miniFinal.winnerId === miniFinal.idolAId ? miniFinal.idolBId : miniFinal.idolAId)
       : null;
     const existing = source.superB?.find((match) => match.id === `sc_b${league.id}`);
-    const match = existing ? { ...existing } : (leagueWinner && miniWinner
+    const expected = leagueWinner && miniWinner
       ? buildSuperCup(`sc_b${league.id}`, leagueWinner, miniWinner, miniRunner)
-      : null);
+      : null;
+    const match = existing && expected && existing.idolAId === expected.idolAId && existing.idolBId === expected.idolBId
+      ? { ...existing }
+      : expected;
     if (!match) return null;
     const bracket = [match];
     simulateBracket(bracket, by);
