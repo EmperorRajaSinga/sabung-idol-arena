@@ -52,6 +52,9 @@ export function saveV5State(s: V5State): boolean {
   // only for migration from older versions.
   try {
     localStorage.setItem(KEY, serialized);
+    // Once the current primary write succeeds, release the legacy duplicate full-state
+    // backup. The compact independent roster snapshot is the recovery path for rosters.
+    try { localStorage.removeItem(BACKUP_KEY); } catch { /* the primary save already succeeded */ }
     return true;
   } catch {
     console.error('[Persistence] Full V5 snapshot could not fit in localStorage. The independent roster snapshot remains available.');
