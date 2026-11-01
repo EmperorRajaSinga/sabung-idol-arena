@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import type { ArchivedMatch, Idol } from '../types';
+import type { V5TitleArchive } from '../utils/v5/store';
 
 type SectionKey = 'Crown Cup' | 'Open Arena Cup' | 'Spotlight Cup' | 'Super Cup A' | 'Super Cup B' | 'Division 2';
 type Row = {
@@ -24,7 +25,8 @@ export const CareerV5StatsPanel: React.FC<{
   section: SectionKey;
   matchDatabase?: ArchivedMatch[];
   idols?: Idol[];
-}> = ({ section, matchDatabase = [], idols = [] }) => {
+  v5TitleArchives?: V5TitleArchive[];
+}> = ({ section, matchDatabase = [], idols = [], v5TitleArchives = [] }) => {
   const idolMap = useMemo(() => new Map(
     (Array.isArray(idols) ? idols : []).filter((idol) => idol && idol.id).map((idol) => [idol.id, idol])
   ), [idols]);
@@ -32,7 +34,6 @@ export const CareerV5StatsPanel: React.FC<{
   const rows = useMemo(() => {
     const table = new Map<string, Row>();
     const seen = new Set<string>();
-    const finals = new Map<string, { winnerId: string; runnerUpId: string }>();
     const safeMatches = (Array.isArray(matchDatabase) ? matchDatabase : [])
       .filter((match) => match && typeof match === 'object' && readSection(match) === section);
 
@@ -72,76 +73,42 @@ export const CareerV5StatsPanel: React.FC<{
         else row.losses += 1;
       });
 
-      if (section !== 'Division 2') {
-        const detail = String(match.stage || '').split(' / ').slice(1).join(' / ').toLowerCase();
-        if (/^(?:grand\\s+)?final(?:\\b|\\s|$)/.test(detail) || detail === 'super cup') {
-          const winner = match.winnerId || (scoreA > scoreB ? match.idolAId : scoreB > scoreA ? match.idolBId : '');
-          const runner = match.loserId || (winner === match.idolAId ? match.idolBId : match.idolAId);
-          if (winner) {
-            const competitionKey = String(match.stage || '').split(' / ')[0].toLowerCase();
-            finals.set(`${String(match.seasonId || 1)}::${competitionKey}`, { winnerId: winner, runnerUpId: runner });
-          }
-        }
+      // Title and runner-up totals come from archived title records, not a
+      // partial live table or an inferred final match. This prevents a current
+      // Division 2 leader from being counted as a champion before the season ends.
+    });
+
+    const titleRecords = (v5TitleArchives || []).filter((record) => {
+      const name = String(record.competition || '').toLowerCase();
+      if (section === 'Division 2') return record.isDivision && name.startsWith('division 2');
+      if (record.isDivision) return false;
+      if (section === 'Crown Cup') return name === 'league champions cup';
+      if (section === 'Open Arena Cup') return name === 'all-league knockout cup';
+      if (section === 'Spotlight Cup') return name.startsWith('top 16 mini cup');
+      if (section === 'Super Cup A') return name === 'super cup a';
+      if (section === 'Super Cup B') return name.startsWith('super cup b');
+      return false;
+    });
+    titleRecords.forEach((record) => {
+      if (record.winnerId) {
+        const winner = getRow(record.winnerId, record.winnerName, record.winnerGroup, record.winnerPhoto);
+        winner.titles += 1;
+        winner.podiums += 1;
+      }
+      if (record.runnerUpId) {
+        const runner = getRow(record.runnerUpId, record.runnerUpName, record.runnerUpGroup, record.runnerUpPhoto);
+        runner.runnerUps += 1;
+        runner.podiums += 1;
       }
     });
 
-    if (section === 'Division 2') {
-      const bySeason = new Map<string, Row[]>();
-      table.forEach((row) => {
-        // Match rows from multiple seasons are aggregated for career totals. Titles are awarded
-        // from the season-specific standings below, not once per match.
-        bySeason.set('career', [...(bySeason.get('career') || []), row]);
-      });
-      // Division 2 historical archive records carry the season in each match. Compute each
-      // season's table independently so a champion is counted once per completed season.
-      const seasonTables = new Map<string, Map<string, { points: number; diff: number; scored: number }>>();
-      const seasonSeen = new Set<string>();
-      safeMatches.forEach((match) => {
-        if (!match.idolAId || !match.idolBId || match.scoreA == null || match.scoreB == null) return;
-        const seasonMatchKey = String(match.matchId || [match.seasonId, match.idolAId, match.idolBId, match.scoreA, match.scoreB].join('|'));
-        if (seasonSeen.has(seasonMatchKey)) return;
-        seasonSeen.add(seasonMatchKey);
-        const competitionKey = String(match.stage || '').split(' / ')[0].toLowerCase();
-        const season = `${String(match.seasonId || 1)}::${competitionKey}`;
-        if (!seasonTables.has(season)) seasonTables.set(season, new Map());
-        const seasonTable = seasonTables.get(season)!;
-        const a = Number(match.scoreA), b = Number(match.scoreB);
-        if (!Number.isFinite(a) || !Number.isFinite(b)) return;
-        const update = (id: string, scored: number, conceded: number) => {
-          const current = seasonTable.get(id) || { points: 0, diff: 0, scored: 0 };
-          current.points += scored > conceded ? 3 : scored === conceded ? 1 : 0;
-          current.diff += scored - conceded;
-          current.scored += scored;
-          seasonTable.set(id, current);
-        };
-        update(match.idolAId, a, b); update(match.idolBId, b, a);
-      });
-      seasonTables.forEach((seasonTable) => {
-        const ranking = [...seasonTable.entries()].sort((a, b) =>
-          b[1].points - a[1].points || b[1].diff - a[1].diff || b[1].scored - a[1].scored
-        );
-        ranking.forEach(([id], index) => {
-          const row = table.get(id);
-          if (!row) return;
-          if (index === 0) { row.titles += 1; row.podiums += 1; }
-          else if (index < 3) row.podiums += 1;
-        });
-      });
-    } else {
-      finals.forEach(({ winnerId, runnerUpId }) => {
-        const winner = table.get(winnerId);
-        if (winner) { winner.titles += 1; winner.podiums += 1; }
-        const runner = table.get(runnerUpId);
-        if (runner) { runner.runnerUps += 1; runner.podiums += 1; }
-      });
-    }
     return [...table.values()].map((row) => ({
       ...row, goalDiff: row.scored - row.conceded,
       winRate: row.matches ? row.wins / row.matches * 100 : 0,
     })).sort((a, b) => section === 'Division 2'
       ? b.points - a.points || b.goalDiff - a.goalDiff || b.scored - a.scored || a.idolName.localeCompare(b.idolName)
       : b.titles - a.titles || b.wins - a.wins || b.winRate - a.winRate || a.idolName.localeCompare(b.idolName));
-  }, [matchDatabase, section, idolMap]);
+  }, [matchDatabase, section, idolMap, v5TitleArchives]);
 
   const totals = useMemo(() => rows.reduce((sum, row) => ({
     matches: sum.matches + row.matches,
