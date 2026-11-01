@@ -653,7 +653,7 @@ export function App() {
 
   // Fast O(1) map of Idols by ID
   const safeIdols = useMemo(
-    () => (Array.isArray(appState.idols) ? appState.idols.filter((idol): idol is Idol => Boolean(idol && typeof idol === 'object' && idol.id)) : []),
+    () => (Array.isArray(appState.idols) ? appState.idols.filter((idol): idol is Idol => Boolean(idol && typeof idol === 'object' && idol.id && typeof idol.name === 'string' && idol.name.trim())) : []),
     [appState.idols]
   );
 
@@ -714,7 +714,19 @@ export function App() {
       if (legacy && Number(legacy.seasonId) === Number(m.seasonId)) map.delete(legacyMatchId);
       map.set(m.matchId, m);
     });
-    return Array.from(map.values());
+    return Array.from(map.values())
+      .filter((match) => match && typeof match === 'object' && match.matchId && match.idolAId && match.idolBId)
+      .map((match) => ({
+        ...match,
+        idolAName: String(match.idolAName || ''),
+        idolBName: String(match.idolBName || ''),
+        idolAGroup: String(match.idolAGroup || ''),
+        idolBGroup: String(match.idolBGroup || ''),
+        winnerName: String(match.winnerName || ''),
+        loserName: String(match.loserName || ''),
+        stage: String(match.stage || ''),
+        seasonName: String(match.seasonName || ''),
+      }));
   }, [appState.matchDatabase, leagueState, leagueArchives, theIdolsState, theIdolsArchives, appState.idols, appState.config.seasonNumber, appState.config.seasonName, v5State]);
 
   // Dynamic season stats derived from database truth (how many seasons have actually been played, archived, and stored)
@@ -2716,7 +2728,7 @@ export function App() {
 
           {activeTab === 'idol_profile' && (
             <IdolProfilePanel
-              idols={appState.idols}
+              idols={safeIdols}
               careerStats={careerStats}
               matchDatabase={allCombinedMatchDatabase}
               selectedIdolId={selectedIdolId}
