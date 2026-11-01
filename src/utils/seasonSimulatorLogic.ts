@@ -309,9 +309,11 @@ export function simulateEntireSeason(
 
   if (resolvedPostseasonFormat === 'grand_cup_64') {
     // Grand Cup 64: 36 Direct Top 6 + 28 Swiss Play-In Qualifiers = 64
-    if (!swissPlayIn || !swissPlayIn.pools || Object.keys(swissPlayIn.pools).length === 0) {
-      swissPlayIn = generateSwissPlayIn(leagueSeason.leagues, idols);
-    }
+    // Always reconcile the saved Swiss entrants against the freshly completed
+    // league standings before simulating. This preserves valid draws/results,
+    // but rebuilds stale brackets when direct qualifiers (ranks 1-6) have leaked
+    // into Swiss or the league standings have otherwise changed.
+    swissPlayIn = generateSwissPlayIn(leagueSeason.leagues, idols, swissPlayIn);
     swissPlayIn = simulateAllSwissMatches(swissPlayIn, idols);
     leagueSeason.swissPlayIn = swissPlayIn;
 
