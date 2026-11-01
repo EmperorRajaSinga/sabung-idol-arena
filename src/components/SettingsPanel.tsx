@@ -2449,7 +2449,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
               {/* Active Division 2 roster */}
               {(() => {
-                const currentLeague = v5State.d2.find((league) => league.id === (selectedD2LeagueTab || v5State.d2[0].id)) || v5State.d2[0];
+                const currentLeague = v5State.d2.length
+                  ? (v5State.d2.find((league) => league.id === selectedD2LeagueTab) || v5State.d2[0])
+                  : undefined;
                 if (!currentLeague) return null;
 
                 const d2Assigned = new Set(v5State.d2.flatMap((league) => league.memberIds || []));
