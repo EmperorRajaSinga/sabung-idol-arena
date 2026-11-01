@@ -107,10 +107,24 @@ export function saveDivisionOneRosterSnapshot<T extends { id: number; memberIds:
     return false;
   }
   const current = loadRosterSnapshot();
+  const incoming = toMemberships(leagues);
+  const savedById = new Map((current?.division1 || []).map((league) => [league.id, league.memberIds]));
+  // LeagueSystemPanel can emit an older render snapshot while another roster
+  // update is still settling. Never let an accidental empty array erase a
+  // populated division. Explicit roster replacement still writes non-empty
+  // membership normally; intentional clearing is handled by the dedicated
+  // clearDivisionOneRosterSnapshot operation.
+  const protectedMembership = incoming.map((league) => {
+    const savedMembers = savedById.get(league.id) || [];
+    if (league.memberIds.length === 0 && savedMembers.length > 0) {
+      return { ...league, memberIds: [...savedMembers] };
+    }
+    return league;
+  });
   return writeSnapshot({
     version: 1,
     updatedAt: Date.now(),
-    division1: toMemberships(leagues),
+    division1: protectedMembership,
     division2: current?.division2 ?? null,
   });
 }
