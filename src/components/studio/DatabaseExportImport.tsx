@@ -41,6 +41,7 @@ import { saveTheIdolsState, saveTheIdolsArchives } from '../../utils/theIdolsLog
 import { saveV5State } from '../../utils/v5/store';
 import type { V5State } from '../../utils/v5/store';
 import { rebuildLeague } from '../../utils/v5/engine';
+import { recordDataHistory } from '../../utils/dataChangeHistory';
 
 interface DatabaseExportImportProps {
   appState: AppState;
@@ -426,6 +427,13 @@ export const DatabaseExportImport: React.FC<DatabaseExportImportProps> = ({
         }
       }
 
+      recordDataHistory({
+        action: 'imported',
+        entity: 'database_import',
+        entityName: importStaging.description,
+        source: 'Settings / Permanent Download & Upload',
+        details: `Imported database format: ${format}.`,
+      });
       onRefreshAllStats?.();
       setImportStaging(null);
       showToast(`Successfully restored ${importStaging.description} and synchronized all state!`, 'success');
