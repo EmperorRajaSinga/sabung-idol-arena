@@ -97,8 +97,8 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
   const sortedStats = [...safeCareerStats]
     .filter(
       (s) =>
-        s.idolName.toLowerCase().includes(search.toLowerCase()) ||
-        s.girlGroup.toLowerCase().includes(search.toLowerCase())
+        String(s.idolName || '').toLowerCase().includes(search.toLowerCase()) ||
+        String(s.girlGroup || '').toLowerCase().includes(search.toLowerCase())
     )
     .sort((a, b) => {
       const valA = a[sortBy];
@@ -244,8 +244,8 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
     return [...leagueCareerStats]
       .filter(
         (s) =>
-          s.idolName.toLowerCase().includes(search.toLowerCase()) ||
-          s.girlGroup.toLowerCase().includes(search.toLowerCase())
+          String(s.idolName || '').toLowerCase().includes(search.toLowerCase()) ||
+          String(s.girlGroup || '').toLowerCase().includes(search.toLowerCase())
       )
       .sort((a, b) => {
         const valA = a[leagueSortBy];
@@ -419,8 +419,8 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
     return [...theIdolsCareerStats]
       .filter(
         (s) =>
-          s.idolName.toLowerCase().includes(search.toLowerCase()) ||
-          s.girlGroup.toLowerCase().includes(search.toLowerCase())
+          String(s.idolName || '').toLowerCase().includes(search.toLowerCase()) ||
+          String(s.girlGroup || '').toLowerCase().includes(search.toLowerCase())
       )
       .sort((a, b) => {
         const valA = a[theIdolsSortBy];
@@ -555,8 +555,8 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
     return [...combinedCareerStats]
       .filter(
         (s) =>
-          s.idolName.toLowerCase().includes(search.toLowerCase()) ||
-          s.girlGroup.toLowerCase().includes(search.toLowerCase())
+          String(s.idolName || '').toLowerCase().includes(search.toLowerCase()) ||
+          String(s.girlGroup || '').toLowerCase().includes(search.toLowerCase())
       )
       .sort((a, b) => {
         const valA = a[combinedSortBy];
