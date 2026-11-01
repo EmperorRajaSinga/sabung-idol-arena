@@ -2991,6 +2991,7 @@ export function App() {
               idols={appState.idols}
               matchDatabase={allCombinedMatchDatabase}
               archives={appState.archives}
+              v5TitleArchives={appState.v5TitleArchives || []}
               onSelectIdolProfile={(id) => {
                 setSelectedIdolId(id);
                 setActiveTab('idol_profile');
