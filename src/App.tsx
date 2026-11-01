@@ -39,32 +39,32 @@ import {
 
 import { Sidebar } from './components/Sidebar';
 import { DashboardPanel } from './components/DashboardPanel';
-import { SettingsPanel } from './components/SettingsPanel';
-import { IdolDatabasePanel } from './components/IdolDatabasePanel';
-import { GirlGroupManagerPanel } from './components/GirlGroupManagerPanel';
-import { RatingPanel } from './components/RatingPanel';
-import { SeedManagerPanel } from './components/SeedManagerPanel';
-import { NationalityManagerPanel } from './components/NationalityManagerPanel';
-import { InactiveManagerPanel } from './components/InactiveManagerPanel';
-import { CompetitionManagerPanel } from './components/CompetitionManagerPanel';
-import { GroupDrawPanel } from './components/GroupDrawPanel';
-import { GroupStagePanel } from './components/GroupStagePanel';
-import { KnockoutBracketPanel } from './components/KnockoutBracketPanel';
-import { PublicResultsPanel } from './components/PublicResultsPanel';
+const SettingsPanel = React.lazy(() => import('./components/SettingsPanel').then((module) => ({ default: module.SettingsPanel })));
+const IdolDatabasePanel = React.lazy(() => import('./components/IdolDatabasePanel').then((module) => ({ default: module.IdolDatabasePanel })));
+const GirlGroupManagerPanel = React.lazy(() => import('./components/GirlGroupManagerPanel').then((module) => ({ default: module.GirlGroupManagerPanel })));
+const RatingPanel = React.lazy(() => import('./components/RatingPanel').then((module) => ({ default: module.RatingPanel })));
+const SeedManagerPanel = React.lazy(() => import('./components/SeedManagerPanel').then((module) => ({ default: module.SeedManagerPanel })));
+const NationalityManagerPanel = React.lazy(() => import('./components/NationalityManagerPanel').then((module) => ({ default: module.NationalityManagerPanel })));
+const InactiveManagerPanel = React.lazy(() => import('./components/InactiveManagerPanel').then((module) => ({ default: module.InactiveManagerPanel })));
+const CompetitionManagerPanel = React.lazy(() => import('./components/CompetitionManagerPanel').then((module) => ({ default: module.CompetitionManagerPanel })));
+const GroupDrawPanel = React.lazy(() => import('./components/GroupDrawPanel').then((module) => ({ default: module.GroupDrawPanel })));
+const GroupStagePanel = React.lazy(() => import('./components/GroupStagePanel').then((module) => ({ default: module.GroupStagePanel })));
+const KnockoutBracketPanel = React.lazy(() => import('./components/KnockoutBracketPanel').then((module) => ({ default: module.KnockoutBracketPanel })));
+const PublicResultsPanel = React.lazy(() => import('./components/PublicResultsPanel').then((module) => ({ default: module.PublicResultsPanel })));
 
 
-import { GirlGroupStatsPanel } from './components/GirlGroupStatsPanel';
-import { SeasonProfilePanel } from './components/SeasonProfilePanel';
-
-
-
+const GirlGroupStatsPanel = React.lazy(() => import('./components/GirlGroupStatsPanel').then((module) => ({ default: module.GirlGroupStatsPanel })));
+const SeasonProfilePanel = React.lazy(() => import('./components/SeasonProfilePanel').then((module) => ({ default: module.SeasonProfilePanel })));
 
 
 
-import { LeagueSystemPanel } from './components/LeagueSystemPanel';
 
-import { TheIdolsPanel } from './components/TheIdolsPanel';
-import { RankPanel } from './components/RankPanel';
+
+
+const LeagueSystemPanel = React.lazy(() => import('./components/LeagueSystemPanel').then((module) => ({ default: module.LeagueSystemPanel })));
+
+const TheIdolsPanel = React.lazy(() => import('./components/TheIdolsPanel').then((module) => ({ default: module.TheIdolsPanel })));
+const RankPanel = React.lazy(() => import('./components/RankPanel').then((module) => ({ default: module.RankPanel })));
 
 import { incrementSeasonName, extractBaseTournamentName } from './utils/seasonNameHelper';
 import {
