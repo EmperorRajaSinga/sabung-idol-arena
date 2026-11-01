@@ -60,7 +60,8 @@ export interface AppState {
   customLeagueBranding?: LeagueBrandingItem[];
   theIdolsState?: TheIdolsSeasonState | null;
   theIdolsArchives?: TheIdolsSeasonArchive[];
-  v5State?: V5State;\n  v5TitleArchives?: V5TitleArchive[];
+  v5State?: V5State;
+  v5TitleArchives?: V5TitleArchive[];
 }
 
 export const DEFAULT_CONFIG: TournamentConfig = {
@@ -107,7 +108,8 @@ export const createDefaultState = (): AppState => {
     customLeagueBranding: DEFAULT_LEAGUE_DEFS,
     theIdolsState: defaultTheIdols,
     theIdolsArchives: [],
-    v5State: loadV5State(),\n    v5TitleArchives: [],
+    v5State: loadV5State(),
+    v5TitleArchives: [],
   };
 };
 
@@ -1469,7 +1471,8 @@ export function exportMatchDatabaseToCSV(
     ].join(',');
   });
 
-  const csvContent = [headers.join(','), ...rows].join('\r\n');
+  const csvContent = [headers.join(','), ...rows].join('\r
+');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const downloadAnchor = document.createElement('a');

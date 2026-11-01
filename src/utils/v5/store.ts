@@ -1,5 +1,6 @@
 import type { DivisionTwoLeague, BNode, LeagueCupState, PromotionMove } from './engine';
-export interface V5TitleArchive { id: string; seasonNumber: number; seasonName: string; competition: string; winnerId: string; winnerName: string; winnerGroup: string; winnerPhoto?: string; runnerUpId?: string; runnerUpName?: string; runnerUpGroup?: string; runnerUpPhoto?: string; isDivision: boolean; archivedAt: string; }\nexport interface V5State {
+export interface V5TitleArchive { id: string; seasonNumber: number; seasonName: string; competition: string; winnerId: string; winnerName: string; winnerGroup: string; winnerPhoto?: string; runnerUpId?: string; runnerUpName?: string; runnerUpGroup?: string; runnerUpPhoto?: string; isDivision: boolean; archivedAt: string; }
+export interface V5State {
   d2: DivisionTwoLeague[]; perLeague: number; promotionCount: number; pendingMoves: PromotionMove[] | null;
   champsCup: { matches: BNode[]; byeIds: string[] } | null; leagueCup: LeagueCupState | null;
   miniCups: Record<string, BNode[]>; superA: BNode | null; superB: BNode[];

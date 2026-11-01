@@ -45,7 +45,8 @@ interface HallOfChampionsPanelProps {
   leagueArchives?: LeagueSeasonArchive[];
   theIdolsState?: TheIdolsSeasonState | null;
   theIdolsArchives?: TheIdolsSeasonArchive[];
-  v5State?: V5State;\n  v5TitleArchives?: V5TitleArchive[];
+  v5State?: V5State;
+  v5TitleArchives?: V5TitleArchive[];
   onReconcileArchives?: () => void;
 }
 

@@ -1826,7 +1826,10 @@ export function App() {
       v5Names: loadNames(),
     });
     if (unfinished.length > 0) {
-      alert('This season cannot be archived yet. Unfinished competitions:\n\n- ' + unfinished.join('\n- '));
+      alert('This season cannot be archived yet. Unfinished competitions:
+
+- ' + unfinished.join('
+- '));
       return;
     }
     setAppState((prev) => {
