@@ -55,7 +55,7 @@ interface SeasonSimulatorPanelProps {
   theIdolsArchives?: TheIdolsSeasonArchive[];
   onUpdateTheIdolsArchives?: (newArchives: TheIdolsSeasonArchive[]) => void;
   setActiveTab: (tab: ActiveTab) => void;
-  onCrownChampionAndArchive: () => void;
+  onCrownChampionAndArchive: (payload?: any) => void;
   v5State?: V5State | null;
   onUpdateV5State?: (state: V5State) => void;
   v5TitleArchives?: import('../utils/v5/store').V5TitleArchive[];
@@ -200,6 +200,7 @@ export const SeasonSimulatorPanel: React.FC<SeasonSimulatorPanelProps> = ({
   };
 
   const handleArchiveSeasonAndAdvance = () => {
+    let archivePayload: any;
     if (simulationResult) {
       if (simulationResult.updatedTournamentArchives) {
         saveTournamentArchives(simulationResult.updatedTournamentArchives);
@@ -212,6 +213,21 @@ export const SeasonSimulatorPanel: React.FC<SeasonSimulatorPanelProps> = ({
         if (onUpdateTheIdolsArchives) onUpdateTheIdolsArchives(simulationResult.updatedTheIdolsArchives);
         saveTheIdolsArchives(simulationResult.updatedTheIdolsArchives);
       }
+      archivePayload = {
+        appState: {
+          ...appState,
+          ...simulationResult.updatedAppState,
+          archives: simulationResult.updatedTournamentArchives || appState.archives,
+          leagueArchives: simulationResult.updatedLeagueArchives || leagueArchives,
+          theIdolsArchives: simulationResult.updatedTheIdolsArchives || theIdolsArchives,
+          matchDatabase: simulationResult.syncedMatchDatabase,
+          v5State: simulationResult.updatedV5State || v5State,
+          v5TitleArchives: simulationResult.updatedV5TitleArchives || v5TitleArchives,
+        },
+        leagueState: simulationResult.updatedLeagueState,
+        theIdolsState: simulationResult.updatedTheIdolsState,
+        v5State: simulationResult.updatedV5State || v5State,
+      };
       onUpdateAppState((prev) => ({
         ...prev,
         archives: simulationResult.updatedTournamentArchives,
@@ -224,7 +240,7 @@ export const SeasonSimulatorPanel: React.FC<SeasonSimulatorPanelProps> = ({
     }
     flushAppStateToIndexedDB();
     setSimulationResult(null);
-    onCrownChampionAndArchive();
+    onCrownChampionAndArchive(archivePayload);
   };
 
   // Master 1-Click Simulation of Entire Season
