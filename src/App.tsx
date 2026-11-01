@@ -2172,6 +2172,17 @@ export function App() {
         prev.knockoutMatches,
         prev.idols
       );
+      const currentV5 = prev.v5State || loadV5State();
+      const v5Snapshot = createV5ArchiveSnapshot(
+        currentV5,
+        updatedMatchDb,
+        prev.v5TitleArchives || [],
+        prev.idols,
+        Number(prev.config.seasonId || prev.config.seasonNumber || 1),
+        prev.config.seasonName || `Season ${prev.config.seasonNumber || 1}`
+      );
+      saveV5State(v5Snapshot.resetState);
+      saveDivisionTwoRosterSnapshot(v5Snapshot.resetState.d2 || []);
 
       // Auto-archive completed tournament if Grand Final was completed but not yet archived
       const pendingRecord = getCompletedTournamentArchiveRecord(
@@ -2230,7 +2241,9 @@ export function App() {
       return {
         ...prev,
         archives: updatedArchives,
-        matchDatabase: updatedMatchDb,
+        matchDatabase: v5Snapshot.matches,
+        v5State: v5Snapshot.resetState,
+        v5TitleArchives: v5Snapshot.titles,
         groups: [],
         knockoutMatches: [],
         selectedParticipantIds: [],
