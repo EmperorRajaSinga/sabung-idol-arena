@@ -393,18 +393,19 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
     const competition = competitionStageMap.find(([, pattern]) => pattern.test(stage))?.[0];
     if (!competition) return;
     const round = stage.split(' / ').slice(1).join(' / ').trim();
-    if (!/^final(?:\\b|\\s|$)/i.test(round)) return;
+    if (!/^(?:grand\\s+)?final(?:\\b|\\s|$)/i.test(round) && round.toLowerCase() !== 'super cup') return;
     const scoreA = Number(match.scoreA), scoreB = Number(match.scoreB);
     if (!Number.isFinite(scoreA) || !Number.isFinite(scoreB) || scoreA === scoreB) return;
     const dedupeKey = String(match.matchId || [match.seasonId, competition, match.idolAId, match.idolBId, scoreA, scoreB].join('|'));
     if (finalMatchSeen.has(dedupeKey)) return;
     finalMatchSeen.add(dedupeKey);
-    const winnerId = scoreA > scoreB ? match.idolAId : match.idolBId;
+    const winnerId = match.winnerId || (scoreA > scoreB ? match.idolAId : match.idolBId);
     const groupName = idolsMap.get(winnerId)?.girlGroup || 'Solo / Independent';
     if (!v5WinnerByCompetition.has(competition)) v5WinnerByCompetition.set(competition, new Map());
     const seasons = v5WinnerByCompetition.get(competition)!;
     if (!seasons.has(groupName)) seasons.set(groupName, new Set());
-    seasons.get(groupName)!.add(String(match.seasonId || 1));
+    const competitionLabel = stage.split(' / ')[0].replace(/^Cups & Divisions:\\s*/i, '').trim();
+    seasons.get(groupName)!.add(`${String(match.seasonId || 1)}::${competitionLabel}`);
   });
 
   // Division 2 titles are reconstructed per season from its archived match results.
@@ -418,7 +419,8 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
     division2Seen.add(key);
     const a = Number(match.scoreA), b = Number(match.scoreB);
     if (!Number.isFinite(a) || !Number.isFinite(b)) return;
-    const season = String(match.seasonId || 1);
+    const competitionLabel = String(match.stage || '').split(' / ')[0].replace(/^Cups & Divisions:\\s*/i, '').trim();
+    const season = `${String(match.seasonId || 1)}::${competitionLabel}`;
     if (!division2Tables.has(season)) division2Tables.set(season, new Map());
     const table = division2Tables.get(season)!;
     const update = (id: string, scored: number, conceded: number) => {
