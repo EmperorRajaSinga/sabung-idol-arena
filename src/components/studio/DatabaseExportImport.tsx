@@ -333,8 +333,8 @@ export const DatabaseExportImport: React.FC<DatabaseExportImportProps> = ({
           restoredD1 = result.state;
           saveLeagueSeasonState(restoredD1);
           onUpdateLeagueState(restoredD1);
-          if (result.report.unknownEntries.length) notes.push(\`\${result.report.unknownEntries.length} D1 idols not found in the included Idol Database\`);
-          if (result.report.duplicateEntries.length) notes.push(\`\${result.report.duplicateEntries.length} duplicate D1 roster idols skipped\`);
+          if (result.report.unknownEntries.length) notes.push(`${result.report.unknownEntries.length} D1 idols not found in the included Idol Database`);
+          if (result.report.duplicateEntries.length) notes.push(`${result.report.duplicateEntries.length} duplicate D1 roster idols skipped`);
         }
 
         let restoredV5 = v5State || null;
@@ -362,7 +362,7 @@ export const DatabaseExportImport: React.FC<DatabaseExportImportProps> = ({
             return rebuildLeague({
               id: leagueId,
               parentLeagueId,
-              name: String(source.name || \`Division 2 \${parentLeagueId}\`),
+              name: String(source.name || `Division 2 ${parentLeagueId}`),
               tierName: String(source.tierName || 'Challenger'),
               color: String(source.color || '#64748b'),
               logoUrl: String(source.logoUrl || ''),
@@ -393,7 +393,7 @@ export const DatabaseExportImport: React.FC<DatabaseExportImportProps> = ({
             d2: division2,
           };
           saveV5State(restoredV5);
-          if (invalidD2Ids.length) notes.push(\`\${invalidD2Ids.length} unknown, duplicated, or cross-division D2 roster IDs skipped\`);
+          if (invalidD2Ids.length) notes.push(`${invalidD2Ids.length} unknown, duplicated, or cross-division D2 roster IDs skipped`);
         }
 
         onUpdateAppState((prev) => ({
@@ -409,7 +409,7 @@ export const DatabaseExportImport: React.FC<DatabaseExportImportProps> = ({
         const d1Count = Array.isArray(data.divisions) ? data.divisions.length : 0;
         const d2Count = Array.isArray(data.division2) ? data.division2.length : 0;
         showToast(
-          \`League backup restored: \${d1Count} Division 1 and \${d2Count} Division 2 rosters, \${incomingIdols.length} idols, and \${incomingGroups.length} girl groups.\` +
+          `League backup restored: ${d1Count} Division 1 and ${d2Count} Division 2 rosters, ${incomingIdols.length} idols, and ${incomingGroups.length} girl groups.` +
             (notes.length ? ' Warning: ' + notes.join('; ') + '.' : ''),
           notes.length ? 'error' : 'success'
         );
