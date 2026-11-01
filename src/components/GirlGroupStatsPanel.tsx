@@ -773,7 +773,6 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
                           {section.winners.length ? <div className="space-y-2">{section.winners.map((winner) => <div key={winner.key} className="flex items-center gap-2 rounded-lg bg-[#120e0b] p-2">{winner.photo ? <img src={winner.photo} alt={winner.name} className="h-8 w-8 rounded-md object-cover" /> : <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#282018] text-xs font-bold text-amber-200/70">{winner.name.slice(0, 1)}</div>}<div className="min-w-0"><p className="truncate text-xs font-semibold text-white">{winner.name}</p><p className="truncate text-[10px] text-amber-200/50">{winner.season}</p></div></div>)}</div> : <p className="py-3 text-xs text-amber-200/30">No titles recorded.</p>}
                         </section>
                       ))}
->
                     </div>
 
                     <section className="mt-5">
