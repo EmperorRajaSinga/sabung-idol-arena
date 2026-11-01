@@ -378,10 +378,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         .filter((match) => match.completed)
         .map((match) => [`${match.idolAId}__${match.idolBId}`, match])
     );
-    const generatedMatches = sameRoster && league.matches?.length
+    const expectedMatchCount = memberIds.length * Math.max(0, memberIds.length - 1);
+    const canReuseCompleteSchedule = sameRoster && (league.matches?.length || 0) >= expectedMatchCount;
+    const generatedMatches = canReuseCompleteSchedule
       ? league.matches
       : generateRoundRobinMatches(league.id, memberIds);
-    const matches = sameRoster ? generatedMatches : generatedMatches.map((match) => {
+    const matches = canReuseCompleteSchedule ? generatedMatches : generatedMatches.map((match) => {
       const saved = previousCompleted.get(`${match.idolAId}__${match.idolBId}`);
       return saved ? { ...match, ...saved, matchday: match.matchday } : match;
     });
@@ -409,7 +411,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         .filter((match) => match.completed)
         .map((match) => [`${match.idolAId}__${match.idolBId}`, match])
     );
-    const matches = sameRoster && league.matches?.length
+    const expectedMatchCount = memberIds.length * Math.max(0, memberIds.length - 1);
+    const canReuseCompleteSchedule = sameRoster && (league.matches?.length || 0) >= expectedMatchCount;
+    const matches = canReuseCompleteSchedule
       ? league.matches
       : rebuilt.matches.map((match) => {
           const saved = previousCompleted.get(`${match.idolAId}__${match.idolBId}`);
