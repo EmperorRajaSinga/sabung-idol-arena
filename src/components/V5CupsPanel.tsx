@@ -371,12 +371,14 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
       target.completed = false;
       E.invalidateDownstream(next, matchId);
     };
+    let invalidByeAssignment = false;
     updatedMatches.forEach((edited) => {
       if (edited.id === 'cc_manual_bye_a' || edited.id === 'cc_manual_bye_b') {
         const targetId = edited.id === 'cc_manual_bye_a' ? 'cc_usf_a' : 'cc_usf_b';
         const target = next.find((m) => m.id === targetId);
         if (!target) return;
         if (edited.idolAId && edited.idolBId) {
+          invalidByeAssignment = true;
           setMsg('Each Crown Cup bye slot accepts one idol only. Clear one side and save again.');
           return;
         }
@@ -401,6 +403,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
       }
       if (changed) resetChangedMatch(target.id);
     });
+    if (invalidByeAssignment) return;
     E.advanceBracket(next);
     const byeIds = ['cc_usf_a', 'cc_usf_b'].flatMap((id) => {
       const match = next.find((m) => m.id === id);
@@ -523,14 +526,16 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
             {crownCup.byeIds.length > 0 && <p className="mt-3 text-xs text-slate-400">Bye recipients: <span className="font-bold text-slate-200">{crownCup.byeIds.map(nm).join(', ')}</span></p>}
           </section>
           <CrownCupBracket idols={by} nm={nm} sim={simOne} save={manual} ms={crownCup.matches} onChange={(matches) => commit({ champsCup: { ...crownCup, matches } })} />
-          <ManualBracketModal
-            isOpen={isCrownManualOpen}
-            onClose={() => setIsCrownManualOpen(false)}
-            knockoutMatches={getCrownManualMatches(crownCup.matches)}
-            idolsMap={by}
-            onSaveKnockoutMatches={saveCrownManualBracket}
-            onRegenerateAutoBracket={reseedCrownCup}
-          />
+          {isCrownManualOpen && (
+            <ManualBracketModal
+              isOpen
+              onClose={() => setIsCrownManualOpen(false)}
+              knockoutMatches={getCrownManualMatches(crownCup.matches)}
+              idolsMap={by}
+              onSaveKnockoutMatches={saveCrownManualBracket}
+              onRegenerateAutoBracket={reseedCrownCup}
+            />
+          )}
           <KnockoutLiveSimulatorModal
             isOpen={isCrownSimulcastOpen}
             onClose={() => setIsCrownSimulcastOpen(false)}
