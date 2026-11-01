@@ -40,7 +40,7 @@ export function recordDataHistory(
     const history = loadDataHistory();
     const record: DataHistoryEntry = {
       ...entry,
-      id: \`history_\${Date.now()}_\${Math.random().toString(36).slice(2, 9)}\`,
+      id: `history_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       timestamp: entry.timestamp || new Date().toISOString(),
     };
     history.unshift(record);
@@ -127,7 +127,7 @@ export function auditAppStateDataChanges(
           entity,
           entityName: getName(item),
           source,
-          details: \`New \${entity === 'idol' ? 'idol' : 'girl group'} added to the database.\`,
+          details: `New ${entity === 'idol' ? 'idol' : 'girl group'} added to the database.`,
         });
       } else if (JSON.stringify(old) !== JSON.stringify(item)) {
         recordDataHistory({
@@ -135,7 +135,7 @@ export function auditAppStateDataChanges(
           entity,
           entityName: getName(item),
           source,
-          details: \`Profile data changed for \${getName(item)}.\`,
+          details: `Profile data changed for ${getName(item)}.`,
         });
       }
     });
@@ -146,7 +146,7 @@ export function auditAppStateDataChanges(
           entity,
           entityName: getName(item),
           source,
-          details: \`\${entity === 'idol' ? 'Idol' : 'Girl group'} removed from the database.\`,
+          details: `${entity === 'idol' ? 'Idol' : 'Girl group'} removed from the database.`,
         });
       }
     });
