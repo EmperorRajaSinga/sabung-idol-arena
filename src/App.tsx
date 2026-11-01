@@ -176,6 +176,12 @@ class CareerStatsCrashBoundary extends React.Component<{ children: React.ReactNo
   }
 }
 
+class SeasonProfileCrashBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error, info: React.ErrorInfo) { console.error('[SeasonProfilePanel]', error, info); }
+  render() { if (this.state.error) return <div className="rounded-2xl border-2 border-rose-700 bg-[#1b130e] p-6 text-rose-200"><h3 className="font-black">Season Profile gagal dimuat</h3><p className="mt-2 text-xs">{this.state.error.message || 'Terjadi kesalahan saat memuat data.'}</p><button onClick={() => this.setState({error:null})} className="mt-4 rounded-xl bg-rose-700 px-4 py-2 text-xs font-black text-white">Retry Season Profile</button></div>; return this.props.children; }
+}
 class GirlGroupStatsCrashBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
   state = { error: null as Error | null };
   static getDerivedStateFromError(error: Error) { return { error }; }
@@ -2360,7 +2366,10 @@ export function App() {
               leagueArchives={leagueArchives}
               theIdolsState={theIdolsState}
               theIdolsArchives={theIdolsArchives}
+              v5State={v5State}
+              v5TitleArchives={appState.v5TitleArchives || []}
             />
+            </SeasonProfileCrashBoundary>
           )}
 
           {activeTab === 'settings' && (
@@ -2796,6 +2805,7 @@ export function App() {
           )}
 
           {activeTab === 'season_profile' && (
+            <SeasonProfileCrashBoundary key={activeTab}>
             <SeasonProfilePanel
               archives={appState.archives}
               matchDatabase={allCombinedMatchDatabase}
