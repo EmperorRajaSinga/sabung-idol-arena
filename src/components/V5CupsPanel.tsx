@@ -360,6 +360,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
     setMsg('Crown Cup opening matchups and bye order have been re-seeded.');
   };
   const saveCrownManualBracket = (updatedMatches: KnockoutMatch[]) => {
+    const originalMatches = JSON.stringify(crownCup.matches);
     const next = clone(crownCup.matches);
     const resetChangedMatch = (matchId: string) => {
       const target = next.find((m) => m.id === matchId);
@@ -405,6 +406,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
     });
     if (invalidByeAssignment) return;
     E.advanceBracket(next);
+    if (JSON.stringify(next) === originalMatches) { setMsg('No Crown Cup bracket changes to save.'); return; }
     const byeIds = ['cc_usf_a', 'cc_usf_b'].flatMap((id) => {
       const match = next.find((m) => m.id === id);
       return match && 'id' in match.a && match.a.id ? [match.a.id] : [];
@@ -536,14 +538,16 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
               onRegenerateAutoBracket={reseedCrownCup}
             />
           )}
-          <KnockoutLiveSimulatorModal
-            isOpen={isCrownSimulcastOpen}
-            onClose={() => setIsCrownSimulcastOpen(false)}
-            knockoutMatches={crownKnockoutMatches}
-            idolsMap={by}
-            config={crownSimConfig}
-            onCommitMatches={commitCrownSimulcast}
-          />
+          {isCrownSimulcastOpen && (
+            <KnockoutLiveSimulatorModal
+              isOpen
+              onClose={() => setIsCrownSimulcastOpen(false)}
+              knockoutMatches={crownKnockoutMatches}
+              idolsMap={by}
+              config={crownSimConfig}
+              onCommitMatches={commitCrownSimulcast}
+            />
+          )}
         </div>
       )}
 
