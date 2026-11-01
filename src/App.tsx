@@ -1,4 +1,5 @@
 import { loadV5State, saveV5State, hasStoredV5State, V5State, V5TitleArchive } from './utils/v5/store';
+import { loadRosterSnapshot, saveDivisionOneRosterSnapshot, saveDivisionTwoRosterSnapshot, restoreDivisionOneRoster, restoreDivisionTwoRoster } from './utils/rosterPersistence';
 import { loadNames } from './utils/v5/names';
 import { auditAppStateDataChanges, normalizeDataName, recordDataHistory } from './utils/dataChangeHistory';
 
@@ -261,14 +262,32 @@ class GirlGroupStatsCrashBoundary extends React.Component<{ children: React.Reac
 
 
 export function App() {
-  const [appState, setAppState] = useState<AppState>(() => loadAppState());
+  const [appState, setAppState] = useState<AppState>(() => {
+    const loaded = loadAppState();
+    const rosterSnapshot = loadRosterSnapshot();
+    const loadedV5 = loaded.v5State || loadV5State();
+    return {
+      ...loaded,
+      leagueState: loaded.leagueState
+        ? { ...loaded.leagueState, leagues: restoreDivisionOneRoster(loaded.leagueState.leagues, rosterSnapshot) || loaded.leagueState.leagues }
+        : loaded.leagueState,
+      v5State: {
+        ...loadedV5,
+        d2: restoreDivisionTwoRoster(loadedV5.d2, rosterSnapshot) || loadedV5.d2,
+      },
+    };
+  });
   const v5State = appState.v5State || loadV5State();
   const handleUpdateV5State = (next: V5State) => {
     // PERSISTENCE CONTRACT: save every user-authored V5 change synchronously
     // before returning from the input event. IndexedDB remains the full-state backup.
+    const rosterSaved = saveDivisionTwoRosterSnapshot(next.d2 || []);
     const saved = saveV5State(next);
+    if (!rosterSaved) {
+      console.error('[Persistence] Division 2 roster snapshot was not saved.');
+    }
     if (!saved) {
-      console.error('[Persistence] V5 save failed. The browser storage quota may be exhausted.');
+      console.error('[Persistence] Full V5 state save failed. Division 2 membership remains protected by its independent compact roster snapshot.');
     }
     setAppState((prev) => ({ ...prev, v5State: next }));
     window.setTimeout(() => {
@@ -357,7 +376,14 @@ export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [selectedIdolId, setSelectedIdolId] = useState<string>('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
-  const [leagueState, setLeagueState] = useState<LeagueSeasonState | null>(() => loadLeagueSeasonState());
+  const [leagueState, setLeagueState] = useState<LeagueSeasonState | null>(() => {
+    const loaded = loadLeagueSeasonState();
+    if (!loaded) return loaded;
+    return {
+      ...loaded,
+      leagues: restoreDivisionOneRoster(loaded.leagues, loadRosterSnapshot()) || loaded.leagues,
+    };
+  });
   const [leagueArchives, setLeagueArchives] = useState<LeagueSeasonArchive[]>(() => loadLeagueArchives());
   const [theIdolsState, setTheIdolsState] = useState<TheIdolsSeasonState | null>(() => {
     const loaded = loadTheIdolsState();
@@ -402,6 +428,8 @@ export function App() {
   };
 
   const handleUpdateLeagueState = (newState: LeagueSeasonState) => {
+    // Roster membership gets its own tiny synchronous snapshot, independent of fixtures.
+    saveDivisionOneRosterSnapshot(newState.leagues || []);
     setLeagueState(newState);
     saveLeagueSeasonState(newState);
     setAppState((prev) => ({
@@ -689,7 +717,19 @@ export function App() {
             // legacy fallback data. A stale IndexedDB snapshot must never roll back
             // a roster that was saved moments before refresh.
             const localLeagueSnapshot = loadLeagueSeasonState() || prev.leagueState || null;
-            merged.leagueState = chooseLeagueStateDuringHydration(localLeagueSnapshot, idbState.leagueState);
+            const chosenLeagueState = chooseLeagueStateDuringHydration(localLeagueSnapshot, idbState.leagueState);
+            const rosterSnapshot = loadRosterSnapshot();
+            merged.leagueState = chosenLeagueState
+              ? {
+                  ...chosenLeagueState,
+                  leagues: restoreDivisionOneRoster(chosenLeagueState.leagues, rosterSnapshot) || chosenLeagueState.leagues,
+                }
+              : chosenLeagueState;
+            const recoveredV5 = merged.v5State || loadV5State();
+            merged.v5State = {
+              ...recoveredV5,
+              d2: restoreDivisionTwoRoster(recoveredV5.d2, rosterSnapshot) || recoveredV5.d2,
+            };
 
             // The Idols State: keep whichever has higher seasonNumber
             const prevTSeason = Number(prev.theIdolsState?.seasonNumber || 0);
@@ -751,7 +791,13 @@ export function App() {
           if (idbState.leagueState) {
             setLeagueState((prev) => {
               const localSnapshot = loadLeagueSeasonState() || prev;
-              const chosen = chooseLeagueStateDuringHydration(localSnapshot, idbState.leagueState);
+              const base = chooseLeagueStateDuringHydration(localSnapshot, idbState.leagueState);
+              const chosen = base
+                ? {
+                    ...base,
+                    leagues: restoreDivisionOneRoster(base.leagues, loadRosterSnapshot()) || base.leagues,
+                  }
+                : base;
               if (chosen) saveLeagueSeasonState(chosen);
               return chosen;
             });
@@ -2491,8 +2537,12 @@ export function App() {
                   matchDatabase: fullySyncedDb,
                 });
                 if (newLeagueState !== undefined) {
+                  if (newLeagueState) saveDivisionOneRosterSnapshot(newLeagueState.leagues || []);
                   setLeagueState(newLeagueState);
                   if (newLeagueState) saveLeagueSeasonState(newLeagueState);
+                }
+                if (newState.v5State) {
+                  saveDivisionTwoRosterSnapshot(newState.v5State.d2 || []);
                 }
                 if (newLeagueArchives !== undefined) {
                   setLeagueArchives(newLeagueArchives);
