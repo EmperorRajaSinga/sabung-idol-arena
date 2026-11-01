@@ -740,6 +740,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     const targetLeague = activeLeagueState.leagues.find((league) => league.id === toLeagueId);
     const movingIdol = appState.idols.find((idol) => idol.id === idolId);
     if (!sourceLeague || !targetLeague || !movingIdol) return;
+    if (targetLeague.memberIds.some((id) => normalizeDataName(appState.idols.find((idol) => idol.id === id)?.name || id) === normalizeDataName(movingIdol.name))) {
+      showSuccessMsg(`The name "${movingIdol.name}" is already present in ${targetLeague.name}.`);
+      logDataChange({ action: 'duplicate_blocked', entity: 'division_1_roster', entityName: targetLeague.name, source: 'Settings / League Roster Transfer', details: `Blocked duplicate name: ${movingIdol.name}.` });
+      return;
+    }
     if (showRosterConflicts([movingIdol.name], { division: 'Division 1', leagueId: toLeagueId, leagueName: targetLeague.name }, { division: 'Division 1', leagueId: fromLeagueId, leagueName: sourceLeague.name })) return;
 
     const updatedLeagues = activeLeagueState.leagues.map((l) => {
