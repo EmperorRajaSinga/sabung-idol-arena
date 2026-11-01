@@ -14,6 +14,7 @@ import {
   TheIdolsSeasonArchive,
   CareerStat,
 } from '../types';
+import type { V5State, V5TitleArchive } from '../utils/v5/store';
 import {
   Trophy,
   Users,
@@ -61,6 +62,8 @@ interface DashboardPanelProps {
   leagueArchives?: LeagueSeasonArchive[];
   theIdolsState?: TheIdolsSeasonState | null;
   theIdolsArchives?: TheIdolsSeasonArchive[];
+  v5State?: V5State;
+  v5TitleArchives?: V5TitleArchive[];
   onCrownChampionAndArchive?: () => void;
 }
 
@@ -87,6 +90,8 @@ export const DashboardPanel: React.FC<DashboardPanelProps> = ({
   leagueArchives = [],
   theIdolsState,
   theIdolsArchives = [],
+  v5State,
+  v5TitleArchives = [],
   onCrownChampionAndArchive,
 }) => {
   const safeArchives = archives || [];
@@ -269,6 +274,31 @@ export const DashboardPanel: React.FC<DashboardPanelProps> = ({
       leagueState.leagues[0]
     );
   }, [leagueState, selectedDashboardDivision]);
+
+  // Division 2 is a promotion-only competition. It shares each Division 1 league's
+  // parent id, but has its own roster, fixtures and standings in the V5 state.
+  const divisionTwoLeagues = useMemo(() => (v5State?.d2 || []).map((league) => ({
+    ...league,
+    standings: [...(league.standings || [])].sort((a, b) => (a.rank || 999) - (b.rank || 999)),
+  })), [v5State?.d2]);
+  const activeDashboardDivisionTwo = useMemo(() =>
+    divisionTwoLeagues.find((league) => league.parentLeagueId === selectedDashboardDivision) || null,
+  [divisionTwoLeagues, selectedDashboardDivision]);
+  const promotionSlots = Math.max(0, Number(v5State?.promotionCount ?? 3));
+  const divisionTwoCompletedMatches = divisionTwoLeagues.reduce((total, league) =>
+    total + (league.matches || []).filter((match) => match.completed).length, 0);
+  const divisionTwoTotalMatches = divisionTwoLeagues.reduce((total, league) =>
+    total + (league.matches || []).length, 0);
+  const v5CupMatchCount = (v5State?.champsCup?.matches || []).length
+    + (v5State?.leagueCup?.rounds || []).reduce((total, round) => total + round.length, 0)
+    + Object.values(v5State?.miniCups || {}).reduce((total, matches) => total + matches.length, 0)
+    + (v5State?.superA ? 1 : 0)
+    + (v5State?.superB || []).length;
+  const v5CompletedCupMatches = (v5State?.champsCup?.matches || []).filter((match) => match.completed).length
+    + (v5State?.leagueCup?.rounds || []).reduce((total, round) => total + round.filter((match) => match.completed).length, 0)
+    + Object.values(v5State?.miniCups || {}).reduce((total, matches) => total + matches.filter((match) => match.completed).length, 0)
+    + (v5State?.superA?.completed ? 1 : 0)
+    + (v5State?.superB || []).filter((match) => match.completed).length;
 
   // Unified Match Completed Counter
   const totalMatchesCompletedInActiveTournament =
@@ -900,7 +930,7 @@ export const DashboardPanel: React.FC<DashboardPanelProps> = ({
             )}
 
             <p className="text-sm font-poster-body text-amber-100/90 max-w-3xl leading-relaxed font-medium">
-              Overseeing 120 idols across the 6-Division Parallel Leagues, Champions Cup, and The Idols Superleague &amp; Masters.
+              Managing {safeIdols.length} idols across six Division 1 leagues, six Division 2 promotion leagues, and the complete cup circuit.
             </p>
           </div>
 
@@ -1056,11 +1086,12 @@ export const DashboardPanel: React.FC<DashboardPanelProps> = ({
           <div className="mt-3">
             <div className="text-2xl lg:text-3xl font-poster-title text-amber-300">
               {crownedArchives.length +
-                (leagueArchives || []).reduce((acc, a) => acc + (a.leagueWinners?.length || 6), 0) +
-                (theIdolsArchives || []).reduce((acc, a) => acc + (a.championId ? 1 : 0) + 1, 0)}
+                (leagueArchives || []).reduce((acc, a) => acc + (a.leagueWinners?.length || 0), 0) +
+                (theIdolsArchives || []).reduce((acc, a) => acc + (a.championId ? 1 : 0) + (a.standings?.length ? 1 : 0), 0) +
+                (v5TitleArchives || []).length}
             </div>
             <p className="mt-0.5 text-[11px] text-slate-400 font-semibold truncate">
-              Cups, Leagues &amp; Superleague
+              Cups, Division titles &amp; season honours
             </p>
           </div>
         </div>
@@ -2025,6 +2056,69 @@ export const DashboardPanel: React.FC<DashboardPanelProps> = ({
           )}
         </div>
       )}
+
+      {/* ---------------------------------------------------------------------
+          DIVISION 2: PROMOTION RACE OVERVIEW
+      --------------------------------------------------------------------- */}
+      <section className="rounded-3xl border-2 border-black bg-[#170e08] p-5 md:p-6 poster-shadow space-y-5">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b-2 border-black pb-4">
+          <div>
+            <div className="flex items-center gap-2 text-amber-400 text-[11px] font-black uppercase tracking-wider">
+              <ArrowRight className="h-4 w-4" /> DIVISION 2 / PROMOTION TRACKER
+            </div>
+            <h2 className="mt-1 text-2xl md:text-3xl font-poster-title text-white">Division 2 Promotion Race</h2>
+            <p className="mt-1 text-xs text-amber-100/65">Top {promotionSlots} in each Division 2 league earn promotion to the corresponding Division 1 league. Division 2 has no Swiss Play-In or Grand Cup qualification route.</p>
+          </div>
+          <button onClick={() => setActiveTab('division_two')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-black text-black border border-black hover:bg-amber-400 transition-colors">
+            Manage Division 2 <ExternalLink className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="rounded-xl bg-[#100b07] border border-black p-3"><div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">D2 Leagues</div><div className="mt-1 text-2xl font-poster-title text-white">{divisionTwoLeagues.length}/6</div></div>
+          <div className="rounded-xl bg-[#100b07] border border-black p-3"><div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Idols in D2</div><div className="mt-1 text-2xl font-poster-title text-white">{divisionTwoLeagues.reduce((n, league) => n + (league.memberIds || []).length, 0)}</div></div>
+          <div className="rounded-xl bg-[#100b07] border border-black p-3"><div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Promotion Slots</div><div className="mt-1 text-2xl font-poster-title text-emerald-300">{promotionSlots * divisionTwoLeagues.length}</div></div>
+          <div className="rounded-xl bg-[#100b07] border border-black p-3"><div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">D2 Matches</div><div className="mt-1 text-2xl font-poster-title text-amber-300">{divisionTwoCompletedMatches}<span className="text-sm text-slate-500">/{divisionTwoTotalMatches}</span></div></div>
+        </div>
+
+        {divisionTwoLeagues.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+              {divisionTwoLeagues.map((league) => {
+                const top = league.standings.slice(0, promotionSlots);
+                const completed = (league.matches || []).filter((match) => match.completed).length;
+                const total = (league.matches || []).length;
+                const isSelected = league.parentLeagueId === selectedDashboardDivision;
+                return <button key={league.id} onClick={() => setSelectedDashboardDivision(league.parentLeagueId)} className={`text-left rounded-2xl border-2 p-4 transition-colors ${isSelected ? 'border-amber-400 bg-[#21170d]' : 'border-black bg-[#100b07] hover:border-amber-500/50'}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div><div className="text-[10px] text-amber-400 uppercase tracking-wider font-black">{league.name}</div><div className="mt-1 text-xs text-slate-500">{league.memberIds.length} registered idols · {completed}/{total} matches</div></div>
+                    <span className="text-[10px] rounded-lg bg-emerald-950 px-2 py-1 text-emerald-300 border border-emerald-800">{top.length} promotion candidates</span>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {top.length ? top.map((standing, index) => {
+                      const idol = idolsMap.get(standing.idolId);
+                      return <div key={standing.idolId} className="flex items-center gap-2 text-xs"><span className="w-5 text-center font-mono font-black text-emerald-300">{index + 1}</span><span className="h-7 w-7 rounded-lg overflow-hidden bg-black border border-black shrink-0">{(idol?.photoUrl || standing.photoUrl) ? <img src={idol?.photoUrl || standing.photoUrl} alt="" className="h-full w-full object-cover" /> : null}</span><span className="min-w-0 flex-1 truncate text-white font-bold">{standing.idolName || idol?.name || 'Unknown Idol'}</span><span className="font-mono text-amber-300">{standing.points ?? 0} PTS</span></div>;
+                    }) : <p className="text-xs text-slate-500">Standings are not available yet.</p>}
+                  </div>
+                </button>;
+              })}
+            </div>
+
+            {activeDashboardDivisionTwo && <div className="overflow-hidden rounded-2xl border-2 border-black bg-[#100b07]">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 border-b border-black">
+                <div><h3 className="font-poster-title text-lg text-white">{activeDashboardDivisionTwo.name} Standings</h3><p className="text-[11px] text-slate-500">Top {promotionSlots} promote to {leagueState?.leagues.find((league) => league.id === activeDashboardDivisionTwo.parentLeagueId)?.name || `Division 1 League ${activeDashboardDivisionTwo.parentLeagueId}`}. No Swiss stage is used in Division 2.</p></div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300">Promotion zone: 1-{promotionSlots}</span>
+              </div>
+              <div className="overflow-x-auto"><table className="w-full text-xs text-left"><thead className="bg-black/60 text-[10px] uppercase tracking-wider text-slate-500"><tr><th className="px-3 py-2 text-center">Pos</th><th className="px-3 py-2">Idol</th><th className="px-2 py-2 text-center">P</th><th className="px-2 py-2 text-center">W</th><th className="px-2 py-2 text-center">D</th><th className="px-2 py-2 text-center">L</th><th className="px-2 py-2 text-center">GD</th><th className="px-3 py-2 text-center">PTS</th><th className="px-3 py-2 text-right">Status</th></tr></thead><tbody className="divide-y divide-black/60">{activeDashboardDivisionTwo.standings.map((standing, index) => { const rank = standing.rank || index + 1; const promoted = rank <= promotionSlots; const idol = idolsMap.get(standing.idolId); return <tr key={standing.idolId} className={promoted ? 'bg-emerald-950/20' : 'hover:bg-white/[0.03]'}><td className="px-3 py-2 text-center font-mono text-slate-400">{rank}</td><td className="px-3 py-2"><div className="flex items-center gap-2"><span className="h-7 w-7 rounded-lg overflow-hidden bg-black shrink-0">{(idol?.photoUrl || standing.photoUrl) ? <img src={idol?.photoUrl || standing.photoUrl} alt="" className="h-full w-full object-cover" /> : null}</span><span className="font-bold text-white">{standing.idolName || idol?.name || 'Unknown Idol'}</span></div></td><td className="px-2 py-2 text-center font-mono text-slate-300">{standing.played ?? 0}</td><td className="px-2 py-2 text-center font-mono text-emerald-300">{standing.wins ?? 0}</td><td className="px-2 py-2 text-center font-mono text-slate-400">{standing.draws ?? 0}</td><td className="px-2 py-2 text-center font-mono text-rose-300">{standing.losses ?? 0}</td><td className="px-2 py-2 text-center font-mono text-slate-300">{(standing.gameDiff ?? 0) > 0 ? `+${standing.gameDiff}` : standing.gameDiff ?? 0}</td><td className="px-3 py-2 text-center font-mono font-black text-amber-300">{standing.points ?? 0}</td><td className="px-3 py-2 text-right">{promoted ? <span className="rounded-full bg-emerald-950 px-2 py-1 text-[10px] font-black text-emerald-300 border border-emerald-800">PROMOTION ZONE</span> : <span className="text-[10px] text-slate-500">Division 2</span>}</td></tr>; })}</tbody></table></div>
+            </div>}
+          </>
+        ) : <div className="rounded-2xl border border-dashed border-amber-500/30 bg-[#100b07] p-8 text-center"><h3 className="font-poster-title text-lg text-white">Division 2 has not been configured</h3><p className="mt-2 text-xs text-slate-500">Create and configure the six Division 2 rosters in Settings. The dashboard will display promotion standings here.</p><button onClick={() => setActiveTab('settings')} className="mt-4 rounded-xl bg-amber-500 px-4 py-2 text-xs font-black text-black">Open Settings</button></div>}
+
+        <div className="rounded-xl border border-black bg-black/30 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="text-[11px] text-slate-400">Cup circuit activity: <span className="font-bold text-amber-300">{v5CompletedCupMatches}/{v5CupMatchCount}</span> V5 cup matches completed across Champions Cup, League Cup, Mini Cups and Super Cups.</div>
+          <button onClick={() => setActiveTab('v5_cups')} className="text-xs font-bold text-amber-300 hover:text-white inline-flex items-center gap-1">Open Cup Circuit <ArrowRight className="h-3.5 w-3.5" /></button>
+        </div>
+      </section>
 
       {/* ---------------------------------------------------------------------
           TIER 6: REIGNING CHAMPIONS & RECENT MATCH ACTIVITY
