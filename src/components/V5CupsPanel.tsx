@@ -758,7 +758,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
                 <TournamentBracketTree knockoutMatches={lcKnockoutTreeMatches} idolsMap={by} onSelectMatch={(match) => { const selected = lcKnockoutStage.flat().find((item) => item.id === match.id); if (selected?.idolAId && selected?.idolBId) setSelectedOpenMatch(selected); }} showTitleHeader={false} initialLayoutMode="split" />
               </div>
             </> : <OpenArenaMatchList matches={lcViewMatches} idols={by} nm={nm} onSave={saveOpenArenaResult} />}
-          </section>
+          </section>}
           {isOpenManualOpen && <ManualBracketModal key={lcViewMatches.map((match) => match.id).join('|')} isOpen onClose={() => setIsOpenManualOpen(false)} knockoutMatches={lcKnockoutMatches} idolsMap={by} onSaveKnockoutMatches={saveOpenManualBracket} onRegenerateAutoBracket={buildLC} />}
           {isOpenSimulcastOpen && lc && <KnockoutLiveSimulatorModal isOpen onClose={() => setIsOpenSimulcastOpen(false)} knockoutMatches={toOpenArenaKnockoutMatches([lc.rounds[lc.rounds.length - 1] || []])} idolsMap={by} config={crownSimConfig} onCommitMatches={commitOpenSimulcast} />}
         </div>
