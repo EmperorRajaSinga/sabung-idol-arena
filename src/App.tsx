@@ -373,9 +373,10 @@ export function App() {
         const a = prev.idols.find((i) => i.id === match.idolAId);
         const b = prev.idols.find((i) => i.id === match.idolBId);
         if (!a || !b) return;
-        const winnerId = match.winnerId || (Number(match.scoreA) > Number(match.scoreB) ? a.id : b.id);
-        const winner = winnerId === a.id ? a : b;
-        const loser = winnerId === a.id ? b : a;
+        const isDraw = match.isDraw === true || match.winnerId === 'DRAW' || Number(match.scoreA) === Number(match.scoreB);
+        const winnerId = isDraw ? '' : (match.winnerId || (Number(match.scoreA) > Number(match.scoreB) ? a.id : b.id));
+        const winner = isDraw ? undefined : (winnerId === a.id ? a : b);
+        const loser = isDraw ? undefined : (winnerId === a.id ? b : a);
         const legacyMatchId = `v5_${competition.replace(/[^a-z0-9]+/gi, '_')}_${match.id}`;
         const matchId = `v5_s${seasonId}_${competition.replace(/[^a-z0-9]+/gi, '_')}_${match.id}`;
         // Migrate the old season-agnostic key without deleting records from earlier seasons.
@@ -387,7 +388,7 @@ export function App() {
           idolAId: a.id, idolAName: a.name, idolAGroup: a.girlGroup, idolAPhoto: a.photoUrl,
           idolBId: b.id, idolBName: b.name, idolBGroup: b.girlGroup, idolBPhoto: b.photoUrl,
           scoreA: Number(match.scoreA), scoreB: Number(match.scoreB), winnerId,
-          winnerName: winner.name, loserId: loser.id, loserName: loser.name,
+          winnerName: isDraw ? 'Draw' : winner!.name, loserId: loser?.id || '', loserName: loser?.name || '', isDraw,
           date: match.updatedAt || new Date().toISOString(),
         });
       };
@@ -904,16 +905,17 @@ export function App() {
       const a = safeIdols.find((idol) => idol.id === match.idolAId);
       const b = safeIdols.find((idol) => idol.id === match.idolBId);
       if (!a || !b) return;
-      const winnerId = match.winnerId || (Number(match.scoreA) > Number(match.scoreB) ? a.id : b.id);
-      const winner = winnerId === a.id ? a : b;
-      const loser = winnerId === a.id ? b : a;
+      const isDraw = match.isDraw === true || match.winnerId === 'DRAW' || Number(match.scoreA) === Number(match.scoreB);
+      const winnerId = isDraw ? '' : (match.winnerId || (Number(match.scoreA) > Number(match.scoreB) ? a.id : b.id));
+      const winner = isDraw ? undefined : (winnerId === a.id ? a : b);
+      const loser = isDraw ? undefined : (winnerId === a.id ? b : a);
       v5Matches.push({
         matchId: `v5_s${seasonId}_${competition.replace(/[^a-z0-9]+/gi, '_')}_${match.id}`,
         seasonId, seasonName, stage: `Cups & Divisions: ${competition} / ${match.roundName || 'Match'}`,
         idolAId: a.id, idolAName: a.name, idolAGroup: a.girlGroup, idolAPhoto: a.photoUrl,
         idolBId: b.id, idolBName: b.name, idolBGroup: b.girlGroup, idolBPhoto: b.photoUrl,
         scoreA: Number(match.scoreA), scoreB: Number(match.scoreB), winnerId,
-        winnerName: winner.name, loserId: loser.id, loserName: loser.name,
+        winnerName: isDraw ? 'Draw' : winner!.name, loserId: loser?.id || '', loserName: loser?.name || '', isDraw,
         date: match.updatedAt || new Date().toISOString(),
       });
     };
