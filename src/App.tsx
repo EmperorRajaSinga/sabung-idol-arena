@@ -2085,12 +2085,13 @@ export function App() {
     const nextSeasonId = Math.max(currentSeasonId + 1, maxSeason + 1);
 
     // Calculate promotion/relegation from the just-completed season before any fixtures are reset.
-    const promotionMoves = sourceLeagueState?.leagues?.length === 6 && sourceV5State.d2?.length === 6
+    const candidatePromotionMoves = sourceLeagueState?.leagues?.length === 6 && sourceV5State.d2?.length === 6
       ? sourceLeagueState.leagues.flatMap((division) => {
           const pairedD2 = sourceV5State.d2.find((league) => league.parentLeagueId === division.id);
           return pairedD2 ? [V5Engine.computePromotionRelegation(division as any, pairedD2 as any, sourceV5State.promotionCount || 3)] : [];
         })
       : [];
+    const promotionMoves = candidatePromotionMoves.length === 6 ? candidatePromotionMoves : [];
     const promotionModalRows = promotionMoves.map((move) => {
       const division = sourceLeagueState?.leagues?.find((league) => league.id === move.leagueId);
       const pairedD2 = sourceV5State.d2?.find((league) => league.parentLeagueId === move.leagueId);
