@@ -19,10 +19,19 @@ export const V5CompetitionStatsPanel: React.FC<{ matchDatabase: ArchivedMatch[];
   const idolMap = useMemo(() => new Map(safeIdols.map((idol) => [idol.id, idol])), [safeIdols]);
   const allRows = useMemo(() => {
     const map = new Map<string, CompetitionRow>();
+    const seenMatches = new Set<string>();
+    const titleWinners = new Set<string>();
     (Array.isArray(matchDatabase) ? matchDatabase : []).forEach((match) => {
       if (!match || typeof match !== 'object') return;
       const competition = getCompetition(match);
       if (!competition || !match.idolAId || !match.idolBId || match.scoreA == null || match.scoreB == null) return;
+      const roundLabel = String(match.stage || '').split(' / ').slice(1).join(' / ').trim();
+      const isFinal = /^final(?:\b|\s|$)/i.test(roundLabel);
+      const matchKey = String(match.matchId || [
+        match.seasonId, competition, roundLabel, match.idolAId, match.idolBId, match.scoreA, match.scoreB
+      ].join('|'));
+      if (seenMatches.has(matchKey)) return;
+      seenMatches.add(matchKey);
       const sides = [
         { id: match.idolAId, name: match.idolAName, group: match.idolAGroup, photo: match.idolAPhoto, score: Number(match.scoreA), against: Number(match.scoreB) },
         { id: match.idolBId, name: match.idolBName, group: match.idolBGroup, photo: match.idolBPhoto, score: Number(match.scoreB), against: Number(match.scoreA) },
@@ -34,7 +43,14 @@ export const V5CompetitionStatsPanel: React.FC<{ matchDatabase: ArchivedMatch[];
         const row = map.get(key) || { idolId: side.id, idolName: idol?.name || side.name || 'Unknown Idol', group: idol?.girlGroup || side.group || 'Solo', photo: idol?.photoUrl || side.photo, matches: 0, wins: 0, losses: 0, scored: 0, conceded: 0, titles: 0 };
         row.matches += 1; row.scored += side.score; row.conceded += side.against;
         if (side.score > side.against) row.wins += 1; else row.losses += 1;
-        if (side.score > side.against && /final/i.test(String(match.stage || '').split(' / ').slice(1).join(' '))) row.titles += 1;
+        if (side.score > side.against && isFinal) {
+          const winnerId = side.score > side.against ? side.id : '';
+          const titleKey = [match.seasonId || 1, competition, winnerId].join('::');
+          if (winnerId && !titleWinners.has(titleKey)) {
+            row.titles += 1;
+            titleWinners.add(titleKey);
+          }
+        }
         map.set(key, row);
       });
     });
