@@ -623,7 +623,8 @@ export const RankPanel: React.FC<RankPanelProps> = ({
     spotlight: summary.spotlight + record.spotlightCupTitles,
     superA: summary.superA + record.superCupATitles,
     superB: summary.superB + record.superCupBTitles,
-  }), { total: 0, divisionTwo: 0, cups: 0, crown: 0, openArena: 0, spotlight: 0, superA: 0, superB: 0 }), [topIdols]);
+    otherCups: summary.otherCups + Math.max(0, record.v5CupTitles - record.crownCupTitles - record.openArenaCupTitles - record.spotlightCupTitles - record.superCupATitles - record.superCupBTitles),
+  }), { total: 0, divisionTwo: 0, cups: 0, crown: 0, openArena: 0, spotlight: 0, superA: 0, superB: 0, otherCups: 0 }), [topIdols]);
   const movementSummary = useMemo(() => topIdols.reduce((summary, record) => ({
     promotions: summary.promotions + record.promotions,
     relegations: summary.relegations + record.relegations,
@@ -707,6 +708,7 @@ export const RankPanel: React.FC<RankPanelProps> = ({
           <div className="mt-1 font-poster-title text-2xl text-amber-300">{v5TitleSummary.total}</div>
           <div className="text-[10px] text-amber-100/55">D2 {v5TitleSummary.divisionTwo} · Crown {v5TitleSummary.crown} · Open {v5TitleSummary.openArena}</div>
           <div className="text-[10px] text-amber-100/45">Spotlight {v5TitleSummary.spotlight} · Super A {v5TitleSummary.superA} · Super B {v5TitleSummary.superB}</div>
+          {v5TitleSummary.otherCups > 0 && <div className="text-[10px] font-bold text-rose-300">Unclassified V5 cups: {v5TitleSummary.otherCups}</div>}
         </div>
         <div className="rounded-2xl border-2 border-black bg-[#17100b] p-4 poster-shadow">
           <div className="text-[10px] font-black uppercase tracking-wider text-emerald-200/55">Promotions</div>
@@ -808,11 +810,13 @@ export const RankPanel: React.FC<RankPanelProps> = ({
                               />
                             )}
                           </div>
-                          {((item.girlGroup && item.girlGroup !== 'Solo') || item.currentDivision) && (
+                          {activeLeaderboard === 'idols' && (
                             <div className="text-[10px] font-bold text-amber-400/80">
-                              {item.girlGroup && item.girlGroup !== 'Solo' ? item.girlGroup + ' · ' + (item.seed || 'Tier Competitor') : (item.seed || 'Unseeded')}
-                              {item.currentDivision && <span className="block text-cyan-300/80">{item.currentDivision}</span>}
+                              {item.girlGroup && item.girlGroup !== 'Solo' ? item.girlGroup : 'Solo / Independent'} · {item.seed || 'Unseeded'}
                             </div>
+                          )}
+                          {item.currentDivision && (
+                            <div className="text-[10px] font-bold text-cyan-300/80">{item.currentDivision}</div>
                           )}
                         </div>
                       </div>
