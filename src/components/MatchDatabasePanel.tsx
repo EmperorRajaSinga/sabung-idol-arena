@@ -77,7 +77,7 @@ export const MatchDatabasePanel: React.FC<MatchDatabasePanelProps> = ({
 }) => {
   // Filter States
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'ALL' | 'TOURNAMENT' | 'LEAGUE' | 'LEAGUE_DIV_1' | 'LEAGUE_DIV_2' | 'THE_IDOLS' | 'CROWN_CUP' | 'OPEN_ARENA_CUP' | 'SPOTLIGHT_CUP' | 'SUPER_CUP_A' | 'SUPER_CUP_B'>('ALL');
+  const [typeFilter, setTypeFilter] = useState<'ALL' | 'TOURNAMENT' | 'LEAGUE' | 'LEAGUE_DIV_2' | 'THE_IDOLS' | 'CROWN_CUP' | 'OPEN_ARENA_CUP' | 'SPOTLIGHT_CUP' | 'SUPER_CUP_A' | 'SUPER_CUP_B'>('ALL');
   const [divisionFilter, setDivisionFilter] = useState<string>('ALL');
   const [seasonFilter, setSeasonFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -853,12 +853,16 @@ export const MatchDatabasePanel: React.FC<MatchDatabasePanelProps> = ({
       const isSuperCupA = isV5Record && lowerStage.includes('super cup a');
       const isSuperCupB = isV5Record && lowerStage.includes('super cup b');
       const isNamedV5Cup = isCrownCup || isOpenArenaCup || isSpotlightCup || isSuperCupA || isSuperCupB;
-      const isDivision1League = m.type === 'League Division' && doesMatchDivisionOrStage(stageLabel, 'Division 1');
+      const division2Name = String(leagueState?.leagues?.find((league) => league.id === 2)?.name || '').toLowerCase();
+      const isDivision2League = m.type === 'League Division' && (
+        /division\s*2|div\s*2|div2|championship/.test(lowerStage) ||
+        (Boolean(division2Name) && lowerStage.includes(division2Name))
+      );
       const matchType =
         typeFilter === 'ALL' ||
         (typeFilter === 'TOURNAMENT' && m.type === 'Tournament Cup' && !isV5Record) ||
-        (typeFilter === 'LEAGUE' && isDivision1League) ||
-        (typeFilter === 'LEAGUE_DIV_2' && isDivision2V5) ||
+        (typeFilter === 'LEAGUE' && m.type === 'League Division' && !isDivision2League) ||
+        (typeFilter === 'LEAGUE_DIV_2' && (isDivision2League || isDivision2V5)) ||
         (typeFilter === 'THE_IDOLS' && m.type === 'The Idols Superleague') ||
         (typeFilter === 'CROWN_CUP' && isCrownCup) ||
         (typeFilter === 'OPEN_ARENA_CUP' && isOpenArenaCup) ||
@@ -931,7 +935,12 @@ export const MatchDatabasePanel: React.FC<MatchDatabasePanelProps> = ({
   }, [combinedMatchesList]);
 
   const leagueCount = useMemo(() => {
-    return combinedMatchesList.filter((m) => m.type === 'League Division' && doesMatchDivisionOrStage(m.stageOrDivision, 'Division 1')).length;
+    return combinedMatchesList.filter((m) => {
+      const stage = String(m.stageOrDivision || '').toLowerCase();
+      const division2Name = String(leagueState?.leagues?.find((league) => league.id === 2)?.name || '').toLowerCase();
+      const isDivision2 = /division\s*2|div\s*2|div2|championship/.test(stage) || (Boolean(division2Name) && stage.includes(division2Name));
+      return m.type === 'League Division' && !isDivision2;
+    }).length;
   }, [combinedMatchesList, leagueState]);
 
   const theIdolsCount = useMemo(() => {
@@ -967,7 +976,6 @@ export const MatchDatabasePanel: React.FC<MatchDatabasePanelProps> = ({
     ALL: 'All Competitions',
     TOURNAMENT: 'Tournament Cups',
     LEAGUE: 'League',
-    LEAGUE_DIV_1: 'League',
     LEAGUE_DIV_2: 'Division 2',
     THE_IDOLS: 'The Idols Superleague',
     CROWN_CUP: 'Crown Cup',
@@ -1074,7 +1082,7 @@ export const MatchDatabasePanel: React.FC<MatchDatabasePanelProps> = ({
             <span>🛡️ League ({leagueCount})</span>
           </button>
           {([
-            ['LEAGUE_DIV_2', 'Division 2', (m: NormalizedMatch) => (m.type === 'League Division' && doesMatchDivisionOrStage(m.stageOrDivision, 'Division 2')) || m.stageOrDivision.toLowerCase().includes('cups & divisions: division 2')],
+            ['LEAGUE_DIV_2', 'Division 2', (m: NormalizedMatch) => (m.type === 'League Division' && (/division\\s*2|div\\s*2|div2|championship/.test(m.stageOrDivision.toLowerCase()) || (Boolean(leagueState?.leagues?.find((league) => league.id === 2)?.name) && m.stageOrDivision.toLowerCase().includes(String(leagueState?.leagues?.find((league) => league.id === 2)?.name).toLowerCase())))) || m.stageOrDivision.toLowerCase().includes('cups & divisions: division 2')],
             ['CROWN_CUP', 'Crown Cup', (m: NormalizedMatch) => m.stageOrDivision.toLowerCase().includes('cups & divisions:') && m.stageOrDivision.toLowerCase().includes('league champions cup')],
             ['OPEN_ARENA_CUP', 'Open Arena Cup', (m: NormalizedMatch) => m.stageOrDivision.toLowerCase().includes('cups & divisions:') && m.stageOrDivision.toLowerCase().includes('all-league knockout cup')],
             ['SPOTLIGHT_CUP', 'Spotlight Cup', (m: NormalizedMatch) => m.stageOrDivision.toLowerCase().includes('cups & divisions:') && m.stageOrDivision.toLowerCase().includes('top 16 mini cup')],
