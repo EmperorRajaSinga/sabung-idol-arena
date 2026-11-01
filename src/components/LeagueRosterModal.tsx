@@ -516,7 +516,12 @@ export const LeagueRosterModal: React.FC<LeagueRosterModalProps> = ({
     // Commit the compact roster snapshot directly from the Save & Apply action.
     // This avoids relying only on parent React state updates or the larger app-state
     // write, either of which may be delayed or rejected by browser storage limits.
-    const rosterSnapshotSaved = saveDivisionOneRosterSnapshot(updatedLeagues);
+    const explicitlyClearedRosterIds = updatedLeagues
+      .filter((league) => (divisionMembers[league.id] || []).length === 0)
+      .map((league) => league.id);
+    const rosterSnapshotSaved = saveDivisionOneRosterSnapshot(updatedLeagues, {
+      allowEmptyRosterIds: explicitlyClearedRosterIds,
+    });
     if (!rosterSnapshotSaved) {
       triggerFeedback('Save failed. The roster snapshot could not be written. Keep this window open and do not refresh.', 'error');
       return;
