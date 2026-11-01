@@ -22,11 +22,13 @@ export function getTopH2HRecordsForIdol(
   idols: Idol[],
   limit: number = 5
 ): OpponentH2HRecord[] {
-  if (!idolId || !matchDatabase || matchDatabase.length === 0) return [];
+  if (!idolId || !Array.isArray(matchDatabase) || matchDatabase.length === 0) return [];
 
-  const idolMap = new Map<string, Idol>(idols.map((i) => [i.id, i]));
+  const safeIdols = (Array.isArray(idols) ? idols : []).filter((i) => i && typeof i.id === 'string' && typeof i.name === 'string');
+  const safeMatches = matchDatabase.filter((m) => m && typeof m === 'object');
+  const idolMap = new Map<string, Idol>(safeIdols.map((i) => [i.id, i]));
   const idolNameMap = new Map<string, Idol>(
-    idols.map((i) => [i.name.trim().toLowerCase(), i])
+    safeIdols.map((i) => [i.name.trim().toLowerCase(), i])
   );
 
   const opponentStats = new Map<
@@ -43,7 +45,7 @@ export function getTopH2HRecordsForIdol(
     }
   >();
 
-  matchDatabase.forEach((m) => {
+  safeMatches.forEach((m) => {
     if (m.scoreA === null || m.scoreB === null || m.scoreA === undefined || m.scoreB === undefined) return;
 
     let isA = false;
@@ -62,13 +64,14 @@ export function getTopH2HRecordsForIdol(
     const myScore = isA ? m.scoreA : m.scoreB;
     const oppScore = isA ? m.scoreB : m.scoreA;
 
-    const key = oppId || oppName.toLowerCase();
+    const safeOpponentName = String(oppName || 'Unknown Opponent');
+    const key = oppId || safeOpponentName.toLowerCase();
     let current = opponentStats.get(key);
 
     if (!current) {
       current = {
         opponentId: oppId,
-        opponentName: oppName,
+        opponentName: safeOpponentName,
         played: 0,
         wins: 0,
         losses: 0,
@@ -102,7 +105,7 @@ export function getTopH2HRecordsForIdol(
 
     return {
       opponentId: stat.opponentId || matchedIdol?.id || stat.opponentName,
-      opponentName: matchedIdol?.name || stat.opponentName,
+      opponentName: matchedIdol?.name || stat.opponentName || 'Unknown Opponent',
       opponentGroup: matchedIdol?.girlGroup || 'Solo',
       opponentPhoto: matchedIdol?.photoUrl || '',
       opponentSeed: matchedIdol?.seed || 'Seed 3',
