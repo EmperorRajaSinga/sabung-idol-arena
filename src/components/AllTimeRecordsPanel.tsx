@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { V5CompetitionStatsPanel } from './V5CompetitionStatsPanel';
 import {
   CareerStat,
   LeagueSeasonArchive,
@@ -98,7 +99,7 @@ export const AllTimeRecordsPanel: React.FC<AllTimeRecordsPanelProps> = ({
   matchDatabase = [],
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'tournament' | 'league' | 'the_idols' | 'combined' | 'achievements'
+    'tournament' | 'league' | 'the_idols' | 'combined' | 'achievements' | 'v5_competitions'
   >('tournament');
 
   const [showAllRows, setShowAllRows] = useState<boolean>(true);
@@ -756,6 +757,9 @@ export const AllTimeRecordsPanel: React.FC<AllTimeRecordsPanelProps> = ({
             <Star className="w-3.5 h-3.5" />
             <span>Combined Career</span>
           </button>
+          <button onClick={() => setActiveTab('v5_competitions')} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-poster-body font-black transition-all ${activeTab === 'v5_competitions' ? 'bg-amber-500 text-black shadow' : 'text-amber-200/70 hover:text-white'}`}>
+            <Trophy className="w-3.5 h-3.5" /><span>New V5 Competitions</span>
+          </button>
           <button
             onClick={() => setActiveTab('achievements')}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-poster-body font-black transition-all ${
@@ -771,7 +775,7 @@ export const AllTimeRecordsPanel: React.FC<AllTimeRecordsPanelProps> = ({
       </div>
 
       {/* Global Filter & Expand Bar (For Leaderboard tabs) */}
-      {activeTab !== 'achievements' && (
+      {activeTab !== 'achievements' && activeTab !== 'v5_competitions' && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#17100b] p-3 rounded-2xl border-2 border-black poster-shadow-sm">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-400/60" />
@@ -808,6 +812,8 @@ export const AllTimeRecordsPanel: React.FC<AllTimeRecordsPanelProps> = ({
           </div>
         </div>
       )}
+
+      {activeTab === 'v5_competitions' && <V5CompetitionStatsPanel matchDatabase={matchDatabase} idols={idols} />}
 
       {/* 1. TOURNAMENT CUP RECORDS */}
       {activeTab === 'tournament' && (
