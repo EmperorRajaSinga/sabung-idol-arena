@@ -1517,6 +1517,16 @@ export function computeCareerStats(
   const playerMatchHistory = new Map<string, { win: boolean; draw: boolean }[]>();
 
   safeMatchDatabase.forEach((m) => {
+    // A permanent record is a played match only when it has a recorded winner
+    // or an explicit draw. Empty 0-0 placeholders are fixtures, not results.
+    const hasRecordedResult =
+      m.isDraw === true ||
+      m.winnerId === 'DRAW' ||
+      Boolean(m.winnerId) ||
+      Number(m.scoreA ?? 0) !== 0 ||
+      Number(m.scoreB ?? 0) !== 0;
+    if (!hasRecordedResult) return;
+
     const sId = Number(m.seasonId || 1);
     const stage = (m.stage || '').toLowerCase();
     const groupName = (m.groupName || '').toLowerCase();
@@ -1827,6 +1837,15 @@ export function syncAllMatchesToDatabase(
   // 1. Ingest existing permanent matchDatabase (excluding active current season so resets/deletions take effect immediately)
   safeMatchDb.forEach((m, idx) => {
     if (!m) return;
+    // Never promote an unplayed fixture placeholder into a permanent match.
+    const hasRecordedResult =
+      m.isDraw === true ||
+      m.winnerId === 'DRAW' ||
+      Boolean(m.winnerId) ||
+      Number(m.scoreA ?? 0) !== 0 ||
+      Number(m.scoreB ?? 0) !== 0;
+    if (!hasRecordedResult) return;
+
     const sId = Number(m.seasonId || 1);
     if (currentConfig?.isStarted && sId === currentSeasonId) {
       // Exclude active current season records; they will be accurately re-synced from currentGroups & currentKnockoutMatches
