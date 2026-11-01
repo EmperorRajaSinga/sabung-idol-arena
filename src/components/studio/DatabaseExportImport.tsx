@@ -373,8 +373,8 @@ export const DatabaseExportImport: React.FC<DatabaseExportImportProps> = ({
             }, incomingIdols);
           });
           if (
-            division2.length !== 6 ||
-            new Set(division2.map((league: any) => league.parentLeagueId)).size !== 6 ||
+            (division2.length > 0 && division2.length !== 6) ||
+            (division2.length > 0 && new Set(division2.map((league: any) => league.parentLeagueId)).size !== 6) ||
             division2.some((league: any) =>
               !Number.isInteger(league.parentLeagueId) ||
               league.parentLeagueId < 1 ||
@@ -382,7 +382,7 @@ export const DatabaseExportImport: React.FC<DatabaseExportImportProps> = ({
               league.id !== 100 + league.parentLeagueId
             )
           ) {
-            throw new Error('League backup must contain six Division 2 leagues paired one-to-one with Division 1.');
+            throw new Error('League backup must contain either zero or six Division 2 leagues paired one-to-one with Division 1.');
           }
           restoredV5 = {
             ...(restoredV5 || {
