@@ -201,8 +201,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     }));
     return entries;
   };
-  const showRosterConflicts = (names: string[], target: RosterLocation): boolean => {
-    const conflicts = findRosterNameConflicts(names, target, getRosterEntries());
+  const showRosterConflicts = (names: string[], target: RosterLocation, exclude?: RosterLocation): boolean => {
+    const existing = getRosterEntries().filter(({ location }) =>
+      !exclude || location.division !== exclude.division || location.leagueId !== exclude.leagueId
+    );
+    const conflicts = findRosterNameConflicts(names, target, existing);
     if (!conflicts.length) return false;
     const message = conflicts.slice(0, 6).map((conflict) => {
       const where = conflict.locations.map((location) => `${location.division} / ${location.leagueName}`).join(', ');
