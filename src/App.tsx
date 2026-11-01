@@ -4,7 +4,7 @@ import { auditAppStateDataChanges, normalizeDataName, recordDataHistory } from '
 
 
 import { getUnfinishedCompetitions } from './utils/seasonGuard';
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import {
   AppState,
   loadAppState,
@@ -236,12 +236,14 @@ export function App() {
   const [appState, setAppState] = useState<AppState>(() => loadAppState());
   const v5State = appState.v5State || loadV5State();
   const handleUpdateV5State = (next: V5State) => {
-    // Update the visible competition state immediately. Persisting the full V5
-    // state and reconciling the permanent history can be expensive for large seasons,
-    // so move that work out of the click's input event.
+    // PERSISTENCE CONTRACT: save every user-authored V5 change synchronously
+    // before returning from the input event. IndexedDB remains the full-state backup.
+    const saved = saveV5State(next);
+    if (!saved) {
+      console.error('[Persistence] V5 save failed. The browser storage quota may be exhausted.');
+    }
     setAppState((prev) => ({ ...prev, v5State: next }));
     window.setTimeout(() => {
-      saveV5State(next);
       setAppState((prev) => {
       // Preserve every completed V5 match in the permanent central match database
       // before a competition can be reset or rebuilt.
@@ -772,8 +774,9 @@ export function App() {
     };
   }, []);
 
-  // Sync app state to localStorage and IndexedDB whenever it changes, ONLY after initial hydration
-  useEffect(() => {
+  // PERSISTENCE CONTRACT: every committed user-data change is written to synchronous
+  // localStorage before paint, then mirrored to IndexedDB. Refresh must never discard edits.
+  useLayoutEffect(() => {
     if (!isHydratedRef.current) return;
     saveAppState(appState, leagueState, leagueArchives, theIdolsState, theIdolsArchives);
   }, [appState, leagueState, leagueArchives, theIdolsState, theIdolsArchives]);
