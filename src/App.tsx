@@ -1055,6 +1055,12 @@ export function App() {
   };
 
   const handleUpdateIdol = (updated: Idol) => {
+    const duplicate = appState.idols.find((idol) => idol.id !== updated.id && normalizeDataName(idol.name) === normalizeDataName(updated.name));
+    if (duplicate) {
+      recordDataHistory({ action: 'duplicate_blocked', entity: 'idol', entityName: duplicate.name, source: 'Idol Database / Edit Idol', details: `Blocked rename to "${updated.name}" because another idol profile already uses that name.` });
+      window.alert(`Idol name "${duplicate.name}" is already in use. Choose a unique name.`);
+      return;
+    }
     setAppState((prev) => ({
       ...prev,
       idols: prev.idols.map((i) => (i.id === updated.id ? updated : i)),
