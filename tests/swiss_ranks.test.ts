@@ -38,5 +38,28 @@ const allSwissMatchesUseCurrentEntrants = [...sw5.matches, ...sw5.lastChanceMatc
 );
 check('f) completed stale Swiss data is rebuilt without retaining old entrants or pairings', bad(sw5, top) === 0 && allSwissMatchesUseCurrentEntrants && sw5.matches.every((m: any) => !m.completed), `${bad(sw5, top)} direct entrants; stale completed matches retained: ${sw5.matches.filter((m: any) => m.completed).length}`);
 
+
+ // g) full-season simulation must reconcile even a populated, completed stale Swiss state
+const { simulateEntireSeason } = await import('../src/utils/seasonSimulatorLogic');
+const staleLeagueState = {
+  ...r.summary.updatedLeagueState,
+  swissPlayIn: {
+    ...r.summary.updatedLeagueState.swissPlayIn,
+    participants: r.summary.updatedLeagueState.swissPlayIn.participants.map((p: any, i: number) =>
+      i < 3 ? { ...p, idolId: [...top][i] } : p
+    ),
+  },
+};
+const rerun = simulateEntireSeason(
+  r.summary.updatedAppState,
+  staleLeagueState as any,
+  r.summary.updatedTheIdolsState
+);
+const rerunSwiss = rerun.updatedLeagueState.swissPlayIn;
+const rerunDirect = rerun.qualifiers.filter((q: any) => q.qualificationType === 'Automatic (Top 6)');
+check('g) full-season simulator repairs populated stale Swiss state before qualifier calculation',
+  bad(rerunSwiss, top) === 0 && rerunDirect.length === 36 && rerunDirect.every((q: any) => top.has(q.idolId)),
+  `${bad(rerunSwiss, top)} direct Swiss entrants; ${rerunDirect.length} direct qualifiers`);
+
 let f = 0; for (const [n, ok, i] of results) { if (!ok) f++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${n}${i ? '   [' + i + ']' : ''}`); }
 process.exit(f ? 1 : 0);
