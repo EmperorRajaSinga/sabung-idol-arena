@@ -852,10 +852,17 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
           setMsg(`${selectedLeague?.name || 'Spotlight Cup'} bracket and match results reset. Historical records remain unchanged.`);
         };
         const rebuildSpotlight = () => {
-          const currentEntrants = spotlightMatches.filter((match) => match.roundName === 'Round of 16')
-            .flatMap((match) => [match.idolAId || '', match.idolBId || '']);
-          const validEntrants = currentEntrants.length === 16 && currentEntrants.every((id) => !!id);
-          const nextEntrants = validEntrants ? currentEntrants : qualified;
+          const openingMatches = spotlightMatches.filter((match) => match.roundName === 'Round of 16');
+          const seedPositions = [1, 16, 8, 9, 4, 13, 5, 12, 2, 15, 7, 10, 3, 14, 6, 11];
+          const reconstructedEntrants = Array.from({ length: 16 }, () => '');
+          openingMatches.forEach((match, index) => {
+            reconstructedEntrants[seedPositions[index * 2] - 1] = match.idolAId || '';
+            reconstructedEntrants[seedPositions[index * 2 + 1] - 1] = match.idolBId || '';
+          });
+          const validCurrentEntrants = reconstructedEntrants.length === 16 && reconstructedEntrants.every(Boolean);
+          const nextEntrants = qualified.length === 16 && qualified.every(Boolean)
+            ? qualified
+            : validCurrentEntrants ? reconstructedEntrants : [];
           if (nextEntrants.length !== 16 || nextEntrants.some((id) => !id)) {
             setMsg('Automatic rebuild requires 16 valid qualified idols. Assign all opening-round slots manually first.');
             return;
