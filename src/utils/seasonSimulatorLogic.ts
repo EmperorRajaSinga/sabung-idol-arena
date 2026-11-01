@@ -28,6 +28,7 @@ import {
   initializeLeagueSeason,
   syncLeagueMatchesToArchivedMatches,
   archiveLeagueSeason,
+  repairLeagueFixturesForSimulation,
 } from './leagueLogic';
 import {
   generateSwissPlayIn,
@@ -212,7 +213,12 @@ export function simulateEntireSeason(
   // Apply custom branding
   const brandingDefs = loadCustomLeagueBranding();
 
-  const simulatedLeagues = leagueSeason.leagues.map((league) => {
+  const simulatedLeagues = leagueSeason.leagues.map((sourceLeague) => {
+    const repaired = repairLeagueFixturesForSimulation(sourceLeague, idols);
+    if (repaired.unresolvedMemberIds.length) {
+      throw new Error(`${sourceLeague.name}: unresolved roster IDs: ${repaired.unresolvedMemberIds.join(', ')}`);
+    }
+    const league = repaired.league;
     const customDef = brandingDefs.find((b) => b.id === league.id);
     const defaultDef = DEFAULT_LEAGUE_DEFS.find((d) => d.id === league.id) || DEFAULT_LEAGUE_DEFS[0];
 
