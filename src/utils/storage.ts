@@ -13,7 +13,7 @@ import {
   TheIdolsSeasonArchive,
 } from '../types';
 import { INITIAL_IDOLS, INITIAL_GIRL_GROUPS } from '../data/initialData';
-import { loadV5State, saveV5State } from './v5/store';
+import { loadV5State, saveV5State, hasStoredV5State } from './v5/store';
 import type { V5State, V5TitleArchive } from './v5/store';
 import {
   loadPersonalRankings,
@@ -654,7 +654,8 @@ export function normalizeAppState(parsed: any, isFullRestore: boolean = false): 
     customLeagueBranding,
     theIdolsState,
     theIdolsArchives,
-    v5State: parsed.v5State && typeof parsed.v5State === 'object' ? parsed.v5State as V5State : loadV5State(),
+    // The dedicated V5 key is written synchronously after every competition edit, so prefer it over a possibly older main snapshot.
+    v5State: hasStoredV5State() ? loadV5State() : (parsed.v5State && typeof parsed.v5State === 'object' ? parsed.v5State as V5State : loadV5State()),
     _savedAt: typeof parsed._savedAt === 'number' ? parsed._savedAt : Date.now(),
   };
 
