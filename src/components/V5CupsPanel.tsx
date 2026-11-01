@@ -92,7 +92,7 @@ const Row: React.FC<{ m: E.BNode; idols: Map<string, Idol>; nm: (id: string | nu
       ) : (
         <div className="mt-3 rounded-xl border border-black/70 bg-black/25 px-3 py-2 text-[11px] font-bold italic text-amber-100/40">Waiting for previous round</div>
       )}
-      {ready && <MatchModal isOpen={scoreModalOpen} onClose={() => setScoreModalOpen(false)} idolA={idolA} idolB={idolB} currentScoreA={m.scoreA} currentScoreB={m.scoreB} matchTitle={m.roundName} stageName="Cups & Divisions" isKnockout isGrandFinal={/grand final/i.test(m.roundName)} isCompleted={m.completed} onFinish={(scoreA, scoreB) => { const result = onSave(scoreA, scoreB); if (result) setErr(result); else setScoreModalOpen(false); }} />}
+      {ready && <MatchModal isOpen={scoreModalOpen} onClose={() => setScoreModalOpen(false)} idolA={idolA} idolB={idolB} currentScoreA={m.scoreA} currentScoreB={m.scoreB} matchTitle={m.roundName} stageName="Cup Competition" isKnockout isGrandFinal={/grand final/i.test(m.roundName)} isCompleted={m.completed} onFinish={(scoreA, scoreB) => { const result = onSave(scoreA, scoreB); if (result) setErr(result); else setScoreModalOpen(false); }} />}
     </div>
   );
 };
@@ -119,7 +119,7 @@ const Bracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (id: stri
       <span className="mr-1 text-[10px] font-black uppercase tracking-wider text-amber-300/70">Quick simulate</span>
       {ms.filter((m) => !m.completed && m.idolAId && m.idolBId).map((m) => <Btn key={m.id} onClick={() => { const next = clone(ms); sim(next, m.id); onChange(next); }}>{m.roundName} #{m.id.slice(-2)}</Btn>)}
     </div>
-    {selectedMatch && <MatchModal isOpen onClose={() => setSelectedMatch(null)} idolA={selectedMatch.idolAId ? idols.get(selectedMatch.idolAId) || null : null} idolB={selectedMatch.idolBId ? idols.get(selectedMatch.idolBId) || null : null} currentScoreA={selectedMatch.scoreA} currentScoreB={selectedMatch.scoreB} matchTitle={selectedMatch.roundName} stageName="Cups & Divisions" isKnockout isCompleted={selectedMatch.completed} onFinish={(a, b) => { const next = clone(ms); const error = save(next, selectedMatch.id, a, b); if (error) { window.alert(error); return; } onChange(next); setSelectedMatch(null); }} />}
+    {selectedMatch && <MatchModal isOpen onClose={() => setSelectedMatch(null)} idolA={selectedMatch.idolAId ? idols.get(selectedMatch.idolAId) || null : null} idolB={selectedMatch.idolBId ? idols.get(selectedMatch.idolBId) || null : null} currentScoreA={selectedMatch.scoreA} currentScoreB={selectedMatch.scoreB} matchTitle={selectedMatch.roundName} stageName="Cup Competition" isKnockout isCompleted={selectedMatch.completed} onFinish={(a, b) => { const next = clone(ms); const error = save(next, selectedMatch.id, a, b); if (error) { window.alert(error); return; } onChange(next); setSelectedMatch(null); }} />}
   </div>;
 };
 
@@ -340,7 +340,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
       <p className="text-sm text-amber-100/60 mb-4">{panelDescription}</p>
       {msg && <div role="status" className="mb-4 rounded-xl border-2 border-black bg-black/50 p-3 text-sm text-amber-200">{msg} <button className="underline ml-2" onClick={() => setMsg('')}>close</button></div>}
 
-      {(section === 'all' || section === 'crown') && (<Card title={names.champsCup} note="The 6 league champions, double elimination. Byes: Unzure Cup winner, then The Idols winner, then league points. Best of 5, Lower Final and Grand Final Best of 7.">
+      {section === 'crown' && (<Card title={names.champsCup} note="The 6 league champions, double elimination. Byes: Unzure Cup winner, then The Idols winner, then league points. Best of 5, Lower Final and Grand Final Best of 7.">
         <div className="flex gap-2 mb-2">
           <Btn onClick={buildChamps} disabled={!d1Done || !!v5.champsCup}>Build bracket</Btn>
           <Btn onClick={() => { if (v5.champsCup) { const c = clone(v5.champsCup); E.simulateBracket(c.matches, by); commit({ champsCup: c }); } }} disabled={!v5.champsCup}>Simulate all</Btn>
@@ -350,7 +350,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
         {v5.champsCup && <><p className="text-xs mb-1">Byes: {v5.champsCup.byeIds.map(nm).join(', ')}</p><CrownCupBracket idols={by} nm={nm} sim={simOne} save={manual} ms={v5.champsCup.matches} onChange={(ms) => commit({ champsCup: { ...v5.champsCup!, matches: ms } })} /></>}
       </Card> )}
 
-      {(section === 'all' || section === 'open') && (<Card title={names.leagueCup} note="Every idol of every league. Division 2 starts in round 1. Stronger Division 1 idols (league position, then points) skip rounds. Best of 5, final Best of 7.">
+      {section === 'open' && (<Card title={names.leagueCup} note="Every idol of every league. Division 2 starts in round 1. Stronger Division 1 idols (league position, then points) skip rounds. Best of 5, final Best of 7.">
         <div className="flex flex-wrap gap-2 mb-2">
           <Btn onClick={buildLC} disabled={!!lc}>Build bracket</Btn>
           <Btn onClick={lcRound} disabled={!lc || !!lc.championId}>Simulate current round</Btn>
@@ -375,12 +375,12 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
         {lcMatches.length > 0 && <span className="sr-only">{lcMatches.length} matches</span>}
       </Card> )}
 
-      {(section === 'all' || section === 'spotlight') && (<Card title={names.miniCup} note="Top 16 of each Division 1 final table, seeded 1 vs 16. Single elimination. Best of 5, final Best of 7.">
+      {section === 'spotlight' && (<Card title={names.miniCup} note="Top 16 of each Division 1 final table, seeded 1 vs 16. Single elimination. Best of 5, final Best of 7.">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
           {d1.map((l) => { const ms = v5.miniCups[l.id]; const played = ms?.filter((m) => m.completed).length || 0; const total = ms?.length || l.memberIds.length * 15; const selected = (selectedSpotlightLeague || d1[0]?.id) === l.id; const complete = !!ms?.some((m) => m.id.endsWith('_final') && m.completed); return (
             <button key={l.id} type="button" onClick={() => setSelectedSpotlightLeague(l.id)} className={`relative flex min-h-[82px] flex-col justify-between overflow-hidden rounded-2xl border-2 p-3 text-left transition-all ${selected ? 'border-amber-400 bg-[#22160d] shadow-lg ring-2 ring-amber-400/30' : 'border-black bg-[#16100b] text-slate-400 hover:bg-[#1c140e]'}`}>
               <div className="mb-1.5 flex items-center justify-between"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: l.color || '#d97706' }} /><span className="font-mono text-[10px] font-bold text-amber-400/80">{played}/{total}</span></div>
-              <div><div className={`truncate text-xs font-black uppercase tracking-wide ${selected ? 'text-white' : 'text-slate-300'}`}>{l.name}</div><div className="truncate text-[10px] font-bold text-amber-400/60">Challenger Division</div></div>
+              <div><div className={`truncate text-xs font-black uppercase tracking-wide ${selected ? 'text-white' : 'text-slate-300'}`}>{l.name}</div><div className="truncate text-[10px] font-bold text-amber-400/60">Division 1 · Top 16</div></div>
               {complete && <span className="absolute right-1 top-1 text-[10px] font-black text-emerald-400">CHAMP</span>}
             </button>); })}
         </div>
@@ -396,7 +396,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
           </div>); })}
       </Card> )}
 
-      {(section === 'all' || section === 'super') && (<Card title="Super Cups" note={`${names.superCupA}: The Idols champion vs Unzure Cup champion. ${names.superCupB}: league champion vs ${names.miniCup} champion. If one idol wins both, the opponent is the runner-up. Best of 5.`}>
+      {section === 'super' && (<Card title="Super Cups" note={`${names.superCupA}: The Idols champion vs Unzure Cup champion. ${names.superCupB}: league champion vs ${names.miniCup} champion. If one idol wins both, the opponent is the runner-up. Best of 5.`}>
         <div className="flex gap-2 mb-2"><Btn onClick={buildSuperA} disabled={!!v5.superA}>Build {names.superCupA}</Btn><Btn onClick={buildSuperB} disabled={v5.superB.length > 0}>Build {names.superCupB}</Btn>
           <Btn onClick={() => { const a = v5.superA ? clone(v5.superA) : null; if (a) E.playNode(a, by); const b = clone(v5.superB); b.forEach((m) => { if (!m.completed) E.playNode(m, by); }); commit({ superA: a, superB: b }); }} disabled={!v5.superA && v5.superB.length === 0}>Simulate all</Btn>
           <Btn onClick={() => { if ((v5.superA || v5.superB.length) && window.confirm("Reset all Super Cup matches and results?")) commit({ superA: null, superB: [] }); }} disabled={!v5.superA && v5.superB.length === 0} className="bg-rose-400">Reset Competitions</Btn></div>
