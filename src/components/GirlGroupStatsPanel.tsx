@@ -11,6 +11,7 @@ import {
 } from '../types';
 import { Users, Crown, Trophy, Search, ChevronDown, ChevronUp, Award, Swords, Shield, Sparkles, Star, Table } from 'lucide-react';
 import { calculateUnifiedTotalTitles } from '../utils/databaseStudioLogic';
+import type { V5TitleArchive } from '../utils/v5/store';
 
 interface GirlGroupStatsPanelProps {
   idols: Idol[];
@@ -21,6 +22,7 @@ interface GirlGroupStatsPanelProps {
   leagueState?: LeagueSeasonState | null;
   theIdolsState?: TheIdolsSeasonState | null;
   theIdolsArchives?: TheIdolsSeasonArchive[];
+  v5TitleArchives?: V5TitleArchive[];
 }
 
 export interface GirlGroupStat {
@@ -92,6 +94,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
   leagueState = null,
   theIdolsState = null,
   theIdolsArchives = [],
+  v5TitleArchives = [],
 }) => {
   const [search, setSearch] = useState('');
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
@@ -376,72 +379,28 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
     }
   });
 
-  // 2e. Calculate V5 cup and Division 2 champions from completed archived matches.
+  // V5 title records are the authoritative source for cup and Division 2 champions.
   const v5WinnerByCompetition = new Map<string, Map<string, Set<string>>>();
-  const competitionStageMap: Array<[string, RegExp]> = [
-    ['Crown Cup', /league champions cup/i],
-    ['Open Arena Cup', /all-league knockout cup/i],
-    ['Spotlight Cup', /top 16 mini cup/i],
-    ['Super Cup A', /super cup a/i],
-    ['Super Cup B', /super cup b/i],
+  const v5CompetitionNames: Array<[string, (name: string) => boolean]> = [
+    ['Crown Cup', (name) => name.toLowerCase() === 'league champions cup'],
+    ['Open Arena Cup', (name) => name.toLowerCase() === 'all-league knockout cup'],
+    ['Spotlight Cup', (name) => name.toLowerCase().startsWith('top 16 mini cup')],
+    ['Super Cup A', (name) => name.toLowerCase() === 'super cup a'],
+    ['Super Cup B', (name) => name.toLowerCase().startsWith('super cup b')],
+    ['Division 2', (name) => name.toLowerCase().startsWith('division 2')],
   ];
-  const finalMatchSeen = new Set<string>();
-  (Array.isArray(matchDatabase) ? matchDatabase : []).forEach((match) => {
-    if (!match || !match.idolAId || !match.idolBId || match.scoreA == null || match.scoreB == null) return;
-    const stage = String(match.stage || '');
-    if (!stage.toLowerCase().startsWith('cups & divisions:')) return;
-    const competition = competitionStageMap.find(([, pattern]) => pattern.test(stage))?.[0];
+  (v5TitleArchives || []).forEach((record) => {
+    if (!record?.winnerId) return;
+    const competitionName = String(record.competition || '');
+    const competition = record.isDivision
+      ? 'Division 2'
+      : v5CompetitionNames.find(([label, matches]) => label !== 'Division 2' && matches(competitionName))?.[0];
     if (!competition) return;
-    const round = stage.split(' / ').slice(1).join(' / ').trim();
-    if (!/^(?:grand\\s+)?final(?:\\b|\\s|$)/i.test(round) && round.toLowerCase() !== 'super cup') return;
-    const scoreA = Number(match.scoreA), scoreB = Number(match.scoreB);
-    if (!Number.isFinite(scoreA) || !Number.isFinite(scoreB) || scoreA === scoreB) return;
-    const dedupeKey = String(match.matchId || [match.seasonId, competition, match.idolAId, match.idolBId, scoreA, scoreB].join('|'));
-    if (finalMatchSeen.has(dedupeKey)) return;
-    finalMatchSeen.add(dedupeKey);
-    const winnerId = match.winnerId || (scoreA > scoreB ? match.idolAId : match.idolBId);
-    const historicalWinnerGroup = winnerId === match.idolAId ? match.idolAGroup : match.idolBGroup;
-    const groupName = historicalWinnerGroup || idolsMap.get(winnerId)?.girlGroup || 'Solo / Independent';
+    const groupName = record.winnerGroup || idolsMap.get(record.winnerId)?.girlGroup || 'Solo / Independent';
     if (!v5WinnerByCompetition.has(competition)) v5WinnerByCompetition.set(competition, new Map());
-    const seasons = v5WinnerByCompetition.get(competition)!;
-    if (!seasons.has(groupName)) seasons.set(groupName, new Set());
-    const competitionLabel = stage.split(' / ')[0].replace(/^Cups & Divisions:\\s*/i, '').trim();
-    seasons.get(groupName)!.add(`${String(match.seasonId || 1)}::${competitionLabel}`);
-  });
-
-  // Division 2 titles are reconstructed per season from its archived match results.
-  const division2Tables = new Map<string, Map<string, { points: number; diff: number; scored: number }>>();
-  const division2Groups = new Map<string, string>();
-  const division2Seen = new Set<string>();
-  (Array.isArray(matchDatabase) ? matchDatabase : []).forEach((match) => {
-    if (!match || !match.idolAId || !match.idolBId || match.scoreA == null || match.scoreB == null) return;
-    if (!String(match.stage || '').toLowerCase().includes('cups & divisions: division 2')) return;
-    const key = String(match.matchId || [match.seasonId, match.idolAId, match.idolBId, match.scoreA, match.scoreB].join('|'));
-    if (division2Seen.has(key)) return;
-    division2Seen.add(key);
-    const a = Number(match.scoreA), b = Number(match.scoreB);
-    if (!Number.isFinite(a) || !Number.isFinite(b)) return;
-    const competitionLabel = String(match.stage || '').split(' / ')[0].replace(/^Cups & Divisions:\\s*/i, '').trim();
-    const season = `${String(match.seasonId || 1)}::${competitionLabel}`;
-    if (!division2Tables.has(season)) division2Tables.set(season, new Map());
-    const table = division2Tables.get(season)!;
-    if (match.idolAGroup) division2Groups.set(`${season}::${match.idolAId}`, match.idolAGroup);
-    if (match.idolBGroup) division2Groups.set(`${season}::${match.idolBId}`, match.idolBGroup);
-    const update = (id: string, scored: number, conceded: number) => {
-      const row = table.get(id) || { points: 0, diff: 0, scored: 0 };
-      row.points += scored > conceded ? 3 : scored === conceded ? 1 : 0;
-      row.diff += scored - conceded; row.scored += scored; table.set(id, row);
-    };
-    update(match.idolAId, a, b); update(match.idolBId, b, a);
-  });
-  division2Tables.forEach((table, season) => {
-    const championId = [...table.entries()].sort((a, b) => b[1].points - a[1].points || b[1].diff - a[1].diff || b[1].scored - a[1].scored)[0]?.[0];
-    if (!championId) return;
-    const groupName = division2Groups.get(`${season}::${championId}`) || idolsMap.get(championId)?.girlGroup || 'Solo / Independent';
-    if (!v5WinnerByCompetition.has('Division 2')) v5WinnerByCompetition.set('Division 2', new Map());
-    const seasons = v5WinnerByCompetition.get('Division 2')!;
-    if (!seasons.has(groupName)) seasons.set(groupName, new Set());
-    seasons.get(groupName)!.add(season);
+    const groups = v5WinnerByCompetition.get(competition)!;
+    if (!groups.has(groupName)) groups.set(groupName, new Set());
+    groups.get(groupName)!.add(`${Number(record.seasonNumber || 1)}::${competitionName}`);
   });
 
   // Keep historical group names visible even if the current idol roster has changed.
