@@ -992,6 +992,19 @@ export const DatabaseStudioPanel: React.FC<DatabaseStudioPanelProps> = ({
           const incomingIdols = appState.idols;
           const leagueDefs = [...branding].sort((a: any, b: any) => a.id - b.id);
           const importedSeason = Math.max(1, Number(data.seasonNumber) || 1);
+          const invalidRoster = data.divisions.find((division: any) => {
+            const roster = Array.isArray(division.memberIds)
+              ? division.memberIds
+              : Array.isArray(division.roster)
+                ? division.roster.map((idol: any) => String(idol.id || idol.idolId || '')).filter(Boolean)
+                : [];
+            return roster.length !== 20 || new Set(roster).size !== 20 ||
+              roster.some((id: string) => !incomingIdols.some((idol) => idol.id === id));
+          });
+          if (invalidRoster) {
+            showToast(`Division ${invalidRoster.leagueId} must contain 20 unique idols that exist in the imported Idol Database. Import the Idol Database first.`, 'error');
+            return;
+          }
           saveCustomLeagueBranding(leagueDefs);
           const baseLeague = {
             seasonNumber: importedSeason,
@@ -1030,10 +1043,19 @@ export const DatabaseStudioPanel: React.FC<DatabaseStudioPanelProps> = ({
             ...prev,
             customLeagueBranding: leagueDefs,
             matchDatabase: [],
+            archives: [],
             leagueArchives: [],
+            theIdolsArchives: [],
+            groups: [],
+            knockoutMatches: [],
+            selectedParticipantIds: [],
+            config: { ...prev.config, isStarted: false, isGroupStageFinished: false, isKnockoutFinished: false },
           }));
           onUpdateLeagueArchives([]);
-          showToast('League branding and six rosters imported. League fixtures, league archives, and previous match records reset to an unplayed state.', 'success');
+          onUpdateTheIdolsArchives?.([]);
+          onUpdateTheIdolsState?.(initializeTheIdolsSeason(incomingIdols, importedSeason, appState.girlGroups));
+          saveTheIdolsArchives([]);
+          showToast('League branding and six rosters imported. All active and historical match records reset; all six leagues remain unplayed.', 'success');
         } else {
           if (Array.isArray(data.idols)) {
             onUpdateAppState((prev) => ({
