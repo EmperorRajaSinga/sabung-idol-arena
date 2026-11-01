@@ -80,6 +80,7 @@ export interface KnockoutMatch {
   roundIndex: number; // 0 = Play-In, 1 = Round of 32, 2 = Round of 16, 3 = Quarter Final, 4 = Semi Final, 5 = Grand Final / 3rd Place
   roundName: string; // "Play-In", "Round of 32", "Round of 16", "Quarter Finals", "Semi Finals", "Third Place Match", "Grand Final"
   matchNumber: number;
+  bestOf?: 5 | 7;
   idolAId: string | null;
   idolBId: string | null;
   scoreA: number | null;
