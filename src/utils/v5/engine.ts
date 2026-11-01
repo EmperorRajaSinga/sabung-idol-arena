@@ -70,7 +70,7 @@ export function simulateBracket(ms: BNode[], idols: Map<string, Idol>) {
     playNode(next, idols);
   }
 }
-/** Simulates Crown Cup while resolving the seed-based Lower Bracket bye. */
+/** Simulates Crown Cup using its fixed eight-match upper/lower bracket graph. */
 export function simulateChampsCup(ms: BNode[], idols: Map<string, Idol>, seedOrder: string[] = []) {
   for (let guard = 0; guard < 2000; guard++) {
     advanceChampsCup(ms, seedOrder);
@@ -150,8 +150,6 @@ export function rankChampionsForByes(c: ChampionInfo[]): ChampionInfo[] {
 export function buildChampsCup(champions: ChampionInfo[]): { matches: BNode[]; byeIds: string[]; seedOrder: string[] } {
   if (champions.length !== 6) throw new Error('Champs Cup needs exactly 6 league champions');
   const ranked = rankChampionsForByes(champions);
-  // Crown Cup lower-bracket seeding is based on Division 1 league performance,
-  // not on which semifinal slot a losing idol occupied.
   const seedOrder = [...champions]
     .sort((a, b) => (b.points - a.points) || (b.gameDiff - a.gameDiff) || (a.leagueId - b.leagueId))
     .map((champion) => champion.idolId);
@@ -159,15 +157,21 @@ export function buildChampsCup(champions: ChampionInfo[]): { matches: BNode[]; b
   const drawn = shuffle(ranked.slice(2).map((c) => c.idolId));
   const S = (id: string): Slot => ({ id }), W = (id: string): Slot => ({ win: id }), L = (id: string): Slot => ({ lose: id });
   const matches = [
-    node('cc_ur1_a', 'Upper Round 1', 5, S(drawn[0]), S(drawn[1])), node('cc_ur1_b', 'Upper Round 1', 5, S(drawn[2]), S(drawn[3])),
-    node('cc_usf_a', 'Upper Semi Final', 5, S(byeIds[1]), W('cc_ur1_a')), node('cc_usf_b', 'Upper Semi Final', 5, S(byeIds[0]), W('cc_ur1_b')),
+    node('cc_ur1_a', 'Upper Round 1', 5, S(drawn[0]), S(drawn[1])),
+    node('cc_ur1_b', 'Upper Round 1', 5, S(drawn[2]), S(drawn[3])),
+    node('cc_usf_a', 'Upper Semi Final', 5, S(byeIds[1]), W('cc_ur1_a')),
+    node('cc_usf_b', 'Upper Semi Final', 5, S(byeIds[0]), W('cc_ur1_b')),
     node('cc_uf', 'Upper Final', 5, W('cc_usf_a'), W('cc_usf_b')),
-    node('cc_lr1', 'Lower Round 1', 5, L('cc_ur1_a'), L('cc_ur1_b')), node('cc_lr2', 'Lower Round 2', 5, W('cc_lr1'), L('cc_usf_a')),
-    node('cc_lr3', 'Lower Round 3', 5, W('cc_lr2'), L('cc_usf_b')), node('cc_lf', 'Lower Final', 7, W('cc_lr3'), L('cc_uf')),
+    node('cc_lr1', 'Lower Round 1', 5, L('cc_usf_a'), L('cc_usf_b')),
+    node('cc_lf', 'Lower Final', 7, W('cc_lr1'), L('cc_uf')),
     node('cc_gf', 'Grand Final', 7, W('cc_uf'), W('cc_lf')),
   ];
-  advanceChampsCup(matches, seedOrder);
+  advanceBracket(matches);
   return { matches, byeIds, seedOrder };
+}
+/** Crown Cup: Upper Round 1 losers are eliminated. Only Upper Semi Final losers enter Lower Round 1. */
+export function advanceChampsCup(matches: BNode[], _seedOrder: string[] = []) {
+  advanceBracket(matches);
 }
 /** Resolve the lower-bracket bye after both Upper Semi Finals finish.
  * The better-seeded semifinal loser receives the bye into Lower Round 3.
