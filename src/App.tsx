@@ -123,8 +123,13 @@ export function App() {
   const [appState, setAppState] = useState<AppState>(() => loadAppState());
   const v5State = appState.v5State || loadV5State();
   const handleUpdateV5State = (next: V5State) => {
-    saveV5State(next);
-    setAppState((prev) => {
+    // Update the visible competition state immediately. Persisting the full V5
+    // state and reconciling the permanent history can be expensive for large seasons,
+    // so move that work out of the click's input event.
+    setAppState((prev) => ({ ...prev, v5State: next }));
+    window.setTimeout(() => {
+      saveV5State(next);
+      setAppState((prev) => {
       // Preserve every completed V5 match in the permanent central match database
       // before a competition can be reset or rebuilt.
       const seasonId = Number(prev.leagueState?.seasonNumber || prev.config.seasonNumber || 1);
@@ -203,7 +208,8 @@ export function App() {
       snapshot(next);
       const matchDatabase = Array.from(archived.values());
       return { ...prev, matchDatabase, v5State: next, v5TitleArchives: Array.from(titleMap.values()) };
-    });
+      });
+    }, 0);
   };
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [selectedIdolId, setSelectedIdolId] = useState<string>('');
