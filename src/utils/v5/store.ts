@@ -45,9 +45,16 @@ export function loadV5State(): V5State {
 export function saveV5State(s: V5State): boolean {
   let serialized: string;
   try { serialized = JSON.stringify({ ...s, updatedAt: Date.now() }); } catch { return false; }
-  let primarySaved = false;
-  let backupSaved = false;
-  try { localStorage.setItem(KEY, serialized); primarySaved = true; } catch { /* attempt recovery copy */ }
-  try { localStorage.setItem(BACKUP_KEY, serialized); backupSaved = true; } catch { /* report partial failure */ }
-  return primarySaved && backupSaved;
+
+  // Keep one full V5 snapshot only. A second full copy consumed too much localStorage
+  // quota and could make both copies fail. Roster membership now has its own compact,
+  // independent recovery store in rosterPersistence.ts. BACKUP_KEY remains readable
+  // only for migration from older versions.
+  try {
+    localStorage.setItem(KEY, serialized);
+    return true;
+  } catch {
+    console.error('[Persistence] Full V5 snapshot could not fit in localStorage. The independent roster snapshot remains available.');
+    return false;
+  }
 }
