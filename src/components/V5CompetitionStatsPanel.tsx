@@ -20,7 +20,7 @@ export const V5CompetitionStatsPanel: React.FC<{ matchDatabase: ArchivedMatch[];
   const allRows = useMemo(() => {
     const map = new Map<string, CompetitionRow>();
     const seenMatches = new Set<string>();
-    const titleWinners = new Set<string>();
+    const finalWinnersBySeason = new Map<string, string>();
     (Array.isArray(matchDatabase) ? matchDatabase : []).forEach((match) => {
       if (!match || typeof match !== 'object') return;
       const competition = getCompetition(match);
@@ -43,16 +43,17 @@ export const V5CompetitionStatsPanel: React.FC<{ matchDatabase: ArchivedMatch[];
         const row = map.get(key) || { idolId: side.id, idolName: idol?.name || side.name || 'Unknown Idol', group: idol?.girlGroup || side.group || 'Solo', photo: idol?.photoUrl || side.photo, matches: 0, wins: 0, losses: 0, scored: 0, conceded: 0, titles: 0 };
         row.matches += 1; row.scored += side.score; row.conceded += side.against;
         if (side.score > side.against) row.wins += 1; else row.losses += 1;
-        if (side.score > side.against && isFinal) {
-          const winnerId = side.score > side.against ? side.id : '';
-          const titleKey = [match.seasonId || 1, competition, winnerId].join('::');
-          if (winnerId && !titleWinners.has(titleKey)) {
-            row.titles += 1;
-            titleWinners.add(titleKey);
-          }
+        if (isFinal && side.score > side.against) {
+          const titleKey = [match.seasonId || 1, competition].join('::');
+          if (!finalWinnersBySeason.has(titleKey)) finalWinnersBySeason.set(titleKey, side.id);
         }
         map.set(key, row);
       });
+    });
+    finalWinnersBySeason.forEach((winnerId, titleKey) => {
+      const [seasonId, competition] = titleKey.split('::');
+      const winnerRow = map.get(competition + '::' + winnerId);
+      if (winnerRow) winnerRow.titles += 1;
     });
     return Array.from(map.entries()).map(([key, row]) => ({ ...row, competition: key.split('::')[0] }));
   }, [matchDatabase, idolMap]);
