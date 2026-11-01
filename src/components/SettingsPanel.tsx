@@ -395,6 +395,34 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     };
   };
 
+  const rebuildDivisionTwoRosterPreservingResults = <T extends LeagueInfo>(
+    league: T,
+    memberIds: string[],
+    idols: Idol[]
+  ): T => {
+    const oldIds = league.memberIds || [];
+    const sameRoster = oldIds.length === memberIds.length &&
+      oldIds.every((id) => memberIds.includes(id));
+    const rebuilt = V5Engine.rebuildLeague({ ...league, memberIds }, idols);
+    const previousCompleted = new Map(
+      (league.matches || [])
+        .filter((match) => match.completed)
+        .map((match) => [`${match.idolAId}__${match.idolBId}`, match])
+    );
+    const matches = sameRoster && league.matches?.length
+      ? league.matches
+      : rebuilt.matches.map((match) => {
+          const saved = previousCompleted.get(`${match.idolAId}__${match.idolBId}`);
+          return saved ? { ...match, ...saved, matchday: match.matchday } : match;
+        });
+    return {
+      ...rebuilt,
+      matches,
+      standings: calculateLeagueStandings(league.id, memberIds, matches, idols),
+      ...(sameRoster ? { isCompleted: league.isCompleted, championId: league.championId, championName: league.championName } : {}),
+    };
+  };
+
   // Sync state if config changes externally (e.g., season change)
   React.useEffect(() => {
     const activeNum = config.seasonNumber || config.seasonId || 1;
@@ -479,7 +507,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     const allIdols = [...appState.idols, ...createdIdols];
     const nextD2 = v5State.d2.map((league) =>
       league.id === leagueId
-        ? V5Engine.rebuildLeague({ ...league, memberIds: nextMemberIds }, allIdols)
+        ? rebuildDivisionTwoRosterPreservingResults(league, nextMemberIds, allIdols)
         : league
     );
     const nextV5State = { ...v5State, d2: nextD2 };
@@ -2306,7 +2334,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   type="button"
                   onClick={() => {
                     if (!v5State || !leagueState?.leagues?.length) return;
-                    const nextD2 = V5Engine.autoFillDivisionTwo(
+                    const autoFilledD2 = V5Engine.autoFillDivisionTwo(
                       leagueState.leagues,
                       v5State.d2,
                       appState.idols,
@@ -2314,6 +2342,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       v5State.perLeague,
                       competitionNames.division2
                     );
+                    const nextD2 = autoFilledD2.map((league) => {
+                      const previous = v5State.d2.find((item) => item.id === league.id);
+                      return previous
+                        ? rebuildDivisionTwoRosterPreservingResults(league, league.memberIds, appState.idols)
+                        : league;
+                    });
                     const assignedCount = nextD2.reduce((total, league) => total + league.memberIds.length, 0) -
                       v5State.d2.reduce((total, league) => total + league.memberIds.length, 0);
                     onUpdateV5State?.({ ...v5State, d2: nextD2 });
