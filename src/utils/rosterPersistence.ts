@@ -91,7 +91,13 @@ function toMemberships<T extends { id: number; memberIds: string[] }>(leagues: T
 }
 
 export function saveDivisionOneRosterSnapshot<T extends { id: number; memberIds: string[] }>(leagues: T[]): boolean {
-  if (!Array.isArray(leagues) || leagues.length !== 6 || new Set(leagues.map((league) => Number(league.id))).size !== 6) {
+  const expectedIds = new Set([1, 2, 3, 4, 5, 6]);
+  if (
+    !Array.isArray(leagues) ||
+    leagues.length !== 6 ||
+    new Set(leagues.map((league) => Number(league.id))).size !== 6 ||
+    !leagues.every((league) => expectedIds.has(Number(league.id)))
+  ) {
     console.error('[Persistence] Division 1 roster snapshot rejected because the six-league source is incomplete.');
     return false;
   }
@@ -110,6 +116,15 @@ export function saveDivisionTwoRosterSnapshot<T extends { id: number; memberIds:
     return false;
   }
   const current = loadRosterSnapshot();
+  // An empty/partial V5 payload can occur during legacy hydration. Never let it
+  // erase an already saved Division 2 membership snapshot.
+  if (
+    leagues.length === 0 &&
+    current?.division2?.some((league) => league.memberIds.length > 0)
+  ) {
+    console.error('[Persistence] Empty Division 2 state rejected because a populated roster snapshot already exists.');
+    return false;
+  }
   return writeSnapshot({
     version: 1,
     updatedAt: Date.now(),
