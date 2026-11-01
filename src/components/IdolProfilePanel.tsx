@@ -42,6 +42,32 @@ import { RatingBadge } from './RatingBadge';
 import { getAllSeasonArchives } from '../utils/tournamentLogic';
 import { loadCareerOverrides, applyOverridesToCareerStats, calculateUnifiedTotalTitles } from '../utils/databaseStudioLogic';
 
+// Match classifiers used by the profile's history filters.
+// Keep these local and defensive: older archived records may have incomplete labels.
+const isLeagueDivisionMatch = (match: ArchivedMatch): boolean => {
+  if (!match || typeof match !== 'object') return false;
+  const stage = String(match.stage || '').trim().toLowerCase();
+  const matchId = String(match.matchId || '').trim().toLowerCase();
+  return (
+    stage.startsWith('league') ||
+    /^division\s*\d+/.test(stage) ||
+    matchId.startsWith('league_s') ||
+    /(^|_)div\d+(_|$)/.test(matchId)
+  );
+};
+
+const isTheIdolsMatch = (match: ArchivedMatch): boolean => {
+  if (!match || typeof match !== 'object') return false;
+  const stage = String(match.stage || '').trim().toLowerCase();
+  const matchId = String(match.matchId || '').trim().toLowerCase();
+  return (
+    matchId.startsWith('the_idols') ||
+    stage.startsWith('the idols') ||
+    stage.includes('superleague') ||
+    stage.includes('masters')
+  );
+};
+
 interface IdolProfilePanelProps {
   idols: Idol[];
   careerStats: CareerStat[];
