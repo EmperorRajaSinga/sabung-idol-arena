@@ -2563,9 +2563,6 @@ export function App() {
               v5State={v5State}
               v5TitleArchives={appState.v5TitleArchives || []}
               onCrownChampionAndArchive={handleCrownChampionAndArchive}
-              v5State={v5State}
-              onUpdateV5State={handleUpdateV5State}
-              v5TitleArchives={appState.v5TitleArchives || []}
             />
           )}
 
@@ -2839,6 +2836,9 @@ export function App() {
               onUpdateTheIdolsArchives={handleUpdateTheIdolsArchives}
               setActiveTab={setActiveTab}
               onCrownChampionAndArchive={handleCrownChampionAndArchive}
+              v5State={v5State}
+              onUpdateV5State={handleUpdateV5State}
+              v5TitleArchives={appState.v5TitleArchives || []}
             />
           )}
 
