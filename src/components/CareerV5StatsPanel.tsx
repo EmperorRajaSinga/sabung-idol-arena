@@ -6,7 +6,7 @@ type SectionKey = 'Crown Cup' | 'Open Arena Cup' | 'Spotlight Cup' | 'Super Cup 
 type Row = {
   idolId: string; idolName: string; group: string; photo?: string;
   events: Set<string>; matches: number; wins: number; draws: number; losses: number;
-  goalsFor: number; goalsAgainst: number; gameDiff: number; winResults: Array<{ date: string; season: number; won: boolean }>;
+  goalsFor: number; goalsAgainst: number; gameDiff: number; points: number; winResults: Array<{ date: string; season: number; won: boolean }>;
   titles: number; runnerUps: number; thirdPlaces: number; top4: number;
   promotions: number; relegations: number;
 };
@@ -42,7 +42,7 @@ export const CareerV5StatsPanel: React.FC<{
         idolId: id, idolName: idol?.name || name || 'Unknown Idol',
         group: group || idol?.girlGroup || 'Solo', photo: photo || idol?.photoUrl,
         events: new Set<string>(), matches: 0, wins: 0, draws: 0, losses: 0,
-        goalsFor: 0, goalsAgainst: 0, gameDiff: 0, winResults: [],
+        goalsFor: 0, goalsAgainst: 0, gameDiff: 0, points: 0, winResults: [],
         titles: 0, runnerUps: 0, thirdPlaces: 0, top4: 0, promotions: 0, relegations: 0,
       };
       table.set(id, row);
@@ -77,14 +77,17 @@ export const CareerV5StatsPanel: React.FC<{
       a.gameDiff += scoreA - scoreB; b.gameDiff += scoreB - scoreA;
       if (scoreA > scoreB) {
         a.wins += 1; b.losses += 1;
+        if (section === 'Division 2') a.points += 3;
         a.winResults.push({ date: String(match.date || ''), season, won: true });
         b.winResults.push({ date: String(match.date || ''), season, won: false });
       } else if (scoreB > scoreA) {
         b.wins += 1; a.losses += 1;
+        if (section === 'Division 2') b.points += 3;
         b.winResults.push({ date: String(match.date || ''), season, won: true });
         a.winResults.push({ date: String(match.date || ''), season, won: false });
       } else {
         a.draws += 1; b.draws += 1;
+        if (section === 'Division 2') { a.points += 1; b.points += 1; }
         a.winResults.push({ date: String(match.date || ''), season, won: false });
         b.winResults.push({ date: String(match.date || ''), season, won: false });
       }
@@ -144,7 +147,7 @@ export const CareerV5StatsPanel: React.FC<{
         participation: row.events.size,
         winRate: row.matches ? Math.round(row.wins / row.matches * 100) : 0,
         longestWinStreak,
-        podiums: row.promotions + row.titles + row.runnerUps,
+        podiums: row.promotions,
       };
     }).sort((a, b) => section === 'Division 2'
       ? b.points - a.points || b.wins - a.wins || a.idolName.localeCompare(b.idolName)
