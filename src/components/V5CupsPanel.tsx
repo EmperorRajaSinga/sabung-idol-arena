@@ -222,36 +222,52 @@ const CrownCupBracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (
     { name: 'Lower Round 3', label: 'LOWER ROUND 3' },
     { name: 'Lower Final', label: 'LOWER FINAL' },
   ];
-  const renderLane = (rounds: { name: string; label: string }[], tone: 'upper' | 'lower') => (
-    <div className="overflow-x-auto pb-4 custom-scrollbar">
-      <div className="flex min-w-max items-start gap-3" style={{ zoom: 0.82 }}>
-        {rounds.map((round) => {
-          const matches = ms.filter((m) => m.roundName === round.name);
-          return (
-            <div key={round.name} className="flex w-[320px] shrink-0 flex-col gap-4 sm:w-[340px]">
-              <div className={`rounded-xl border-2 px-4 py-3 text-center text-xs font-black uppercase tracking-widest shadow ${
-                tone === 'upper'
-                  ? 'border-emerald-500/40 bg-emerald-950/45 text-emerald-300'
-                  : 'border-purple-500/40 bg-purple-950/45 text-purple-300'
-              }`}>
-                <div>{round.label}</div>
-                <div className="mt-1 font-mono text-[10px] opacity-65">{matches.filter((m) => m.completed).length} / {matches.length} completed</div>
-              </div>
-              <div className="flex flex-1 flex-col justify-around gap-5">
-                {matches.map((m) => (
-                  <Row key={m.id} m={m} idols={idols} nm={nm}
-                    onSim={() => { const copy = clone(ms); sim(copy, m.id); onChange(copy); }}
-                    onSave={(a, b) => { const copy = clone(ms); const error = save(copy, m.id, a, b); if (!error) onChange(copy); return error; }}
-                  />
-                ))}
-                {matches.length === 0 && <div className="rounded-xl border border-dashed border-black/70 bg-black/15 px-4 py-8 text-center text-xs italic text-amber-100/30">Waiting for bracket progression</div>}
+  const renderLane = (rounds: { name: string; label: string }[], tone: 'upper' | 'lower') => {
+    // Only render rounds that belong to this bracket format. Empty legacy rounds
+    // create misleading blank columns and large holes in the lower-bracket layout.
+    const activeRounds = rounds
+      .map((round) => ({ ...round, matches: ms.filter((match) => match.roundName === round.name) }))
+      .filter((round) => round.matches.length > 0);
+
+    return (
+      <div
+        className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
+        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))' }}
+      >
+        {activeRounds.map((round) => (
+          <article key={round.name} className="flex min-w-0 flex-col gap-3">
+            <div className={`rounded-xl border px-4 py-3 text-center shadow-sm ${
+              tone === 'upper'
+                ? 'border-emerald-500/40 bg-emerald-950/45 text-emerald-300'
+                : 'border-purple-500/40 bg-purple-950/45 text-purple-300'
+            }`}>
+              <div className="text-xs font-black uppercase tracking-widest">{round.label}</div>
+              <div className="mt-1 font-mono text-[10px] opacity-65">
+                {round.matches.filter((match) => match.completed).length} / {round.matches.length} completed
               </div>
             </div>
-          );
-        })}
+            <div className="flex min-w-0 flex-col gap-3">
+              {round.matches.map((match) => (
+                <Row
+                  key={match.id}
+                  m={match}
+                  idols={idols}
+                  nm={nm}
+                  onSim={() => { const copy = clone(ms); sim(copy, match.id); onChange(copy); }}
+                  onSave={(a, b) => {
+                    const copy = clone(ms);
+                    const error = save(copy, match.id, a, b);
+                    if (!error) onChange(copy);
+                    return error;
+                  }}
+                />
+              ))}
+            </div>
+          </article>
+        ))}
       </div>
-    </div>
-  );
+    );
+  };
   const grandFinal = ms.find((m) => m.roundName === 'Grand Final');
   const champion = grandFinal?.completed ? grandFinal.winnerId : null;
   return (
