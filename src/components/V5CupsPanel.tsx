@@ -26,6 +26,23 @@ const toSuperKnockoutMatches = (matches: E.BNode[]): KnockoutMatch[] => matches.
   bestOf: m.bestOf, idolAId: m.idolAId || null, idolBId: m.idolBId || null,
   scoreA: m.scoreA, scoreB: m.scoreB, winnerId: m.winnerId, completed: m.completed,
 }));
+const createEmptyLeagueCup = (d1Count: number, d2Count: number): E.LeagueCupState => {
+  const state = E.createLeagueCup(Array.from({ length: d1Count + d2Count }, () => ''), {}, d2Count);
+  if (state.plan.rounds > 0) E.stepLeagueCup(state);
+  return state;
+};
+const toOpenArenaKnockoutMatches = (rounds: E.BNode[][]): KnockoutMatch[] => {
+  const matches = rounds.flat();
+  return matches.map((match, index) => {
+    const feedsTo = (id: string, slot: E.Slot) => ('win' in slot && slot.win === id) || ('lose' in slot && slot.lose === id);
+    const target = matches.find((candidate) => feedsTo(match.id, candidate.a) || feedsTo(match.id, candidate.b));
+    return { id: match.id, roundIndex: rounds.findIndex((round) => round.some((item) => item.id === match.id)),
+      roundName: match.roundName, matchNumber: index + 1, idolAId: match.idolAId || null, idolBId: match.idolBId || null,
+      scoreA: match.scoreA, scoreB: match.scoreB, winnerId: match.winnerId, completed: match.completed,
+      feedsIntoMatchId: target?.id, feedsIntoSlot: target ? (feedsTo(match.id, target.a) ? 'A' : 'B') : undefined, bestOf: match.bestOf };
+  });
+};
+
 
 
 const CROWN_ROUND_ORDER = ['Upper Round 1', 'Upper Semi Final', 'Upper Final', 'Lower Round 1', 'Lower Final', 'Grand Final'];
@@ -333,6 +350,8 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
   const [isCrownSimulcastOpen, setIsCrownSimulcastOpen] = useState(false);
   const [superEditor, setSuperEditor] = useState<'a' | 'b' | null>(null);
   const [superSimulcast, setSuperSimulcast] = useState<'a' | 'b' | null>(null);
+  const [isOpenManualOpen, setIsOpenManualOpen] = useState(false);
+  const [isOpenSimulcastOpen, setIsOpenSimulcastOpen] = useState(false);
   const emptyCrownCup = useMemo(() => createEmptyCrownCup(), []);
   const [selectedSpotlightLeague, setSelectedSpotlightLeague] = useState('');
   const [selectedOpenRound, setSelectedOpenRound] = useState('');
@@ -365,6 +384,13 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
   const gf = knockoutMatches.find((m) => m.completed && /grand final/i.test(m.roundName));
   const grandChamp = gf?.winnerId || null, grandRunner = gf ? (gf.winnerId === gf.idolAId ? gf.idolBId : gf.idolAId) : null;
   const d2Count = v5.d2.reduce((a, l) => a + l.memberIds.length, 0);
+  const lcView = useMemo(() => lc || createEmptyLeagueCup(d1.reduce((sum, league) => sum + league.memberIds.length, 0), d2Count), [lc, d1, d2Count]);
+  const lcViewMatches = lcView.rounds.flat();
+  const lcKnockoutMatches = useMemo(() => toOpenArenaKnockoutMatches(lcView.rounds), [lcView.rounds]);
+  const lcRoundOf16Index = lcView.rounds.findIndex((round) => round.length === 8);
+  const lcKnockoutStage = lcRoundOf16Index >= 0 ? lcView.rounds.slice(lcRoundOf16Index) : [];
+  const lcKnockoutTreeMatches = useMemo(() => toOpenArenaKnockoutMatches(lcKnockoutStage), [lcKnockoutStage]);
+  const lcPlayableCount = lcViewMatches.filter((match) => !match.completed && match.idolAId && match.idolBId).length;
 
   const simOne = (ms: E.BNode[], id: string) => { E.advanceBracket(ms); const m = ms.find((x) => x.id === id); if (m && !m.completed && m.idolAId && m.idolBId) E.playNode(m, by); E.advanceBracket(ms); };
   const manual = (ms: E.BNode[], id: string, a: number, b: number): string | null => {
@@ -471,41 +497,74 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
     commit({ champsCup: { ...crownCup, matches: next } });
   };
   const refreshLC = (s: E.LeagueCupState) => { if (s.rounds.length === s.plan.rounds && s.rounds[s.rounds.length - 1].every((m) => m.completed)) s.championId = s.rounds[s.rounds.length - 1][0].winnerId; return s; };
+
   const buildLC = () => {
     try {
       if (!d1Done || !d2Done) { setMsg('Open Arena Cup can be built after every Division 1 and Division 2 league has completed all matches.'); return; }
       const order = E.leagueCupOrder(d1 as any, v5.d2), leagueOf: Record<string, number> = {};
-      [...d1, ...v5.d2].forEach((l) => l.memberIds.forEach((i) => { leagueOf[i] = l.id; }));
-      if (order.length < 2 || order.length % 2 !== 0) { setMsg(`Open Arena Cup needs an even number of qualified idols. Current total: ${order.length}.`); return; }
-      const next = E.createLeagueCup(order, leagueOf, d2Count); E.stepLeagueCup(next);
-      if (!next.rounds.length) { setMsg('Open Arena Cup could not create its first round. Check the completed league standings.'); return; }
+      [...d1, ...v5.d2].forEach((league) => league.memberIds.forEach((idolId) => { leagueOf[idolId] = league.id; }));
+      if (order.length < 2) { setMsg('Open Arena Cup needs at least two qualified idols.'); return; }
+      const next = E.createLeagueCup(order, leagueOf, d2Count);
+      if (!E.stepLeagueCup(next)) { setMsg('Open Arena Cup could not create its first round.'); return; }
       commit({ leagueCup: next }); setMsg('Open Arena Cup bracket created.');
-    } catch (error) { setMsg(error instanceof Error ? `Open Arena Cup build failed: ${error.message}` : 'Open Arena Cup build failed. Check league standings and try again.'); }
+    } catch (error) { setMsg(error instanceof Error ? 'Open Arena Cup build failed: ' + error.message : 'Open Arena Cup build failed.'); }
   };
-  const lcRound = () => { if (!v5.leagueCup) return; const s = clone(v5.leagueCup); const cur = s.rounds[s.rounds.length - 1]; cur.filter((m) => !m.completed).forEach((m) => E.playNode(m, by)); refreshLC(s); if (!s.championId) E.stepLeagueCup(s); commit({ leagueCup: s }); };
   const lcAll = async () => {
-    if (!v5.leagueCup || simulatingOpenCup) return;
+    if (!v5.leagueCup || simulatingOpenCup || v5.leagueCup.championId) return;
     setSimulatingOpenCup(true);
     try {
-      const s = clone(v5.leagueCup);
-      for (let round = 0; round < 20 && !s.championId; round++) {
-        if (!E.stepLeagueCup(s)) break;
-        const current = s.rounds[s.rounds.length - 1];
-        for (let i = 0; i < current.length; i += 8) {
-          current.slice(i, i + 8).forEach((match) => {
-            if (!match.completed && match.idolAId && match.idolBId) E.playNode(match, by);
-          });
-          await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
-        }
-        refreshLC(s);
-        commit({ leagueCup: clone(s) });
+      const next = clone(v5.leagueCup);
+      for (let round = 0; round < 20 && !next.championId; round++) {
+        const current = next.rounds[next.rounds.length - 1];
+        if (!current || !current.every((match) => match.completed || (!!match.idolAId && !!match.idolBId))) break;
+        current.filter((match) => !match.completed && match.idolAId && match.idolBId).forEach((match) => E.playNode(match, by));
+        refreshLC(next);
+        commit({ leagueCup: clone(next) });
+        if (!next.championId) E.stepLeagueCup(next);
         await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
       }
-    } catch (error) {
-      setMsg(error instanceof Error ? 'Open Arena Cup simulation failed: ' + error.message : 'Open Arena Cup simulation failed.');
-    } finally {
-      setSimulatingOpenCup(false);
+      commit({ leagueCup: next });
+    } catch (error) { setMsg(error instanceof Error ? 'Open Arena Cup simulation failed: ' + error.message : 'Open Arena Cup simulation failed.'); }
+    finally { setSimulatingOpenCup(false); }
+  };
+  const saveOpenManualBracket = (updatedMatches: KnockoutMatch[]) => {
+    const next = clone(lcView);
+    const changedRounds = new Set<number>();
+    updatedMatches.forEach((edited) => {
+      const roundIndex = next.rounds.findIndex((round) => round.some((match) => match.id === edited.id));
+      if (roundIndex < 0 || roundIndex > 1) return;
+      const target = next.rounds[roundIndex].find((match) => match.id === edited.id);
+      if (!target) return;
+      const a = edited.idolAId || '', b = edited.idolBId || '';
+      if ((target.idolAId || '') !== a || (target.idolBId || '') !== b) {
+        target.a = { id: a }; target.b = { id: b }; target.idolAId = a || null; target.idolBId = b || null;
+        target.scoreA = null; target.scoreB = null; target.winnerId = null; target.loserId = null; target.completed = false;
+        E.invalidateDownstream(next.rounds.flat(), target.id); changedRounds.add(roundIndex);
+      }
+    });
+    if (!changedRounds.size) { setMsg('No Open Arena Cup bracket changes to save.'); return; }
+    const firstChanged = Math.min(...changedRounds);
+    next.rounds = next.rounds.slice(0, firstChanged + 1); next.championId = null;
+    if (firstChanged === 0) {
+      const entrants = next.rounds[0].flatMap((match) => [match.idolAId || '', match.idolBId || '']);
+      next.order = [...entrants, ...next.order.slice(entrants.length)];
     }
+    commit({ leagueCup: next });
+    setMsg('Manual bracket changes saved. Later rounds will be rebuilt after this round is completed.');
+  };
+  const commitOpenSimulcast = (updatedMatches: KnockoutMatch[]) => {
+    if (!v5.leagueCup) return;
+    const next = clone(v5.leagueCup), current = next.rounds[next.rounds.length - 1];
+    if (!current) return;
+    updatedMatches.forEach((result) => {
+      const target = current.find((match) => match.id === result.id);
+      if (!target || target.completed || !result.completed || result.scoreA === null || result.scoreB === null || !result.winnerId) return;
+      target.scoreA = result.scoreA; target.scoreB = result.scoreB; target.winnerId = result.winnerId;
+      target.loserId = result.winnerId === target.idolAId ? target.idolBId : target.idolAId; target.completed = true;
+    });
+    refreshLC(next);
+    if (current.every((match) => match.completed) && !next.championId) E.stepLeagueCup(next);
+    commit({ leagueCup: next });
   };
   const buildMini = (lid: number) => {
     try {
@@ -654,30 +713,51 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
         </div>
       )}
 
-      {section === 'open' && (<Card title={names.leagueCup} note="Every idol of every league. Division 2 starts in round 1. Stronger Division 1 idols (league position, then points) skip rounds. Best of 5, final Best of 7.">
-        <div className="flex flex-wrap gap-2 mb-2">
-          <Btn onClick={buildLC} disabled={!!lc}>Build bracket</Btn>
-          <Btn onClick={lcRound} disabled={!lc || !!lc.championId}>Simulate current round</Btn>
-          <Btn onClick={lcAll} disabled={!lc || !!lc.championId || simulatingOpenCup}>{simulatingOpenCup ? 'Simulating...' : 'Simulate all'}</Btn>
-          <Btn onClick={() => { if (lc && window.confirm("Reset this tournament bracket and remove all match results?")) commit({ leagueCup: null }); }} disabled={!lc} className="bg-rose-400">Reset Bracket</Btn>
+      {section === 'open' && (
+        <div className="space-y-5 animate-in fade-in duration-200">
+          <section className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div><p className="text-[10px] font-black uppercase tracking-[0.24em] text-indigo-400">Tournament Workspace</p>
+                <h2 className="mt-1 text-2xl font-black tracking-tight text-white">{names.leagueCup}</h2>
+                <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-400">All Division 1 and Division 2 idols enter a tiered single-elimination competition. The full bracket remains visible before participants are assigned.</p>
+                <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">{leagueState?.seasonName || \`Season \${leagueState?.seasonNumber || 1}\`}</p></div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Btn onClick={buildLC} disabled={!d1Done || !d2Done || !!lc} className="border-slate-700 bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-500">Build Bracket</Btn>
+                <Btn onClick={lcAll} disabled={!lc || !!lc.championId || lcPlayableCount === 0 || simulatingOpenCup} className="border-slate-700 bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-500">{simulatingOpenCup ? 'Simulating...' : 'Simulate All Matches'}</Btn>
+                <Btn onClick={() => setIsOpenManualOpen(true)} className="border-slate-700 bg-slate-800 px-4 py-2 text-white hover:bg-slate-700">Edit Bracket Manually</Btn>
+                <Btn onClick={() => setIsOpenSimulcastOpen(true)} disabled={!lc || lcPlayableCount === 0 || !!lc?.championId} className="border-slate-700 bg-fuchsia-700 px-4 py-2 text-white hover:bg-fuchsia-600">Live Simulcast</Btn>
+                <Btn onClick={() => { if (lc && window.confirm(\`Reset \${names.leagueCup} bracket and every match result? Historical records remain unchanged.\`)) commit({ leagueCup: null }); }} disabled={!lc} className="border-slate-700 bg-rose-700 px-4 py-2 text-white hover:bg-rose-600">Reset Bracket / Matches</Btn>
+              </div>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3"><div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Qualified Idols</div><div className="mt-1 font-mono text-xl font-black text-white">{lcView.order.length}</div></div>
+              <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3"><div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Rounds</div><div className="mt-1 font-mono text-xl font-black text-white">{lcView.plan.rounds}</div></div>
+              <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3"><div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Completed</div><div className="mt-1 font-mono text-xl font-black text-emerald-300">{lcViewMatches.filter((match) => match.completed).length}</div></div>
+              <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3"><div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Ready to Play</div><div className="mt-1 font-mono text-xl font-black text-indigo-300">{lcPlayableCount}</div></div>
+            </div>
+          </section>
+          {!lc && <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4 text-xs leading-relaxed text-slate-300">Bracket preview is visible. Build becomes available after all Division 1 and Division 2 league matches finish. Use manual editing to assign participants to the opening bracket.</div>}
+          {lcView.rounds.length > 0 && <section className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 sm:p-5">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><p className="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-300">Competition Bracket</p><h3 className="mt-1 text-lg font-black text-white">Championship Progression</h3></div>
+              {lc?.championId && <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-black text-emerald-300">Champion: {nm(lc.championId)}</span>}</div>
+            {lcRoundOf16Index >= 0 ? <>
+              {lcView.rounds.slice(0, lcRoundOf16Index).map((round, index) => <div key={index} className="mb-5 rounded-xl border border-slate-800 bg-slate-900/40 p-3">
+                <div className="mb-3 flex items-center justify-between gap-2"><h4 className="text-xs font-black uppercase tracking-wider text-slate-300">{round[0]?.roundName || \`Round \${index + 1}\`}</h4><span className="text-[10px] font-mono text-slate-500">{round.filter((match) => match.completed).length}/{round.length} completed</span></div>
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{round.map((match) => <div key={match.id} className="rounded-lg border border-slate-800 bg-black/30 px-3 py-2 text-xs"><div className="font-bold text-slate-200">{nm(match.idolAId)} <span className="text-amber-400">vs</span> {nm(match.idolBId)}</div><div className="mt-1 font-mono text-[10px] text-slate-500">{match.completed ? \`\${match.scoreA} - \${match.scoreB}\` : 'Awaiting result'}</div></div>)}</div>
+              </div>)}
+              <div className="rounded-2xl border border-indigo-500/25 bg-gradient-to-br from-indigo-950/30 via-slate-950 to-slate-950 p-3 sm:p-5">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><p className="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-300">Round of 16 · Single Elimination</p><h4 className="mt-1 text-lg font-black text-white">Knockout Championship Bracket</h4></div><span className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-indigo-200">{lcKnockoutStage.reduce((sum, round) => sum + round.length, 0)} matches</span></div>
+                <TournamentBracketTree knockoutMatches={lcKnockoutTreeMatches} idolsMap={by} showTitleHeader={false} initialLayoutMode="split" />
+              </div>
+            </> : <div className="space-y-4">{lcView.rounds.map((round, index) => <div key={index} className="rounded-xl border border-slate-800 bg-slate-900/40 p-3">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h4 className="text-xs font-black uppercase tracking-wider text-indigo-200">{round[0]?.roundName || \`Round \${index + 1}\`}</h4><span className="text-[10px] font-mono text-slate-500">{round.filter((match) => match.completed).length}/{round.length} completed</span></div>
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{round.map((match) => <button key={match.id} type="button" disabled={!match.idolAId || !match.idolBId} onClick={() => setSelectedOpenRound(match.id)} className="flex items-center justify-between gap-2 rounded-xl border border-slate-800 bg-black/30 px-3 py-3 text-left hover:border-indigo-500/50 disabled:cursor-default"><span className="min-w-0 truncate text-xs font-bold text-slate-200">{nm(match.idolAId)} <span className="text-indigo-300">vs</span> {nm(match.idolBId)}</span><span className="shrink-0 font-mono text-sm font-black text-amber-300">{match.completed ? \`\${match.scoreA}-\${match.scoreB}\` : 'VS'}</span></button>)}</div>
+            </div>)}</div>}
+          </section>}
+          {isOpenManualOpen && <ManualBracketModal key={lcViewMatches.map((match) => match.id).join('|')} isOpen onClose={() => setIsOpenManualOpen(false)} knockoutMatches={lcKnockoutMatches} idolsMap={by} onSaveKnockoutMatches={saveOpenManualBracket} onRegenerateAutoBracket={buildLC} />}
+          {isOpenSimulcastOpen && lc && <KnockoutLiveSimulatorModal isOpen onClose={() => setIsOpenSimulcastOpen(false)} knockoutMatches={toOpenArenaKnockoutMatches([lc.rounds[lc.rounds.length - 1] || []])} idolsMap={by} config={crownSimConfig} onCommitMatches={commitOpenSimulcast} />}
         </div>
-        {lc && <p className="text-xs mb-2 font-mono">{lc.order.length} idols · {lc.plan.rounds} rounds · entering per round: {lc.plan.entrants.join(' / ')}{lc.championId ? ` · Champion: ${nm(lc.championId)}` : ''}</p>}
-        {lc && <OpenArenaMatchList matches={lc.rounds.flat()} idols={by} nm={nm} onSave={(id, a, b) => {
-          const next = clone(lc);
-          const roundIndex = next.rounds.findIndex((round) => round.some((match) => match.id === id));
-          if (roundIndex < 0) return 'Match not found in Open Arena Cup.';
-          const error = manual(next.rounds.flat(), id, a, b);
-          if (error) return error;
-          // Later Open Arena rounds are generated from the previous round's winners,
-          // so editing an earlier round must remove and regenerate the entire later path.
-          next.rounds = next.rounds.slice(0, roundIndex + 1);
-          next.championId = null;
-          if (next.rounds[roundIndex].every((match) => match.completed)) E.stepLeagueCup(next);
-          commit({ leagueCup: refreshLC(next) });
-          return null;
-        }} />}
-        {lcMatches.length > 0 && <span className="sr-only">{lcMatches.length} matches</span>}
-      </Card> )}
+      )}
 
       {section === 'spotlight' && (<Card title={names.miniCup} note="Top 16 of each Division 1 final table, seeded 1 vs 16. Single elimination. Best of 5, final Best of 7.">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
