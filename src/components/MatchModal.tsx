@@ -191,7 +191,6 @@ export const MatchModal: React.FC<MatchModalProps> = ({
   });
 
   useEffect(() => {
-    setSeriesFormat(defaultSeriesFormat);
     setScoreA(safeScoreA(currentScoreA));
     setScoreB(safeScoreB(currentScoreB));
     setError(null);
@@ -209,7 +208,7 @@ export const MatchModal: React.FC<MatchModalProps> = ({
       setGrandFinalModes(distinct7);
       setGrandFinalRoundIndex(0);
     }
-  }, [isOpen, currentScoreA, currentScoreB, defaultSeriesFormat, isGrandFinalMatch, isKnockout, isThirdPlaceMatch, hasFavoriteIdol, bothAreFavorites, isFavA, isFavB]);
+  }, [isOpen, currentScoreA, currentScoreB, isGrandFinalMatch, isKnockout, isThirdPlaceMatch, hasFavoriteIdol, bothAreFavorites, isFavA, isFavB]);
 
   const handleFinish = () => {
     if (!idolA || !idolB) return;
