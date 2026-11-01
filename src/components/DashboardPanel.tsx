@@ -445,8 +445,8 @@ export const DashboardPanel: React.FC<DashboardPanelProps> = ({
     careerStats.forEach((cs) => {
       const rec = map.get(cs.idolId);
       if (!rec) return;
-      rec.cupTitles = cs.championships || 0;
-      rec.cupRunnerUps = cs.runnerUps || 0;
+      rec.cupTitles += cs.championships || 0;
+      rec.cupRunnerUps += cs.runnerUps || 0;
       rec.cupMatches = cs.matches || 0;
       rec.cupWins = cs.wins || 0;
       rec.cupWinRate = cs.winRate || 0;
