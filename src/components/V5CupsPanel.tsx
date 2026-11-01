@@ -5,7 +5,6 @@ import { loadNames, saveNames, CompetitionNames } from '../utils/v5/names';
 import * as E from '../utils/v5/engine';
 import { rankStandings } from '../utils/swissLogic';
 import { getIdolRating } from '../utils/ratingHelper';
-import { TournamentBracketTree } from './TournamentBracketTree';
 
 interface Props {
   idols: Idol[]; girlGroups: GirlGroup[]; leagueState: LeagueSeasonState | null; section?: 'all' | 'crown' | 'super' | 'open' | 'spotlight';
@@ -95,32 +94,51 @@ const Row: React.FC<{ m: E.BNode; idols: Map<string, Idol>; nm: (id: string | nu
   );
 };
 const Bracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (id: string | null) => string; sim: (ms: E.BNode[], id: string) => void; save: (ms: E.BNode[], id: string, a: number, b: number) => string | null; onChange: (ms: E.BNode[]) => void }> = ({ ms, idols, nm, sim, save, onChange }) => {
-  const roundNames = Array.from(new Set(ms.map((m) => m.roundName)));
-  const roundIndex = new Map(roundNames.map((name, index) => [name, index]));
-  const knockoutMatches = ms.map((m, index) => {
-    const feedsA = ms.find((target) => 'win' in target.a && target.a.win === m.id || 'lose' in target.a && target.a.lose === m.id);
-    const feedsB = ms.find((target) => 'win' in target.b && target.b.win === m.id || 'lose' in target.b && target.b.lose === m.id);
-    return {
-      id: m.id, roundIndex: roundIndex.get(m.roundName) ?? 0, roundName: m.roundName, matchNumber: index + 1,
-      idolAId: m.idolAId, idolBId: m.idolBId, scoreA: m.scoreA, scoreB: m.scoreB, winnerId: m.winnerId,
-      completed: m.completed, feedsIntoMatchId: feedsA?.id || feedsB?.id,
-      feedsIntoSlot: feedsA ? 'A' as const : feedsB ? 'B' as const : undefined,
-    };
-  });
-  const editMatch = (match: typeof knockoutMatches[number]) => {
-    const current = ms.find((m) => m.id === match.id); if (!current || !current.idolAId || !current.idolBId) return;
-    const target = current.bestOf === 7 ? 4 : 3;
-    const value = window.prompt(`Enter result for ${nm(current.idolAId)} vs ${nm(current.idolBId)}. Format: ${target}-0, ${target}-1, or ${target}-${target - 1}`, current.completed ? `${current.scoreA}-${current.scoreB}` : '');
-    if (value === null) return;
-    const parsed = value.trim().match(/^(\\d+)\\s*[-:]\\s*(\\d+)$/); if (!parsed) { window.alert('Invalid score format. Use for example 3-1.'); return; }
-    const next = clone(ms); const error = save(next, current.id, Number(parsed[1]), Number(parsed[2]));
-    if (error) { window.alert(error); return; } onChange(next);
-  };
-  return <div className="w-full min-w-0 rounded-2xl border-2 border-black/80 bg-[#100b08] p-3 shadow-inner sm:p-4">
-    <p className="mb-3 text-[11px] text-amber-100/50">Select a match card to enter or update its result. Use Simulate on the card controls where available.</p>
-    <TournamentBracketTree knockoutMatches={knockoutMatches as KnockoutMatch[]} idolsMap={idols} onSelectMatch={editMatch as any} showTitleHeader={false} />
-    <div className="mt-3 flex flex-wrap gap-2">{ms.filter((m) => !m.completed && m.idolAId && m.idolBId).map((m) => <Btn key={m.id} onClick={() => { const next = clone(ms); sim(next, m.id); onChange(next); }}>Simulate {m.roundName} #{m.id.slice(-2)}</Btn>)}</div>
-  </div>;
+  const rounds = Array.from(new Set(ms.map((m) => m.roundName)));
+  return (
+    <div className="w-full min-w-0 rounded-2xl border-2 border-black/80 bg-[#100b08] p-4 shadow-inner sm:p-5">
+      <div className="overflow-x-auto pb-3 custom-scrollbar">
+        <div className="flex min-w-max items-stretch gap-5 py-2">
+          {rounds.map((round, index) => {
+            const matches = ms.filter((m) => m.roundName === round);
+            return (
+              <React.Fragment key={round}>
+                <div className="flex w-[320px] shrink-0 flex-col gap-3">
+                  <div className="rounded-xl border-2 border-slate-700 bg-[#1b1b2b] px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-indigo-200 shadow">
+                    <div>{round}</div>
+                    <div className="mt-1 font-mono text-[10px] text-slate-400">{matches.filter((m) => m.completed).length} / {matches.length} completed</div>
+                  </div>
+                  <div className="flex flex-1 flex-col justify-around gap-5">
+                    {matches.map((m) => (
+                      <Row key={m.id} m={m} idols={idols} nm={nm}
+                        onSim={() => { const c = clone(ms); sim(c, m.id); onChange(c); }}
+                        onSave={(a, b) => { const c = clone(ms); const error = save(c, m.id, a, b); if (!error) onChange(c); return error; }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                {index < rounds.length - 1 && (
+                  <div className="flex w-5 shrink-0 items-center justify-center">
+                    <div className="h-3/4 w-px border-l-2 border-dashed border-indigo-500/50" />
+                  </div>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+      {(() => {
+        const finalMatch = ms.find((m) => m.completed && /grand final/i.test(m.roundName))
+          || ms.find((m) => m.completed && /^final$/i.test(m.roundName))
+          || (ms.length === 1 && ms[0].completed ? ms[0] : null);
+        return finalMatch?.winnerId ? (
+          <div className="mt-4 border-t border-amber-500/20 pt-4 text-center text-sm font-black uppercase tracking-widest text-amber-300">
+            Crowned Champion: {nm(finalMatch.winnerId)}
+          </div>
+        ) : null;
+      })()}
+    </div>
+  );
 };
 
 const CrownCupBracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (id: string | null) => string; sim: (ms: E.BNode[], id: string) => void; save: (ms: E.BNode[], id: string, a: number, b: number) => string | null; onChange: (ms: E.BNode[]) => void }> = ({ ms, idols, nm, sim, save, onChange }) => {
