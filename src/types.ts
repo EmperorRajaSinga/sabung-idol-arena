@@ -125,6 +125,9 @@ export interface TournamentArchive {
   qualifiedPerGroup?: number;
   championId: string;
   championName: string;
+  /** Immutable champion identity snapshot captured when the season is archived. */
+  championGroup?: string;
+  championPhoto?: string;
   runnerUpId: string;
   runnerUpName: string;
   thirdPlaceId?: string;
