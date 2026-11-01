@@ -1,6 +1,7 @@
 import { loadV5State, saveV5State, hasStoredV5State, V5State, V5TitleArchive } from './utils/v5/store';
 import { loadRosterSnapshot, saveDivisionOneRosterSnapshot, saveDivisionTwoRosterSnapshot, restoreDivisionOneRoster, clearRosterSnapshot } from './utils/rosterPersistence';
 import { loadNames } from './utils/v5/names';
+import { createV5ArchiveSnapshot } from './utils/v5/archive';
 import { auditAppStateDataChanges, normalizeDataName, recordDataHistory } from './utils/dataChangeHistory';
 
 
@@ -2029,6 +2030,18 @@ export function App() {
       appState.idols
     );
 
+    const currentV5State = appState.v5State || loadV5State();
+    const v5ArchiveSnapshot = createV5ArchiveSnapshot(
+      currentV5State,
+      updatedMatchDb,
+      appState.v5TitleArchives || [],
+      appState.idols,
+      currentSeasonId,
+      appState.config.seasonName || `Season ${currentSeasonId}`
+    );
+    saveV5State(v5ArchiveSnapshot.resetState);
+    saveDivisionTwoRosterSnapshot(v5ArchiveSnapshot.resetState.d2 || []);
+
     const storedLeagueArchives = loadLeagueArchives();
     const effectiveLeagueArchives =
       storedLeagueArchives.length > leagueArchives.length ? storedLeagueArchives : leagueArchives;
@@ -2105,7 +2118,9 @@ export function App() {
       return {
         ...prev,
         archives: [...pFiltered, archiveRecord],
-        matchDatabase: updatedMatchDb,
+        matchDatabase: v5ArchiveSnapshot.matches,
+        v5State: v5ArchiveSnapshot.resetState,
+        v5TitleArchives: v5ArchiveSnapshot.titles,
         groups: [],
         knockoutMatches: [],
         selectedParticipantIds: [],
@@ -2535,6 +2550,9 @@ export function App() {
               v5State={v5State}
               v5TitleArchives={appState.v5TitleArchives || []}
               onCrownChampionAndArchive={handleCrownChampionAndArchive}
+              v5State={v5State}
+              onUpdateV5State={handleUpdateV5State}
+              v5TitleArchives={appState.v5TitleArchives || []}
             />
           )}
 
