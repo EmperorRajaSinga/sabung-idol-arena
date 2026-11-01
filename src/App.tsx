@@ -1969,33 +1969,37 @@ export function App() {
   };
 
   // --- HANDLERS: CROWN CHAMPION & ARCHIVE ---
-  const handleCrownChampionAndArchive = () => {
+  const handleCrownChampionAndArchive = (archivePayload?: { sourceAppState: AppState; sourceLeagueState: LeagueSeasonState; sourceTheIdolsState: TheIdolsSeasonState; v5State?: V5State }) => {
+    const sourceAppState = archivePayload?.sourceAppState || sourceAppState;
+    const sourceLeagueState = archivePayload?.sourceLeagueState || sourceLeagueState;
+    const sourceTheIdolsState = archivePayload?.sourceTheIdolsState || sourceTheIdolsState;
+    const sourceV5State = archivePayload?.v5State || sourceAppState.v5State || loadV5State();
     const unfinished = getUnfinishedCompetitions({
-      groups: appState.groups,
-      knockoutMatches: appState.knockoutMatches,
-      leagueState,
-      theIdolsState,
-      v5: appState.v5State || loadV5State(),
+      groups: sourceAppState.groups,
+      knockoutMatches: sourceAppState.knockoutMatches,
+      sourceLeagueState,
+      sourceTheIdolsState,
+      v5: sourceAppState.v5State || loadV5State(),
       v5Names: loadNames(),
     });
     if (unfinished.length > 0) {
       alert('Season archive blocked. Finish every started competition first:\\n\\n- ' + unfinished.join('\\n- '));
       return;
     }
-    const currentSeasonId = Number(appState.config.seasonId || appState.config.seasonNumber || 1);
+    const currentSeasonId = Number(sourceAppState.config.seasonId || sourceAppState.config.seasonNumber || 1);
     let archiveRecord = getCompletedTournamentArchiveRecord(
-      appState.config,
-      appState.groups,
-      appState.knockoutMatches,
+      sourceAppState.config,
+      sourceAppState.groups,
+      sourceAppState.knockoutMatches,
       idolsMap
     );
 
     if (!archiveRecord) {
-      const existing = appState.archives.find((a) => Number(a.seasonId) === currentSeasonId);
+      const existing = sourceAppState.archives.find((a) => Number(a.seasonId) === currentSeasonId);
       if (existing && existing.championId) {
         archiveRecord = existing;
       } else {
-        const gfDbMatch = appState.matchDatabase.find((m) => {
+        const gfDbMatch = sourceAppState.matchDatabase.find((m) => {
           if (Number(m.seasonId) !== currentSeasonId) return false;
           const st = (m.stage || '').toLowerCase();
           const mid = (m.matchId || '').toLowerCase();
@@ -2012,7 +2016,7 @@ export function App() {
           const rName = champId === gfDbMatch.idolAId ? gfDbMatch.idolBName : gfDbMatch.idolAName;
           archiveRecord = {
             seasonId: currentSeasonId,
-            seasonName: appState.config.seasonName || `Season ${currentSeasonId}`,
+            seasonName: sourceAppState.config.seasonName || `Season ${currentSeasonId}`,
             completedAt: gfDbMatch.date || new Date().toISOString(),
             championId: champId,
             championName: champName,
@@ -2022,9 +2026,9 @@ export function App() {
             thirdPlaceName: '',
             fourthPlaceId: '',
             fourthPlaceName: '',
-            totalParticipants: appState.config.totalParticipants,
-            groups: appState.groups || [],
-            knockoutMatches: appState.knockoutMatches || [],
+            totalParticipants: sourceAppState.config.totalParticipants,
+            groups: sourceAppState.groups || [],
+            knockoutMatches: sourceAppState.knockoutMatches || [],
           };
         } else {
           alert('Grand Final is not completed yet!');
@@ -2034,22 +2038,22 @@ export function App() {
     }
 
     const updatedMatchDb = syncAllMatchesToDatabase(
-      appState.matchDatabase,
-      appState.archives,
-      appState.config,
-      appState.groups,
-      appState.knockoutMatches,
-      appState.idols
+      sourceAppState.matchDatabase,
+      sourceAppState.archives,
+      sourceAppState.config,
+      sourceAppState.groups,
+      sourceAppState.knockoutMatches,
+      sourceAppState.idols
     );
 
-    const currentV5State = appState.v5State || loadV5State();
+    const currentV5State = sourceV5State;
     const v5ArchiveSnapshot = createV5ArchiveSnapshot(
       currentV5State,
       updatedMatchDb,
-      appState.v5TitleArchives || [],
-      appState.idols,
+      sourceAppState.v5TitleArchives || [],
+      sourceAppState.idols,
       currentSeasonId,
-      appState.config.seasonName || `Season ${currentSeasonId}`
+      sourceAppState.config.seasonName || `Season ${currentSeasonId}`
     );
     saveV5State(v5ArchiveSnapshot.resetState);
     saveDivisionTwoRosterSnapshot(v5ArchiveSnapshot.resetState.d2 || []);
@@ -2064,7 +2068,7 @@ export function App() {
 
     const storedTournamentArchives = loadTournamentArchives();
     const effectiveTournamentArchives =
-      storedTournamentArchives.length > appState.archives.length ? storedTournamentArchives : appState.archives;
+      storedTournamentArchives.length > sourceAppState.archives.length ? storedTournamentArchives : sourceAppState.archives;
 
     // Calculate next unique season ID across all formats and match records
     const allSeasonIds = [
@@ -2072,25 +2076,25 @@ export function App() {
       ...effectiveTournamentArchives.map((a) => Number(a.seasonId || 1)),
       ...effectiveLeagueArchives.map((a) => Number(a.seasonNumber || 1)),
       ...effectiveTheIdolsArchives.map((a) => Number(a.seasonNumber || 1)),
-      ...allCombinedMatchDatabase.map((m) => Number(m.seasonId || 1)),
+      ...(sourceAppState.matchDatabase || []).map((m) => Number(m.seasonId || 1)),
     ].filter((n) => !Number.isNaN(n) && n > 0);
     const maxSeason = allSeasonIds.length > 0 ? Math.max(...allSeasonIds) : 1;
     const nextSeasonId = Math.max(currentSeasonId + 1, maxSeason + 1);
 
     // Archive and advance League Season matches & standings
-    if (leagueState && leagueState.leagues && leagueState.leagues.length > 0) {
-      const leagueArchiveRec = archiveLeagueSeason(leagueState, appState.idols);
+    if (sourceLeagueState && sourceLeagueState.leagues && sourceLeagueState.leagues.length > 0) {
+      const leagueArchiveRec = archiveLeagueSeason(sourceLeagueState, sourceAppState.idols);
       const updatedLeagueArchives = [
-        ...effectiveLeagueArchives.filter((a) => a.seasonNumber !== leagueState.seasonNumber),
+        ...effectiveLeagueArchives.filter((a) => a.seasonNumber !== sourceLeagueState.seasonNumber),
         leagueArchiveRec,
       ];
       setLeagueArchives(updatedLeagueArchives);
       saveLeagueArchives(updatedLeagueArchives);
 
       const nextLeagueState = advanceLeagueSeason(
-        leagueState,
-        appState.idols,
-        appState.girlGroups,
+        sourceLeagueState,
+        sourceAppState.idols,
+        sourceAppState.girlGroups,
         nextSeasonId
       );
       setLeagueState(nextLeagueState);
@@ -2098,20 +2102,20 @@ export function App() {
     }
 
     // Archive and advance The Idols Superleague & Masters Playoff
-    if (theIdolsState && theIdolsState.memberIds && theIdolsState.memberIds.length > 0) {
-      const idolsArchiveRec = archiveTheIdolsSeason(theIdolsState, appState.idols);
+    if (sourceTheIdolsState && sourceTheIdolsState.memberIds && sourceTheIdolsState.memberIds.length > 0) {
+      const idolsArchiveRec = archiveTheIdolsSeason(sourceTheIdolsState, sourceAppState.idols);
       const updatedTheIdolsArchives = [
-        ...effectiveTheIdolsArchives.filter((a) => a.seasonNumber !== theIdolsState.seasonNumber),
+        ...effectiveTheIdolsArchives.filter((a) => a.seasonNumber !== sourceTheIdolsState.seasonNumber),
         idolsArchiveRec,
       ];
       setTheIdolsArchives(updatedTheIdolsArchives);
       saveTheIdolsArchives(updatedTheIdolsArchives);
 
       const nextTheIdolsState = advanceTheIdolsSeason(
-        theIdolsState,
-        appState.idols,
+        sourceTheIdolsState,
+        sourceAppState.idols,
         nextSeasonId,
-        appState.girlGroups
+        sourceAppState.girlGroups
       );
       setTheIdolsState(nextTheIdolsState);
       saveTheIdolsState(nextTheIdolsState);
@@ -2124,7 +2128,7 @@ export function App() {
     saveTournamentArchives(newArchives);
 
     setAppState((prev) => {
-      const pFiltered = prev.archives.filter(
+      const pFiltered = sourceAppState.archives.filter(
         (a) => Number(a.seasonId) !== currentSeasonId
       );
       return {
@@ -2137,10 +2141,10 @@ export function App() {
         knockoutMatches: [],
         selectedParticipantIds: [],
         config: {
-          ...prev.config,
+          ...sourceAppState.config,
           seasonId: nextSeasonId,
           seasonNumber: nextSeasonId,
-          seasonName: incrementSeasonName(prev.config.seasonName, nextSeasonId, 'Season'),
+          seasonName: incrementSeasonName(sourceAppState.config.seasonName, nextSeasonId, 'Season'),
           isGroupStageFinished: false,
           isKnockoutFinished: false,
         },
