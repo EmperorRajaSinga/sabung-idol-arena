@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import type { Idol, LeagueSeasonState, KnockoutMatch } from '../types';
+import type { Idol, LeagueSeasonState, KnockoutMatch, TournamentConfig } from '../types';
 import { saveV5State, V5State } from '../utils/v5/store';
 import { loadNames, type CompetitionNames } from '../utils/v5/names';
 import * as E from '../utils/v5/engine';
@@ -7,6 +7,8 @@ import { rankStandings } from '../utils/swissLogic';
 import { getIdolRating } from '../utils/ratingHelper';
 import { TournamentBracketTree } from './TournamentBracketTree';
 import { MatchModal } from './MatchModal';
+import { ManualBracketModal } from './ManualBracketModal';
+import { KnockoutLiveSimulatorModal } from './KnockoutLiveSimulatorModal';
 
 interface Props {
   idols: Idol[]; leagueState: LeagueSeasonState | null; section: 'crown' | 'super' | 'open' | 'spotlight';
@@ -14,6 +16,60 @@ interface Props {
   theIdolsChampionId: string | null; knockoutMatches: KnockoutMatch[];
 }
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
+
+const CROWN_ROUND_ORDER = ['Upper Round 1', 'Upper Semi Final', 'Upper Final', 'Lower Round 1', 'Lower Round 2', 'Lower Round 3', 'Lower Final', 'Grand Final'];
+const createEmptyCrownCup = (): { matches: E.BNode[]; byeIds: string[] } => {
+  const S = (id: string): E.Slot => ({ id });
+  const W = (id: string): E.Slot => ({ win: id });
+  const L = (id: string): E.Slot => ({ lose: id });
+  const matches: E.BNode[] = [
+    { id: 'cc_ur1_a', roundName: 'Upper Round 1', bestOf: 5, a: S(''), b: S(''), idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
+    { id: 'cc_ur1_b', roundName: 'Upper Round 1', bestOf: 5, a: S(''), b: S(''), idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
+    { id: 'cc_usf_a', roundName: 'Upper Semi Final', bestOf: 5, a: S(''), b: W('cc_ur1_a'), idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
+    { id: 'cc_usf_b', roundName: 'Upper Semi Final', bestOf: 5, a: S(''), b: W('cc_ur1_b'), idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
+    { id: 'cc_uf', roundName: 'Upper Final', bestOf: 5, a: W('cc_usf_a'), b: W('cc_usf_b'), idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
+    { id: 'cc_lr1', roundName: 'Lower Round 1', bestOf: 5, a: L('cc_ur1_a'), b: L('cc_ur1_b'), idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
+    { id: 'cc_lr2', roundName: 'Lower Round 2', bestOf: 5, a: L('cc_usf_a'), b: L('cc_usf_b'), idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
+    { id: 'cc_lr3', roundName: 'Lower Round 3', bestOf: 5, a: W('cc_lr1'), b: W('cc_lr2'), idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
+    { id: 'cc_lf', roundName: 'Lower Final', bestOf: 7, a: W('cc_lr3'), b: L('cc_uf'), idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
+    { id: 'cc_gf', roundName: 'Grand Final', bestOf: 7, a: W('cc_uf'), b: W('cc_lf'), idolAId: null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, loserId: null, completed: false },
+  ];
+  E.advanceBracket(matches);
+  return { matches, byeIds: [] };
+};
+const toCrownKnockoutMatches = (matches: E.BNode[]): KnockoutMatch[] => {
+  const feedsTo = (sourceId: string, slot: E.Slot) => ('win' in slot && slot.win === sourceId) || ('lose' in slot && slot.lose === sourceId);
+  return matches.map((m, index) => {
+    const target = matches.find((candidate) => feedsTo(m.id, candidate.a) || feedsTo(m.id, candidate.b));
+    const targetSlot = target ? (feedsTo(m.id, target.a) ? 'A' : 'B') : undefined;
+    return {
+      id: m.id, roundIndex: CROWN_ROUND_ORDER.indexOf(m.roundName), roundName: m.roundName,
+      matchNumber: index + 1, idolAId: m.idolAId || null, idolBId: m.idolBId || null,
+      scoreA: m.scoreA, scoreB: m.scoreB, winnerId: m.winnerId, completed: m.completed,
+      feedsIntoMatchId: target?.id, feedsIntoSlot: targetSlot, bestOf: m.bestOf,
+    };
+  });
+};
+const getCrownManualMatches = (matches: E.BNode[]): KnockoutMatch[] => {
+  const opening = matches.filter((m) => m.roundName === 'Upper Round 1');
+  const byId = new Map(matches.map((m) => [m.id, m]));
+  const openingMatches: KnockoutMatch[] = opening.map((m, index) => ({
+    id: m.id, roundIndex: 0, roundName: m.roundName, matchNumber: index + 1,
+    idolAId: m.idolAId || null, idolBId: m.idolBId || null,
+    scoreA: m.scoreA, scoreB: m.scoreB, winnerId: m.winnerId, completed: m.completed, bestOf: m.bestOf,
+  }));
+  const byeMatches: KnockoutMatch[] = ['cc_usf_a', 'cc_usf_b'].map((id, index) => {
+    const match = byId.get(id)!;
+    const byeId = 'id' in match.a ? match.a.id : '';
+    return {
+      id: index === 0 ? 'cc_manual_bye_a' : 'cc_manual_bye_b',
+      roundIndex: 1, roundName: 'Upper Bracket Bye', matchNumber: index + 3,
+      idolAId: byeId || null, idolBId: null, scoreA: null, scoreB: null, winnerId: null, completed: false,
+    };
+  });
+  return [...openingMatches, ...byeMatches];
+};
+
 const Card: React.FC<{ title: string; note?: string; children: React.ReactNode }> = ({ title, note, children }) => (
   <section className="rounded-2xl border-2 border-black bg-[#20120a] p-4 mb-4 poster-shadow-lg">
     <h2 className="text-lg font-black text-amber-300 tracking-wide">{title}</h2>
@@ -58,14 +114,14 @@ const Row: React.FC<{ m: E.BNode; idols: Map<string, Idol>; nm: (id: string | nu
   return (
     <div className={`relative w-[320px] shrink-0 rounded-2xl border-2 p-4 shadow-xl transition-all sm:w-[340px] ${
       m.completed
-        ? 'border-emerald-900/80 bg-[#19140f]'
+        ? 'border-emerald-800/70 bg-slate-900'
         : ready
-          ? 'border-amber-700/70 bg-[#21170f] hover:border-amber-500/80'
-          : 'border-black bg-[#17110c]'
+          ? 'border-indigo-500/50 bg-slate-900 hover:border-indigo-400'
+          : 'border-slate-800 bg-slate-950'
     }`}>
-      <div className="mb-3 flex items-center justify-between gap-2 border-b border-amber-900/70 pb-2">
-        <span className="truncate font-poster-title text-xs font-black uppercase tracking-wider text-amber-300">{m.roundName}</span>
-        <span className="shrink-0 rounded-lg border border-black bg-black/60 px-2 py-1 text-[10px] font-black text-amber-100">BO{m.bestOf} · FT {targetWins}</span>
+      <div className="mb-3 flex items-center justify-between gap-2 border-b border-slate-700 pb-2">
+        <span className="truncate text-xs font-black uppercase tracking-wider text-indigo-300">{m.roundName}</span>
+        <span className="shrink-0 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] font-black text-slate-300">BO{m.bestOf} · FT {targetWins}</span>
       </div>
       <div className="space-y-2.5">
         {renderCompetitor(idolA, m.idolAId, m.scoreA, !!m.completed && m.winnerId === m.idolAId)}
@@ -77,7 +133,7 @@ const Row: React.FC<{ m: E.BNode; idols: Map<string, Idol>; nm: (id: string | nu
         </div>
       ) : ready ? (
         <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-black/70 pt-3">
-          <Btn onClick={onSim} className="px-4 py-2 text-xs">Simulate</Btn>
+          <Btn onClick={onSim} className="border-slate-700 bg-indigo-600 px-4 py-2 text-xs text-white hover:bg-indigo-500">Simulate</Btn>
           <label className="flex items-center gap-1 rounded-lg border border-black bg-black/35 px-2 py-1">
             <span className="text-[9px] font-black text-amber-200/60">A</span>
             <input value={a} onChange={(e) => setA(e.target.value)} className="w-9 bg-transparent text-center font-mono text-sm font-black text-white outline-none" inputMode="numeric" aria-label="Score A" placeholder="-" />
@@ -86,11 +142,11 @@ const Row: React.FC<{ m: E.BNode; idols: Map<string, Idol>; nm: (id: string | nu
             <span className="text-[9px] font-black text-amber-200/60">B</span>
             <input value={b} onChange={(e) => setB(e.target.value)} className="w-9 bg-transparent text-center font-mono text-sm font-black text-white outline-none" inputMode="numeric" aria-label="Score B" placeholder="-" />
           </label>
-          <Btn onClick={() => { const result = onSave(Number(a), Number(b)); setErr(result || ''); }} className="ml-auto px-4 py-2 text-xs">Save Result</Btn>
+          <Btn onClick={() => { const result = onSave(Number(a), Number(b)); setErr(result || ''); }} className="ml-auto border-slate-700 bg-slate-700 px-4 py-2 text-xs text-white hover:bg-slate-600">Save Result</Btn>
           {err && <span className="w-full text-[11px] font-bold text-rose-400">{err}</span>}
         </div>
       ) : (
-        <div className="mt-3 rounded-xl border border-black/70 bg-black/25 px-3 py-2 text-[11px] font-bold italic text-amber-100/40">Waiting for previous round</div>
+        <div className="mt-3 rounded-xl border border-black/70 bg-black/25 px-3 py-2 text-[11px] font-bold italic text-slate-500">Waiting for previous round</div>
       )}
       {ready && <MatchModal isOpen={scoreModalOpen} onClose={() => setScoreModalOpen(false)} idolA={idolA} idolB={idolB} currentScoreA={m.scoreA} currentScoreB={m.scoreB} matchTitle={m.roundName} stageName="Cup Competition" isKnockout isGrandFinal={/grand final/i.test(m.roundName)} isCompleted={m.completed} onFinish={(scoreA, scoreB) => { const result = onSave(scoreA, scoreB); if (result) setErr(result); else setScoreModalOpen(false); }} />}
     </div>
@@ -202,8 +258,8 @@ const CrownCupBracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (
   const champion = grandFinal?.completed ? grandFinal.winnerId : null;
   return (
     <div className="w-full min-w-0 space-y-4">
-      <section className="rounded-xl border border-emerald-900/70 bg-[#17130f] p-3">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-emerald-900/60 pb-3">
+      <section className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
           <div>
             <h3 className="text-base font-black uppercase tracking-wider text-emerald-300">Upper Bracket</h3>
             <p className="mt-1 text-xs font-bold text-amber-100/45">Winners remain in the championship path</p>
@@ -213,8 +269,8 @@ const CrownCupBracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (
         {renderLane(upperRounds, 'upper')}
       </section>
 
-      <section className="rounded-xl border border-purple-900/70 bg-[#17110f] p-3">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-purple-900/60 pb-3">
+      <section className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
           <div>
             <h3 className="text-base font-black uppercase tracking-wider text-purple-300">Lower Bracket</h3>
             <p className="mt-1 text-xs font-bold text-amber-100/45">One more loss means elimination</p>
@@ -225,7 +281,7 @@ const CrownCupBracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (
       </section>
 
       {grandFinal && (
-        <section className="rounded-xl border border-amber-500/60 bg-gradient-to-br from-[#291a0c] to-[#160d07] p-3 shadow-lg">
+        <section className="rounded-xl border border-indigo-500/50 bg-gradient-to-br from-slate-900 to-slate-950 p-3 shadow-lg">
           <div className="mb-4 text-center">
             <h3 className="text-lg font-black uppercase tracking-widest text-amber-300">Grand Final</h3>
             <p className="mt-1 text-xs font-bold text-amber-100/55">Upper Bracket Champion vs Lower Bracket Champion · Best of 7</p>
@@ -248,9 +304,17 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
   const [names] = useState<CompetitionNames>(() => loadNames());
   const [msg, setMsg] = useState('');
   const [simulatingOpenCup, setSimulatingOpenCup] = useState(false);
+  const [isCrownManualOpen, setIsCrownManualOpen] = useState(false);
+  const [isCrownSimulcastOpen, setIsCrownSimulcastOpen] = useState(false);
+  const emptyCrownCup = useMemo(() => createEmptyCrownCup(), []);
   const [selectedSpotlightLeague, setSelectedSpotlightLeague] = useState('');
   const [selectedOpenRound, setSelectedOpenRound] = useState('');
   const by = useMemo(() => new Map(idols.map((i) => [i.id, i])), [idols]);
+  const crownCup = v5.champsCup || emptyCrownCup;
+  const crownKnockoutMatches = useMemo(() => toCrownKnockoutMatches(crownCup.matches), [crownCup.matches]);
+  const crownPlayableCount = crownCup.matches.filter((m) => !m.completed && m.idolAId && m.idolBId).length;
+  const crownChampionId = crownCup.matches.find((m) => m.id === 'cc_gf')?.winnerId || null;
+  const crownSimConfig = { favoriteIdolIds: [], groups: [] } as unknown as TournamentConfig;
   const nm = (id: string | null) => (id ? by.get(id)?.name || id : 'TBD');
   const d1 = leagueState?.leagues || [];
   const commit = (patch: Partial<V5State>) => { const n = { ...v5, ...patch }; onUpdateV5State(n); if (!saveV5State(n)) setMsg('Storage is full: this change is not saved. Export a backup and clear old data.'); };
@@ -340,15 +404,52 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5St
       <p className="text-sm text-amber-100/60 mb-4">{panelDescription}</p>
       {msg && <div role="status" className="mb-4 rounded-xl border-2 border-black bg-black/50 p-3 text-sm text-amber-200">{msg} <button className="underline ml-2" onClick={() => setMsg('')}>close</button></div>}
 
-      {section === 'crown' && (<Card title={names.champsCup} note="The 6 league champions, double elimination. Byes: Unzure Cup winner, then The Idols winner, then league points. Best of 5, Lower Final and Grand Final Best of 7.">
-        <div className="flex gap-2 mb-2">
-          <Btn onClick={buildChamps} disabled={!d1Done || !!v5.champsCup}>Build bracket</Btn>
-          <Btn onClick={() => { if (v5.champsCup) { const c = clone(v5.champsCup); E.simulateBracket(c.matches, by); commit({ champsCup: c }); } }} disabled={!v5.champsCup}>Simulate all</Btn>
-          <Btn onClick={() => { if (v5.champsCup && window.confirm("Reset the Crown Cup bracket and remove all its match results?")) commit({ champsCup: null }); }} disabled={!v5.champsCup} className="bg-rose-400">Reset Bracket</Btn>
+      {section === 'crown' && (
+        <div className="space-y-5 animate-in fade-in duration-200">
+          <section className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-indigo-400">Tournament Workspace</p>
+                <h2 className="mt-1 text-2xl font-black tracking-tight text-white">{names.champsCup}</h2>
+                <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-400">Six Division 1 champions compete in a double-elimination bracket. The bracket remains visible before participants are assigned.</p>
+                <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">{leagueState?.seasonName || `Season ${leagueState?.seasonNumber || 1}`}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Btn onClick={buildChamps} disabled={!d1Done || !!v5.champsCup} className="border-slate-700 bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-500">Auto Build</Btn>
+                <Btn onClick={() => { const next = clone(crownCup.matches); E.simulateBracket(next, by); commit({ champsCup: { ...crownCup, matches: next } }); }} disabled={!v5.champsCup || crownPlayableCount === 0} className="border-slate-700 bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-500">Simulate All Matches</Btn>
+                <Btn onClick={() => setIsCrownManualOpen(true)} className="border-slate-700 bg-slate-800 px-4 py-2 text-slate-100 hover:bg-slate-700">Edit Bracket Manually</Btn>
+                <Btn onClick={() => setIsCrownSimulcastOpen(true)} disabled={!v5.champsCup || crownPlayableCount === 0 || !!crownChampionId} className="border-slate-700 bg-fuchsia-700 px-4 py-2 text-white hover:bg-fuchsia-600">Live Simulcast</Btn>
+                <Btn onClick={() => { if (window.confirm('Reset the Crown Cup bracket and clear every match result? The season archive and historical records will remain unchanged.')) commit({ champsCup: null }); }} disabled={!v5.champsCup} className="border-slate-700 bg-rose-700 px-4 py-2 text-white hover:bg-rose-600">Reset Bracket / Matches</Btn>
+              </div>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3"><div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Matches</div><div className="mt-1 font-mono text-xl font-black text-white">{crownCup.matches.length}</div></div>
+              <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3"><div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Completed</div><div className="mt-1 font-mono text-xl font-black text-emerald-300">{crownCup.matches.filter((m) => m.completed).length}</div></div>
+              <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3"><div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Ready to Play</div><div className="mt-1 font-mono text-xl font-black text-indigo-300">{crownPlayableCount}</div></div>
+              <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3"><div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Entrants</div><div className="mt-1 font-mono text-xl font-black text-white">{new Set(crownCup.matches.filter((m) => m.roundName === 'Upper Round 1').flatMap((m) => [m.idolAId, m.idolBId]).concat(['cc_usf_a','cc_usf_b'].map((id) => crownCup.matches.find((m) => m.id === id)?.idolAId || null)).filter(Boolean)).size}/6</div></div>
+            </div>
+            {d1Done && (!grandChamp || !theIdolsChampionId) && <p className="mt-3 text-xs text-slate-400">Unzure Cup or The Idols is not finished yet. Automatic bye seeding will use league points and game difference where higher-priority champion data is unavailable.</p>}
+            {crownCup.byeIds.length > 0 && <p className="mt-3 text-xs text-slate-400">Bye recipients: <span className="font-bold text-slate-200">{crownCup.byeIds.map(nm).join(', ')}</span></p>}
+          </section>
+          <CrownCupBracket idols={by} nm={nm} sim={simOne} save={manual} ms={crownCup.matches} onChange={(matches) => commit({ champsCup: { ...crownCup, matches } })} />
+          <ManualBracketModal
+            isOpen={isCrownManualOpen}
+            onClose={() => setIsCrownManualOpen(false)}
+            knockoutMatches={getCrownManualMatches(crownCup.matches)}
+            idolsMap={by}
+            onSaveKnockoutMatches={saveCrownManualBracket}
+            onRegenerateAutoBracket={reseedCrownCup}
+          />
+          <KnockoutLiveSimulatorModal
+            isOpen={isCrownSimulcastOpen}
+            onClose={() => setIsCrownSimulcastOpen(false)}
+            knockoutMatches={crownKnockoutMatches}
+            idolsMap={by}
+            config={crownSimConfig}
+            onCommitMatches={commitCrownSimulcast}
+          />
         </div>
-        {d1Done && (!grandChamp || !theIdolsChampionId) && <p className="text-xs text-amber-200 mb-2">Unzure Cup or The Idols is not finished yet, so byes would use league points only. Finish them first for the full rule.</p>}
-        {v5.champsCup && <><p className="text-xs mb-1">Byes: {v5.champsCup.byeIds.map(nm).join(', ')}</p><CrownCupBracket idols={by} nm={nm} sim={simOne} save={manual} ms={v5.champsCup.matches} onChange={(ms) => commit({ champsCup: { ...v5.champsCup!, matches: ms } })} /></>}
-      </Card> )}
+      )}
 
       {section === 'open' && (<Card title={names.leagueCup} note="Every idol of every league. Division 2 starts in round 1. Stronger Division 1 idols (league position, then points) skip rounds. Best of 5, final Best of 7.">
         <div className="flex flex-wrap gap-2 mb-2">
