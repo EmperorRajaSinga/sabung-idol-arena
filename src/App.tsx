@@ -2093,8 +2093,8 @@ export function App() {
         })
       : [];
     const promotionModalRows = promotionMoves.map((move) => {
-      const division = sourceLeagueState.leagues.find((league) => league.id === move.leagueId);
-      const pairedD2 = sourceV5State.d2.find((league) => league.parentLeagueId === move.leagueId);
+      const division = sourceLeagueState?.leagues?.find((league) => league.id === move.leagueId);
+      const pairedD2 = sourceV5State.d2?.find((league) => league.parentLeagueId === move.leagueId);
       const byId = new Map(sourceAppState.idols.map((idol) => [idol.id, idol]));
       return {
         leagueName: division?.name || pairedD2?.name || `League ${move.leagueId}`,
