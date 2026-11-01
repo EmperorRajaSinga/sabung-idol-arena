@@ -552,10 +552,12 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
       const idolsA = a.theIdolsLeagueTitles + a.theIdolsPlayoffTitles;
       const idolsB = b.theIdolsLeagueTitles + b.theIdolsPlayoffTitles;
       if (idolsB !== idolsA) return idolsB - idolsA;
+    } else if (['crown_cup','open_arena_cup','spotlight_cup','super_cup_a','super_cup_b','division_2'].includes(activeScope)) {
+      const label = ({ crown_cup: 'Crown Cup', open_arena_cup: 'Open Arena Cup', spotlight_cup: 'Spotlight Cup', super_cup_a: 'Super Cup A', super_cup_b: 'Super Cup B', division_2: 'Division 2' } as Record<string,string>)[activeScope];
+      const countA = a.competitionTitles[label] || 0, countB = b.competitionTitles[label] || 0;
+      if (countB !== countA) return countB - countA;
     } else {
-      const titlesA = calculateUnifiedTotalTitles(a.championships, a.leagueCupTitles, a.theIdolsLeagueTitles, a.theIdolsPlayoffTitles);
-      const titlesB = calculateUnifiedTotalTitles(b.championships, b.leagueCupTitles, b.theIdolsLeagueTitles, b.theIdolsPlayoffTitles);
-      if (titlesB !== titlesA) return titlesB - titlesA;
+      if (b.totalTitles !== a.totalTitles) return b.totalTitles - a.totalTitles;
     }
     if (b.totalWins !== a.totalWins) return b.totalWins - a.totalWins;
     if (b.winRate !== a.winRate) return b.winRate - a.winRate;
@@ -571,61 +573,27 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
       {/* Header & Section Tabs */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b-2 border-black pb-4">
         <div>
-          <h2 className="text-2xl font-poster-title text-red-500 flex items-center gap-2 drop-shadow-[2px_2px_0px_#000]">
+          <h2 className="text-xl font-bold text-white flex items-center gap-2 ">
             <Users className="h-7 w-7 text-amber-400" />
             <span>Girl Group Statistics &amp; Championship Leaderboard</span>
           </h2>
-          <p className="text-xs text-amber-200/80 font-bold mt-1">
+          <p className="text-xs text-slate-400 mt-1">
             Tracks total Tournament championships, League Cup titles, The Idols League &amp; Playoff titles, and collective records.
           </p>
         </div>
 
-        {/* Scope Filter Tabs */}
-        <div className="flex flex-wrap items-center gap-1.5 bg-[#160f0b] p-1.5 rounded-2xl border-2 border-black poster-shadow-sm">
-          <button
-            onClick={() => setActiveScope('combined')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-poster-body font-black transition-all ${
-              activeScope === 'combined'
-                ? 'bg-amber-400 text-black shadow'
-                : 'text-amber-200/70 hover:text-white'
-            }`}
-          >
-            <Star className="w-3.5 h-3.5" />
-            <span>All Competitions</span>
-          </button>
-          <button
-            onClick={() => setActiveScope('tournament')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-poster-body font-black transition-all ${
-              activeScope === 'tournament'
-                ? 'poster-pill-red text-white shadow'
-                : 'text-amber-200/70 hover:text-white'
-            }`}
-          >
-            <Trophy className="w-3.5 h-3.5 text-amber-300" />
-            <span>Tournament Cups</span>
-          </button>
-          <button
-            onClick={() => setActiveScope('league')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-poster-body font-black transition-all ${
-              activeScope === 'league'
-                ? 'poster-pill-gold text-amber-950 shadow'
-                : 'text-amber-200/70 hover:text-white'
-            }`}
-          >
-            <Table className="w-3.5 h-3.5" />
-            <span>League Divisions</span>
-          </button>
-          <button
-            onClick={() => setActiveScope('the_idols')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-poster-body font-black transition-all ${
-              activeScope === 'the_idols'
-                ? 'bg-gradient-to-r from-fuchsia-600 to-pink-600 text-white shadow ring-2 ring-fuchsia-400/50'
-                : 'text-fuchsia-300 hover:text-white'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-            <span>The Idols Honors</span>
-          </button>
+        {/* Competition filters */}
+        <div className="flex flex-wrap gap-1.5 rounded-xl border border-slate-700 bg-slate-900 p-2">
+          <button onClick={() => setActiveScope('combined')} className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${activeScope === 'combined' ? 'bg-amber-400 text-slate-950' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>All Competitions</button>
+          <button onClick={() => setActiveScope('tournament')} className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${activeScope === 'tournament' ? 'bg-amber-400 text-slate-950' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>Tournament Cups</button>
+          <button onClick={() => setActiveScope('league')} className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${activeScope === 'league' ? 'bg-amber-400 text-slate-950' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>League Divisions</button>
+          <button onClick={() => setActiveScope('the_idols')} className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${activeScope === 'the_idols' ? 'bg-amber-400 text-slate-950' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>The Idols Honors</button>
+          <button onClick={() => setActiveScope('crown_cup')} className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${activeScope === 'crown_cup' ? 'bg-amber-400 text-slate-950' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>Crown Cup</button>
+          <button onClick={() => setActiveScope('open_arena_cup')} className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${activeScope === 'open_arena_cup' ? 'bg-amber-400 text-slate-950' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>Open Arena Cup</button>
+          <button onClick={() => setActiveScope('spotlight_cup')} className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${activeScope === 'spotlight_cup' ? 'bg-amber-400 text-slate-950' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>Spotlight Cup</button>
+          <button onClick={() => setActiveScope('super_cup_a')} className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${activeScope === 'super_cup_a' ? 'bg-amber-400 text-slate-950' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>Super Cup A</button>
+          <button onClick={() => setActiveScope('super_cup_b')} className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${activeScope === 'super_cup_b' ? 'bg-amber-400 text-slate-950' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>Super Cup B</button>
+          <button onClick={() => setActiveScope('division_2')} className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${activeScope === 'division_2' ? 'bg-amber-400 text-slate-950' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>Division 2</button>
         </div>
       </div>
 
@@ -642,7 +610,7 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
           />
         </div>
         <div className="text-xs font-black text-amber-300 uppercase tracking-wide font-poster-body">
-          Total Groups: <span className="text-red-400 font-poster-title text-sm">{groupStatsList.length}</span>
+          Total Groups: <span className="text-amber-300 text-sm">{groupStatsList.length}</span> <span className="ml-3">Total Titles: <b className="text-amber-300">{groupStatsList.reduce((sum, group) => sum + group.totalTitles, 0)}</b></span>
         </div>
       </div>
 
@@ -652,16 +620,12 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
           const isExpanded = expandedGroup === group.groupName;
           const groupInfo = girlGroups.find((g) => g.name === group.groupName);
           const logoUrl = groupInfo?.logoUrl;
-          const totalHonors = group.championships + group.leagueCupTitles + group.theIdolsLeagueTitles + group.theIdolsPlayoffTitles;
+          const totalHonors = group.totalTitles;
 
           return (
             <div
               key={group.groupName}
-              className={`rounded-2xl border-2 border-black transition-all ${
-                totalHonors > 0
-                  ? 'bg-[#231812] poster-shadow-lg'
-                  : 'bg-[#18130f] poster-shadow'
-              }`}
+              className={`rounded-xl border border-slate-700 transition-colors ${totalHonors > 0 ? 'bg-slate-900' : 'bg-slate-950'}`}
             >
               {/* Group Main Row */}
               <div
@@ -702,10 +666,11 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
                   <div>
                     <h3 className="text-lg font-poster-title text-amber-100 flex items-center gap-2 flex-wrap">
                       <span>{group.groupName}</span>
+                      <span className="rounded-md bg-amber-400/15 px-2 py-0.5 text-xs font-black text-amber-300">{group.totalTitles} Total Titles</span>
                       {group.championships > 0 && (
                         <span className="flex items-center gap-1 rounded-full poster-pill-gold px-2.5 py-0.5 text-xs font-black">
                           <Crown className="h-3.5 w-3.5" />
-                          {group.championships} {group.championships === 1 ? 'Championship' : 'Championships'}
+                          {group.championships} Tournament Titles
                         </span>
                       )}
                       {group.leagueCupTitles > 0 && (
@@ -731,6 +696,15 @@ export const GirlGroupStatsPanel: React.FC<GirlGroupStatsPanelProps> = ({
                       {group.totalMembers} Members &bull; Cups: <span className="font-black text-amber-400">{group.championships}</span> &bull; Leagues: <span className="font-black text-teal-400">{group.leagueCupTitles}</span> &bull; Idols League: <span className="font-black text-sky-400">{group.theIdolsLeagueTitles}</span> &bull; Idols Playoff: <span className="font-black text-fuchsia-400">{group.theIdolsPlayoffTitles}</span>
                     </p>
                   </div>
+                </div>
+
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <span className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] font-bold text-slate-300">Crown Cup: {group.competitionTitles['Crown Cup'] || 0}</span>
+                  <span className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] font-bold text-slate-300">Open Arena Cup: {group.competitionTitles['Open Arena Cup'] || 0}</span>
+                  <span className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] font-bold text-slate-300">Spotlight Cup: {group.competitionTitles['Spotlight Cup'] || 0}</span>
+                  <span className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] font-bold text-slate-300">Super Cup A: {group.competitionTitles['Super Cup A'] || 0}</span>
+                  <span className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] font-bold text-slate-300">Super Cup B: {group.competitionTitles['Super Cup B'] || 0}</span>
+                  <span className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] font-bold text-slate-300">Division 2: {group.competitionTitles['Division 2'] || 0}</span>
                 </div>
 
                 {/* Quick Stats Banner */}
