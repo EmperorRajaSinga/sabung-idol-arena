@@ -1190,6 +1190,17 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             <span>Data Maker &amp; Pot Draw</span>
           </button>
           <button
+            onClick={() => { refreshDataHistory(); setActiveSettingsTab('history'); }}
+            className={\`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-poster-title transition-all \${
+              activeSettingsTab === 'history'
+                ? 'bg-amber-500 text-black font-black shadow-lg'
+                : 'text-amber-300 hover:text-white'
+            }\`}
+          >
+            <Database className="w-3.5 h-3.5" />
+            <span>Data Change History</span>
+          </button>
+          <button
             onClick={() => setActiveSettingsTab('data')}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-poster-title transition-all ${
               activeSettingsTab === 'data'
@@ -2052,6 +2063,96 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {activeSettingsTab === 'history' && (
+        <div className="space-y-5 animate-in fade-in duration-200">
+          <div className="rounded-3xl border-2 border-black bg-[#18110b] p-6 poster-shadow">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h3 className="font-poster-title text-xl font-black text-amber-400">DATA CHANGE HISTORY</h3>
+                <p className="mt-1 max-w-3xl text-xs font-semibold text-amber-100/60">
+                  Audit trail for idol profiles, girl groups, league rosters, duplicate blocks, and database imports. Records are stored in this browser and remain available after refresh.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => {
+                  const blob = new Blob([JSON.stringify(dataHistory, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const anchor = document.createElement('a');
+                  anchor.href = url;
+                  anchor.download = 'sabung_data_change_history.json';
+                  anchor.click();
+                  URL.revokeObjectURL(url);
+                }} className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/20">
+                  <Download className="mr-1 inline h-3.5 w-3.5" /> Export History
+                </button>
+                <button type="button" onClick={() => {
+                  if (!window.confirm('Clear all data change history? This will not delete idols, girl groups, or league rosters.')) return;
+                  clearDataHistory();
+                  refreshDataHistory();
+                }} className="rounded-xl border border-red-800 bg-red-950/40 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-900/60">
+                  <Trash2 className="mr-1 inline h-3.5 w-3.5" /> Clear History
+                </button>
+              </div>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                { label: 'Total Events', value: dataHistory.length },
+                { label: 'New Idols', value: dataHistory.filter((item) => item.entity === 'idol' && item.action === 'created').length },
+                { label: 'New Girl Groups', value: dataHistory.filter((item) => item.entity === 'girl_group' && item.action === 'created').length },
+                { label: 'Duplicate Blocks', value: dataHistory.filter((item) => item.action === 'duplicate_blocked').length },
+              ].map((stat) => (
+                <div key={stat.label} className="rounded-2xl border border-black bg-black/40 p-3">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-amber-100/45">{stat.label}</div>
+                  <div className="mt-1 font-mono text-2xl font-black text-white">{stat.value}</div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+              <input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Search name, league, source, or details..." className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-black px-3 py-2 text-xs text-white outline-none focus:border-amber-500" />
+              <select value={historyActionFilter} onChange={(event) => setHistoryActionFilter(event.target.value)} className="rounded-xl border border-slate-700 bg-black px-3 py-2 text-xs text-amber-200">
+                <option value="all">All actions</option>
+                <option value="created">Created</option>
+                <option value="updated">Updated</option>
+                <option value="deleted">Deleted</option>
+                <option value="roster_updated">Roster updated</option>
+                <option value="duplicate_blocked">Duplicate blocked</option>
+                <option value="imported">Imported</option>
+              </select>
+            </div>
+            <div className="mt-4 overflow-hidden rounded-2xl border border-black">
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 bg-black/70 px-4 py-3 text-[10px] font-black uppercase tracking-wider text-amber-300 sm:grid-cols-[180px_130px_minmax(0,1fr)_minmax(0,1fr)]">
+                <span>When</span><span>Action</span><span>Record</span><span className="hidden sm:block">Details / Source</span>
+              </div>
+              <div className="max-h-[560px] divide-y divide-black overflow-y-auto">
+                {dataHistory.filter((item) => {
+                  const query = historySearch.trim().toLowerCase();
+                  const matchesQuery = !query || [item.entityName, item.details, item.source, item.entity].some((value) => value.toLowerCase().includes(query));
+                  return matchesQuery && (historyActionFilter === 'all' || item.action === historyActionFilter);
+                }).map((item) => (
+                  <div key={item.id} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 bg-[#100c08] px-4 py-3 text-xs sm:grid-cols-[180px_130px_minmax(0,1fr)_minmax(0,1fr)]">
+                    <span className="text-[10px] text-slate-400">{new Date(item.timestamp).toLocaleString()}</span>
+                    <span className={\`font-black uppercase tracking-wide \${
+                      item.action === 'duplicate_blocked' ? 'text-red-400' :
+                      item.action === 'created' ? 'text-emerald-400' :
+                      item.action === 'deleted' ? 'text-red-300' : 'text-amber-300'
+                    }\`}>{item.action.replace(/_/g, ' ')}</span>
+                    <span className="min-w-0 break-words font-bold text-white">{item.entityName}<span className="ml-1 text-[9px] font-semibold text-slate-500">{item.entity.replace(/_/g, ' ')}</span></span>
+                    <span className="col-span-2 break-words text-[10px] text-slate-400 sm:col-span-1">{item.details}<span className="mt-1 block text-[9px] text-amber-100/35">Source: {item.source}</span></span>
+                  </div>
+                ))}
+                {!dataHistory.length && <div className="p-8 text-center text-xs text-slate-500">No changes recorded yet. New data edits and roster changes will appear here.</div>}
+                {dataHistory.length > 0 && !dataHistory.some((item) => {
+                  const query = historySearch.trim().toLowerCase();
+                  const matchesQuery = !query || [item.entityName, item.details, item.source, item.entity].some((value) => value.toLowerCase().includes(query));
+                  return matchesQuery && (historyActionFilter === 'all' || item.action === historyActionFilter);
+                }) && <div className="p-8 text-center text-xs text-slate-500">No history entries match the current filters.</div>}
+              </div>
+            </div>
+            <p className="mt-3 text-[10px] text-slate-500">History limit: latest 5,000 events. Export a copy periodically. The log is browser-local and is not shared across devices or browsers.</p>
+          </div>
         </div>
       )}
 
