@@ -2345,7 +2345,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     const nextD2 = autoFilledD2.map((league) => {
                       const previous = v5State.d2.find((item) => item.id === league.id);
                       return previous
-                        ? rebuildDivisionTwoRosterPreservingResults(league, league.memberIds, appState.idols)
+                        ? rebuildDivisionTwoRosterPreservingResults(previous, league.memberIds, appState.idols)
                         : league;
                     });
                     const assignedCount = nextD2.reduce((total, league) => total + league.memberIds.length, 0) -
