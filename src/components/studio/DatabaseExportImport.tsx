@@ -23,6 +23,7 @@ import {
   TheIdolsSeasonArchive,
   TheIdolsSeasonState,
   CareerStat,
+  Idol,
 } from '../../types';
 import {
   CareerOverridesMap,
