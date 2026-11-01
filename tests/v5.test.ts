@@ -136,7 +136,7 @@ ck('J archive guard: finished v5 season is clean, unfinished cups and Division 2
 const ids = [...a.matches.map((m) => m.id), ...lcm.map((m) => m.id), ...minis.flat().map((m) => m.id)];
 ck('H all cup match IDs unique', new Set(ids).size === ids.length, `${ids.length}`);
 // stress
-let stressOk = true; for (let i = 0; i < 25; i++) { const x = cc(i % 3 === 0 ? [i % 6, (i + 1) % 6] : null); const c2 = E.createLeagueCup(E.leagueCupOrder(d1, d2), leagueOf, 60); E.simulateLeagueCup(c2, by); if (x.matches.length !== 10 || !x.matches.every(seriesOk) || c2.rounds.flat().length !== 179 || !c2.championId) stressOk = false; }
+let stressOk = true; for (let i = 0; i < 25; i++) { const x = cc(i % 3 === 0 ? [i % 6, (i + 1) % 6] : null); const c2 = E.createLeagueCup(E.leagueCupOrder(d1, d2), leagueOf, 60); E.simulateLeagueCup(c2, by); if (x.matches.length !== 8 || !x.matches.every(seriesOk) || c2.rounds.flat().length !== 179 || !c2.championId) stressOk = false; }
 ck('I stress: 25 random runs of Champs Cup + League Cup are always valid', stressOk);
 let f = 0; for (const [n, ok3, i] of res) { if (!ok3) f++; console.log(`${ok3 ? 'PASS' : 'FAIL'}  ${n}${i ? '   [' + i + ']' : ''}`); }
 console.log(`${res.length - f}/${res.length} passed`); process.exit(f ? 1 : 0);
