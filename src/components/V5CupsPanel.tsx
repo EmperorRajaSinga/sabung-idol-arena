@@ -248,6 +248,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
   const v5 = v5State;
   const [names, setNames] = useState<CompetitionNames>(() => loadNames());
   const [msg, setMsg] = useState('');
+  const [simulatingOpenCup, setSimulatingOpenCup] = useState(false);
   const [selectedSpotlightLeague, setSelectedSpotlightLeague] = useState('');
   const [selectedOpenRound, setSelectedOpenRound] = useState('');
   const by = useMemo(() => new Map(idols.map((i) => [i.id, i])), [idols]);
@@ -294,7 +295,30 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
     } catch (error) { setMsg(error instanceof Error ? `Open Arena Cup build failed: ${error.message}` : 'Open Arena Cup build failed. Check league standings and try again.'); }
   };
   const lcRound = () => { if (!v5.leagueCup) return; const s = clone(v5.leagueCup); const cur = s.rounds[s.rounds.length - 1]; cur.filter((m) => !m.completed).forEach((m) => E.playNode(m, by)); refreshLC(s); if (!s.championId) E.stepLeagueCup(s); commit({ leagueCup: s }); };
-  const lcAll = () => { if (!v5.leagueCup) return; const s = clone(v5.leagueCup); E.simulateLeagueCup(s, by); commit({ leagueCup: refreshLC(s) }); };
+  const lcAll = async () => {
+    if (!v5.leagueCup || simulatingOpenCup) return;
+    setSimulatingOpenCup(true);
+    try {
+      const s = clone(v5.leagueCup);
+      for (let round = 0; round < 20 && !s.championId; round++) {
+        if (!E.stepLeagueCup(s)) break;
+        const current = s.rounds[s.rounds.length - 1];
+        for (let i = 0; i < current.length; i += 8) {
+          current.slice(i, i + 8).forEach((match) => {
+            if (!match.completed && match.idolAId && match.idolBId) E.playNode(match, by);
+          });
+          await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+        }
+        refreshLC(s);
+        commit({ leagueCup: clone(s) });
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+      }
+    } catch (error) {
+      setMsg(error instanceof Error ? 'Open Arena Cup simulation failed: ' + error.message : 'Open Arena Cup simulation failed.');
+    } finally {
+      setSimulatingOpenCup(false);
+    }
+  };
   const buildMini = (lid: number) => {
     try {
       const l = d1.find((x) => x.id === lid); if (!l) { setMsg('League not found.'); return; }
@@ -353,7 +377,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
         <div className="flex flex-wrap gap-2 mb-2">
           <Btn onClick={buildLC} disabled={!!lc}>Build bracket</Btn>
           <Btn onClick={lcRound} disabled={!lc || !!lc.championId}>Simulate current round</Btn>
-          <Btn onClick={lcAll} disabled={!lc || !!lc.championId}>Simulate all</Btn>
+          <Btn onClick={lcAll} disabled={!lc || !!lc.championId || simulatingOpenCup}>{simulatingOpenCup ? 'Simulating...' : 'Simulate all'}</Btn>
           <Btn onClick={() => { if (lc && window.confirm("Reset this tournament bracket and remove all match results?")) commit({ leagueCup: null }); }} disabled={!lc} className="bg-rose-400">Reset Bracket</Btn>
         </div>
         {lc && <p className="text-xs mb-2 font-mono">{lc.order.length} idols · {lc.plan.rounds} rounds · entering per round: {lc.plan.entrants.join(' / ')}{lc.championId ? ` · Champion: ${nm(lc.championId)}` : ''}</p>}
