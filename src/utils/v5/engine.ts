@@ -70,6 +70,15 @@ export function simulateBracket(ms: BNode[], idols: Map<string, Idol>) {
     playNode(next, idols);
   }
 }
+/** Simulates Crown Cup while resolving the seed-based Lower Bracket bye. */
+export function simulateChampsCup(ms: BNode[], idols: Map<string, Idol>, seedOrder: string[] = []) {
+  for (let guard = 0; guard < 2000; guard++) {
+    advanceChampsCup(ms, seedOrder);
+    const next = ms.find((m) => !m.completed && m.idolAId && m.idolBId);
+    if (!next) return;
+    playNode(next, idols);
+  }
+}
 
 /* ------------------------------------------------------------------ Division 2 */
 export interface DivisionTwoLeague extends LeagueInfo { parentLeagueId: number; }
@@ -138,22 +147,50 @@ export function rankChampionsForByes(c: ChampionInfo[]): ChampionInfo[] {
   const rnd = new Map(c.map((x) => [x.idolId, Math.random()]));
   return [...c].sort((a, b) => (Number(b.wonGrandCup) - Number(a.wonGrandCup)) || (Number(b.wonTheIdols) - Number(a.wonTheIdols)) || (b.points - a.points) || (b.gameDiff - a.gameDiff) || (rnd.get(a.idolId)! - rnd.get(b.idolId)!));
 }
-export function buildChampsCup(champions: ChampionInfo[]): { matches: BNode[]; byeIds: string[] } {
+export function buildChampsCup(champions: ChampionInfo[]): { matches: BNode[]; byeIds: string[]; seedOrder: string[] } {
   if (champions.length !== 6) throw new Error('Champs Cup needs exactly 6 league champions');
   const ranked = rankChampionsForByes(champions);
+  const seedOrder = ranked.map((c) => c.idolId);
   const byeIds = ranked.slice(0, 2).map((c) => c.idolId);
   const drawn = shuffle(ranked.slice(2).map((c) => c.idolId));
   const S = (id: string): Slot => ({ id }), W = (id: string): Slot => ({ win: id }), L = (id: string): Slot => ({ lose: id });
   const matches = [
     node('cc_ur1_a', 'Upper Round 1', 5, S(drawn[0]), S(drawn[1])), node('cc_ur1_b', 'Upper Round 1', 5, S(drawn[2]), S(drawn[3])),
-    node('cc_usf_a', 'Upper Semi Final', 5, S(byeIds[0]), W('cc_ur1_a')), node('cc_usf_b', 'Upper Semi Final', 5, S(byeIds[1]), W('cc_ur1_b')),
+    node('cc_usf_a', 'Upper Semi Final', 5, S(byeIds[1]), W('cc_ur1_a')), node('cc_usf_b', 'Upper Semi Final', 5, S(byeIds[0]), W('cc_ur1_b')),
     node('cc_uf', 'Upper Final', 5, W('cc_usf_a'), W('cc_usf_b')),
     node('cc_lr1', 'Lower Round 1', 5, L('cc_ur1_a'), L('cc_ur1_b')), node('cc_lr2', 'Lower Round 2', 5, W('cc_lr1'), L('cc_usf_a')),
     node('cc_lr3', 'Lower Round 3', 5, W('cc_lr2'), L('cc_usf_b')), node('cc_lf', 'Lower Final', 7, W('cc_lr3'), L('cc_uf')),
     node('cc_gf', 'Grand Final', 7, W('cc_uf'), W('cc_lf')),
   ];
+  advanceChampsCup(matches, seedOrder);
+  return { matches, byeIds, seedOrder };
+}
+/** Resolve the lower-bracket bye after both Upper Semi Finals finish.
+ * The better-seeded semifinal loser receives the bye into Lower Round 3.
+ * The other loser faces the Lower Round 1 winner in Lower Round 2.
+ */
+export function advanceChampsCup(matches: BNode[], seedOrder: string[] = []) {
+  const by = new Map(matches.map((match) => [match.id, match]));
+  const semiA = by.get('cc_usf_a');
+  const semiB = by.get('cc_usf_b');
+  const lower2 = by.get('cc_lr2');
+  const lower3 = by.get('cc_lr3');
+  if (semiA && semiB && lower2 && lower3 && semiA.completed && semiB.completed && semiA.loserId && semiB.loserId) {
+    const seedRank = (id: string) => {
+      const index = seedOrder.indexOf(id);
+      return index < 0 ? Number.MAX_SAFE_INTEGER : index;
+    };
+    const loserA = semiA.loserId;
+    const loserB = semiB.loserId;
+    const byeId = seedRank(loserA) <= seedRank(loserB) ? loserA : loserB;
+    const playInId = byeId === loserA ? loserB : loserA;
+    lower2.b = { id: playInId };
+    lower3.b = { id: byeId };
+  } else {
+    lower2 && (lower2.b = { lose: 'cc_usf_a' });
+    lower3 && (lower3.b = { lose: 'cc_usf_b' });
+  }
   advanceBracket(matches);
-  return { matches, byeIds };
 }
 
 /* ------------------------------------------------------------------ League Cup (all idols, tiered entry) */
