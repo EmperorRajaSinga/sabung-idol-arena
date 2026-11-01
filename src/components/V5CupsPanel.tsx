@@ -245,7 +245,7 @@ const CrownCupBracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (
 
 export const V5CupsPanel: React.FC<Props> = ({ idols, leagueState, section, v5State, onUpdateV5State, theIdolsChampionId, knockoutMatches }) => {
   const v5 = v5State;
-  const [names, setNames] = useState<CompetitionNames>(() => loadNames());
+  const [names] = useState<CompetitionNames>(() => loadNames());
   const [msg, setMsg] = useState('');
   const [simulatingOpenCup, setSimulatingOpenCup] = useState(false);
   const [selectedSpotlightLeague, setSelectedSpotlightLeague] = useState('');
