@@ -310,28 +310,108 @@ export const DatabaseExportImport: React.FC<DatabaseExportImportProps> = ({
           }));
         }
       } else if (format === 'league_branding_rosters') {
+        const incomingIdols = Array.isArray(data.idols) ? data.idols : (appState.idols || []);
+        const incomingGroups = Array.isArray(data.girlGroups) ? data.girlGroups : (appState.girlGroups || []);
+        if (Array.isArray(data.idols)) saveIdols(data.idols);
+        if (Array.isArray(data.girlGroups)) saveGirlGroups(data.girlGroups);
+
         if (Array.isArray(data.customLeagueBranding)) {
           saveCustomLeagueBranding(data.customLeagueBranding);
-          onUpdateAppState((prev) => ({ ...prev, customLeagueBranding: data.customLeagueBranding }));
         }
+
+        let restoredD1 = leagueState;
+        let notes: string[] = [];
         if (Array.isArray(data.divisions)) {
-          const { state: newState, report } = applyLeagueRosterImport(
+          const result = applyLeagueRosterImport(
             leagueState,
             data,
-            appState.idols || [],
-            appState.girlGroups || [],
+            incomingIdols,
+            incomingGroups,
             (leagueState && leagueState.seasonNumber) || 1
           );
-          saveLeagueSeasonState(newState);
-          onUpdateLeagueState(newState);
-          const notes: string[] = [];
-          if (report.unknownEntries.length) notes.push(`${report.unknownEntries.length} idols not found in the Idol Database (import idols first)`);
-          if (report.duplicateEntries.length) notes.push(`${report.duplicateEntries.length} duplicate idols skipped`);
-          showToast(
-            `League rosters restored: ${report.leaguesUpdated} leagues updated, sizes ${report.rosterSizes.join('/')}.` + (notes.length ? ' Warning: ' + notes.join('; ') + '.' : ''),
-            notes.length ? 'error' : 'success'
-          );
+          restoredD1 = result.state;
+          saveLeagueSeasonState(restoredD1);
+          onUpdateLeagueState(restoredD1);
+          if (result.report.unknownEntries.length) notes.push(\`\${result.report.unknownEntries.length} D1 idols not found in the included Idol Database\`);
+          if (result.report.duplicateEntries.length) notes.push(\`\${result.report.duplicateEntries.length} duplicate D1 roster idols skipped\`);
         }
+
+        let restoredV5 = v5State || null;
+        if (Array.isArray(data.division2)) {
+          const d1Ids = new Set((restoredD1?.leagues || []).flatMap((league) => league.memberIds || []));
+          const usedD2Ids = new Set<string>();
+          const invalidD2Ids: string[] = [];
+          const division2 = data.division2.map((source: any) => {
+            const parentLeagueId = Number(source.parentLeagueId);
+            const leagueId = Number(source.leagueId);
+            const rawIds = Array.isArray(source.memberIds)
+              ? source.memberIds.map(String)
+              : Array.isArray(source.roster)
+                ? source.roster.map((idol: any) => String(idol.id || idol.idolId || '')).filter(Boolean)
+                : [];
+            const memberIds = rawIds.filter((id: string, index: number) => {
+              const valid = rawIds.indexOf(id) === index &&
+                incomingIdols.some((idol: Idol) => idol.id === id) &&
+                !d1Ids.has(id) &&
+                !usedD2Ids.has(id);
+              if (valid) usedD2Ids.add(id);
+              else invalidD2Ids.push(id);
+              return valid;
+            });
+            return rebuildLeague({
+              id: leagueId,
+              parentLeagueId,
+              name: String(source.name || \`Division 2 \${parentLeagueId}\`),
+              tierName: String(source.tierName || 'Challenger'),
+              color: String(source.color || '#64748b'),
+              logoUrl: String(source.logoUrl || ''),
+              description: String(source.description || ''),
+              memberIds,
+              matches: [],
+              standings: [],
+            }, incomingIdols);
+          });
+          if (
+            division2.length !== 6 ||
+            new Set(division2.map((league: any) => league.parentLeagueId)).size !== 6 ||
+            division2.some((league: any) =>
+              !Number.isInteger(league.parentLeagueId) ||
+              league.parentLeagueId < 1 ||
+              league.parentLeagueId > 6 ||
+              league.id !== 100 + league.parentLeagueId
+            )
+          ) {
+            throw new Error('League backup must contain six Division 2 leagues paired one-to-one with Division 1.');
+          }
+          restoredV5 = {
+            ...(restoredV5 || {
+              d2: [], perLeague: 20, promotionCount: 3, pendingMoves: null,
+              promotionHistory: [], champsCup: null, leagueCup: null, miniCups: {},
+              superA: null, superB: [],
+            }),
+            d2: division2,
+          };
+          saveV5State(restoredV5);
+          if (invalidD2Ids.length) notes.push(\`\${invalidD2Ids.length} unknown, duplicated, or cross-division D2 roster IDs skipped\`);
+        }
+
+        onUpdateAppState((prev) => ({
+          ...prev,
+          idols: incomingIdols,
+          girlGroups: incomingGroups,
+          customLeagueBranding: Array.isArray(data.customLeagueBranding)
+            ? data.customLeagueBranding
+            : prev.customLeagueBranding,
+          v5State: restoredV5 || prev.v5State,
+        }));
+
+        const d1Count = Array.isArray(data.divisions) ? data.divisions.length : 0;
+        const d2Count = Array.isArray(data.division2) ? data.division2.length : 0;
+        showToast(
+          \`League backup restored: \${d1Count} Division 1 and \${d2Count} Division 2 rosters, \${incomingIdols.length} idols, and \${incomingGroups.length} girl groups.\` +
+            (notes.length ? ' Warning: ' + notes.join('; ') + '.' : ''),
+          notes.length ? 'error' : 'success'
+        );
       } else if (format === 'permanent_match_db') {
         const matches = Array.isArray(data.matches) ? data.matches : data.matchDatabase;
         if (Array.isArray(matches)) {
