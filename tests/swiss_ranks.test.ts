@@ -23,5 +23,20 @@ check('d) short rosters: no ranks 1-6 added as padding', bad(sw4, topIds(short))
 // e) full season: legacy wildcard play-in is not played in the 64 format
 const wc = (r.summary.syncedMatchDatabase || []).filter((m: any) => String(m.matchId).startsWith('wildcard_'));
 check('e) no legacy Wildcard Play-In matches in the 64-idol format', wc.length === 0, String(wc.length));
+
+// f) completed legacy Swiss data must also be invalidated when its entrant set is stale
+const staleCompleted = {
+  ...sw1,
+  participants: sw1.participants.map((p: any, i: number) => i < 3 ? { ...p, idolId: [...top][i] } : p),
+  matches: sw1.matches.map((m: any) => ({ ...m, completed: true, scoreA: 2, scoreB: 0, winnerId: m.idolAId, loserId: m.idolBId })),
+  lastChanceMatches: sw1.lastChanceMatches.map((m: any) => ({ ...m, completed: true, scoreA: 2, scoreB: 0, winnerId: m.idolAId, loserId: m.idolBId })),
+};
+const sw5 = generateSwissPlayIn(ls.leagues, r.idols, staleCompleted as any);
+const currentSwissIds = new Set(sw5.participants.map((p: any) => p.idolId));
+const allSwissMatchesUseCurrentEntrants = [...sw5.matches, ...sw5.lastChanceMatches].every((m: any) =>
+  (!m.idolAId || currentSwissIds.has(m.idolAId)) && (!m.idolBId || currentSwissIds.has(m.idolBId))
+);
+check('f) completed stale Swiss data is rebuilt without retaining old entrants or pairings', bad(sw5, top) === 0 && allSwissMatchesUseCurrentEntrants && sw5.matches.every((m: any) => !m.completed), `${bad(sw5, top)} direct entrants; stale completed matches retained: ${sw5.matches.filter((m: any) => m.completed).length}`);
+
 let f = 0; for (const [n, ok, i] of results) { if (!ok) f++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${n}${i ? '   [' + i + ']' : ''}`); }
 process.exit(f ? 1 : 0);
