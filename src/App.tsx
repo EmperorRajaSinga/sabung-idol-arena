@@ -2059,8 +2059,7 @@ export function App() {
       currentSeasonId,
       sourceAppState.config.seasonName || `Season ${currentSeasonId}`
     );
-    saveV5State(v5ArchiveSnapshot.resetState);
-    saveDivisionTwoRosterSnapshot(v5ArchiveSnapshot.resetState.d2 || []);
+    let nextV5State = v5ArchiveSnapshot.resetState;
 
     const storedLeagueArchives = loadLeagueArchives();
     const effectiveLeagueArchives =
@@ -2130,11 +2129,7 @@ export function App() {
         const seasonName = sourceLeagueState.seasonName || sourceAppState.config.seasonName || `Season ${currentSeasonId}`;
         const history = [...(v5ArchiveSnapshot.resetState.promotionHistory || [])].filter((entry) => Number(entry.seasonNumber) !== currentSeasonId);
         history.push({ seasonNumber: currentSeasonId, seasonName, appliedAt: new Date().toISOString(), moves: promotionMoves });
-        const promotedV5State = { ...v5ArchiveSnapshot.resetState, d2: applied.d2 as any, pendingMoves: null, promotionHistory: history };
-        saveV5State(promotedV5State);
-        saveDivisionTwoRosterSnapshot(promotedV5State.d2 || []);
-        // The state update below persists the promoted/relegated Division 2 roster.
-        (v5ArchiveSnapshot as any).nextSeasonState = promotedV5State;
+        nextV5State = { ...v5ArchiveSnapshot.resetState, d2: applied.d2 as any, pendingMoves: null, promotionHistory: history };
       }
       handleUpdateLeagueState(nextLeagueState);
     }
@@ -2157,6 +2152,9 @@ export function App() {
       handleUpdateTheIdolsState(nextTheIdolsState);
     }
 
+    saveV5State(nextV5State);
+    saveDivisionTwoRosterSnapshot(nextV5State.d2 || []);
+
     const filteredArchives = effectiveTournamentArchives.filter(
       (a) => Number(a.seasonId) !== currentSeasonId
     );
@@ -2171,7 +2169,7 @@ export function App() {
         ...prev,
         archives: [...pFiltered, archiveRecord],
         matchDatabase: v5ArchiveSnapshot.matches,
-        v5State: (v5ArchiveSnapshot as any).nextSeasonState || v5ArchiveSnapshot.resetState,
+        v5State: nextV5State,
         v5TitleArchives: v5ArchiveSnapshot.titles,
         groups: [],
         knockoutMatches: [],
