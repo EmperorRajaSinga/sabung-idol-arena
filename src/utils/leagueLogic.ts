@@ -2113,7 +2113,9 @@ export function advanceLeagueSeason(
     };
   });
 
-  const freshWildcard = generateWildcardPlayIn(updatedLeagues, idols);
+  const freshWildcard = currentState.postseasonFormat === 'grand_cup_64'
+    ? undefined
+    : generateWildcardPlayIn(updatedLeagues, idols);
   const freshSwiss = generateSwissPlayIn(updatedLeagues, idols);
 
   return {
@@ -2150,7 +2152,9 @@ export function resetLeagueSeasonMatchesOnly(
     };
   });
 
-  const freshWildcard = generateWildcardPlayIn(updatedLeagues, idols);
+  const freshWildcard = currentState.postseasonFormat === 'grand_cup_64'
+    ? undefined
+    : generateWildcardPlayIn(updatedLeagues, idols);
   const freshSwiss = generateSwissPlayIn(updatedLeagues, idols);
 
   return {
