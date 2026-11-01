@@ -929,7 +929,7 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
       );
       const titles = titleRecords.filter((record) => record.winnerId === idol?.id).length;
       const runnerUps = titleRecords.filter((record) => record.runnerUpId === idol?.id).length;
-      const seasonNumbers = Array.from(new Set(matches.map((match) => Number(match.seasonId || 1)))).sort((a, b) => b - a);
+      const seasonNumbers: number[] = Array.from(new Set<number>(matches.map((match: ArchivedMatch) => Number(match.seasonId || 1)))).sort((a: number, b: number) => b - a);
       const seasons = seasonNumbers.map((seasonNumber) => {
         const rows = matches.filter((match) => Number(match.seasonId || 1) === seasonNumber);
         const stages = rows.map((match) => String(match.stage || '').split('/').slice(1).join('/').toLowerCase());
