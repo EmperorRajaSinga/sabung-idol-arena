@@ -4,6 +4,7 @@ import { loadV5State, saveV5State, V5State } from '../utils/v5/store';
 import { loadNames, saveNames, CompetitionNames } from '../utils/v5/names';
 import * as E from '../utils/v5/engine';
 import { rankStandings } from '../utils/swissLogic';
+import { getIdolRating } from '../utils/ratingHelper';
 
 interface Props {
   idols: Idol[]; girlGroups: GirlGroup[]; leagueState: LeagueSeasonState | null; section?: 'all' | 'crown' | 'super' | 'open' | 'spotlight';
@@ -23,74 +24,116 @@ const Btn: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ classNam
   <button {...p} className={`rounded-xl border-2 border-black bg-amber-500 px-3 py-1.5 text-xs font-black text-black hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed ${className}`} />
 );
 
-const Row: React.FC<{ m: E.BNode; nm: (id: string | null) => string; onSim: () => void; onSave: (a: number, b: number) => string | null }> = ({ m, nm, onSim, onSave }) => {
+const Row: React.FC<{ m: E.BNode; idols: Map<string, Idol>; nm: (id: string | null) => string; onSim: () => void; onSave: (a: number, b: number) => string | null }> = ({ m, idols, nm, onSim, onSave }) => {
   const [a, setA] = useState(''), [b, setB] = useState(''), [err, setErr] = useState('');
-  const ready = !!m.idolAId && !!m.idolBId;
-  return (
-    <div className="relative w-64 rounded-xl border-2 border-black bg-[#1c1510] p-2.5 shadow-lg">
-      <div className="mb-2 flex items-center justify-between border-b border-amber-900/70 pb-1.5">
-        <span className="truncate text-[10px] font-black uppercase tracking-wider text-amber-300">{m.roundName}</span>
-        <span className="rounded border border-black bg-black/60 px-1.5 py-0.5 text-[9px] font-black text-amber-100">BO{m.bestOf}</span>
-      </div>
-      {[{ id: m.idolAId, score: m.scoreA }, { id: m.idolBId, score: m.scoreB }].map((p, i) => {
-        const isWinner = m.completed && m.winnerId === p.id;
-        return (
-          <div key={i} className={`mb-1 flex min-w-0 items-center justify-between rounded-lg border border-black px-2 py-2 ${isWinner ? 'bg-emerald-800 text-white' : 'bg-[#100c09] text-amber-100'}`}>
-            <span className={`truncate text-xs font-bold ${!p.id ? 'italic text-amber-100/40' : ''}`}>{nm(p.id)}</span>
-            <span className="ml-2 min-w-5 rounded bg-black/40 px-1.5 text-center font-mono text-xs font-black text-amber-300">{p.score ?? '-'}</span>
+  const idolA = m.idolAId ? idols.get(m.idolAId) : null;
+  const idolB = m.idolBId ? idols.get(m.idolBId) : null;
+  const ready = !!idolA && !!idolB;
+  const targetWins = m.bestOf === 7 ? 4 : 3;
+  const renderCompetitor = (idol: Idol | null, id: string | null, score: number | null, isWinner: boolean) => (
+    <div className={`flex min-w-0 items-center justify-between gap-3 rounded-xl border-2 px-3 py-2.5 transition-all ${
+      isWinner
+        ? 'border-lime-500/60 bg-lime-950/40 text-lime-200 shadow-[0_0_10px_rgba(163,230,53,0.16)]'
+        : 'border-black/60 bg-black/35 text-amber-100'
+    }`}>
+      <div className="flex min-w-0 items-center gap-3">
+        {idol?.photoUrl ? (
+          <img src={idol.photoUrl} alt={idol.name} referrerPolicy="no-referrer" className="h-11 w-11 shrink-0 rounded-xl border-2 border-black object-cover" />
+        ) : (
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-2 border-black bg-[#2a1b11] font-poster-title text-sm text-amber-300">
+            {idol?.name?.slice(0, 2).toUpperCase() || 'TBD'}
           </div>
-        );
-      })}
+        )}
+        <div className="min-w-0">
+          <div className={`truncate text-sm font-black ${isWinner ? 'text-lime-300' : 'text-amber-100'}`}>{idol?.name || nm(id)}</div>
+          <div className="mt-0.5 truncate text-[11px] font-bold text-amber-200/55">{idol ? `${idol.girlGroup || 'Solo / Independent'} · R${getIdolRating(idol)}` : 'Awaiting qualification'}</div>
+        </div>
+      </div>
+      <span className={`min-w-9 rounded-lg bg-black/45 px-2 py-1 text-center font-mono text-lg font-black ${isWinner ? 'text-lime-300' : 'text-amber-300'}`}>{score ?? '-'}</span>
+    </div>
+  );
+
+  return (
+    <div className={`relative w-[320px] shrink-0 rounded-2xl border-2 p-4 shadow-xl transition-all sm:w-[340px] ${
+      m.completed
+        ? 'border-emerald-900/80 bg-[#19140f]'
+        : ready
+          ? 'border-amber-700/70 bg-[#21170f] hover:border-amber-500/80'
+          : 'border-black bg-[#17110c]'
+    }`}>
+      <div className="mb-3 flex items-center justify-between gap-2 border-b border-amber-900/70 pb-2">
+        <span className="truncate font-poster-title text-xs font-black uppercase tracking-wider text-amber-300">{m.roundName}</span>
+        <span className="shrink-0 rounded-lg border border-black bg-black/60 px-2 py-1 text-[10px] font-black text-amber-100">BO{m.bestOf} · FT {targetWins}</span>
+      </div>
+      <div className="space-y-2.5">
+        {renderCompetitor(idolA, m.idolAId, m.scoreA, !!m.completed && m.winnerId === m.idolAId)}
+        {renderCompetitor(idolB, m.idolBId, m.scoreB, !!m.completed && m.winnerId === m.idolBId)}
+      </div>
       {m.completed ? (
-        <div className="mt-2 flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-emerald-300">
-          <span>Match complete</span><span>{nm(m.winnerId)} advances</span>
+        <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-emerald-800/70 bg-emerald-950/35 px-3 py-2 text-[11px] font-black uppercase tracking-wide text-emerald-300">
+          <span>Match complete</span><span className="truncate text-right">{nm(m.winnerId)} advances</span>
         </div>
       ) : ready ? (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          <Btn onClick={onSim}>Simulate</Btn>
-          <input value={a} onChange={(e) => setA(e.target.value)} className="w-9 rounded border-2 border-black bg-black/60 px-1 py-1 text-center font-mono text-xs text-white" inputMode="numeric" aria-label="Score A" placeholder="A" />
-          <input value={b} onChange={(e) => setB(e.target.value)} className="w-9 rounded border-2 border-black bg-black/60 px-1 py-1 text-center font-mono text-xs text-white" inputMode="numeric" aria-label="Score B" placeholder="B" />
-          <Btn onClick={() => { const r = onSave(Number(a), Number(b)); setErr(r || ''); }}>Save</Btn>
-          {err && <span className="w-full text-[10px] text-rose-400">{err}</span>}
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-black/70 pt-3">
+          <Btn onClick={onSim} className="px-4 py-2 text-xs">Simulate</Btn>
+          <label className="flex items-center gap-1 rounded-lg border border-black bg-black/35 px-2 py-1">
+            <span className="text-[9px] font-black text-amber-200/60">A</span>
+            <input value={a} onChange={(e) => setA(e.target.value)} className="w-9 bg-transparent text-center font-mono text-sm font-black text-white outline-none" inputMode="numeric" aria-label="Score A" placeholder="-" />
+          </label>
+          <label className="flex items-center gap-1 rounded-lg border border-black bg-black/35 px-2 py-1">
+            <span className="text-[9px] font-black text-amber-200/60">B</span>
+            <input value={b} onChange={(e) => setB(e.target.value)} className="w-9 bg-transparent text-center font-mono text-sm font-black text-white outline-none" inputMode="numeric" aria-label="Score B" placeholder="-" />
+          </label>
+          <Btn onClick={() => { const result = onSave(Number(a), Number(b)); setErr(result || ''); }} className="ml-auto px-4 py-2 text-xs">Save Result</Btn>
+          {err && <span className="w-full text-[11px] font-bold text-rose-400">{err}</span>}
         </div>
-      ) : <div className="mt-2 text-[10px] italic text-amber-100/40">Waiting for previous round</div>}
+      ) : (
+        <div className="mt-3 rounded-xl border border-black/70 bg-black/25 px-3 py-2 text-[11px] font-bold italic text-amber-100/40">Waiting for previous round</div>
+      )}
     </div>
   );
 };
-const Bracket: React.FC<{ ms: E.BNode[]; nm: (id: string | null) => string; sim: (ms: E.BNode[], id: string) => void; save: (ms: E.BNode[], id: string, a: number, b: number) => string | null; onChange: (ms: E.BNode[]) => void }> = ({ ms, nm, sim, save, onChange }) => {
+const Bracket: React.FC<{ ms: E.BNode[]; idols: Map<string, Idol>; nm: (id: string | null) => string; sim: (ms: E.BNode[], id: string) => void; save: (ms: E.BNode[], id: string, a: number, b: number) => string | null; onChange: (ms: E.BNode[]) => void }> = ({ ms, idols, nm, sim, save, onChange }) => {
   const rounds = Array.from(new Set(ms.map((m) => m.roundName)));
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/80 p-4 custom-scrollbar">
-      <div className="flex min-w-max items-stretch gap-8 py-2">
-        {rounds.map((round, index) => {
-          const matches = ms.filter((m) => m.roundName === round);
-          return (
-            <React.Fragment key={round}>
-              <div className="flex w-64 flex-shrink-0 flex-col gap-4">
-                <div className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-center text-[10px] font-black uppercase tracking-widest text-indigo-300">
-                  {round}<span className="ml-2 text-slate-500">{matches.filter((m) => m.completed).length}/{matches.length}</span>
+    <div className="w-full min-w-0 rounded-2xl border-2 border-black/80 bg-[#100b08] p-4 shadow-inner sm:p-5">
+      <div className="overflow-x-auto pb-3 custom-scrollbar">
+        <div className="flex min-w-max items-stretch gap-5 py-2">
+          {rounds.map((round, index) => {
+            const matches = ms.filter((m) => m.roundName === round);
+            return (
+              <React.Fragment key={round}>
+                <div className="flex w-[320px] shrink-0 flex-col gap-4 sm:w-[340px]">
+                  <div className="rounded-xl border-2 border-slate-700 bg-[#1b1b2b] px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-indigo-200 shadow">
+                    <div>{round}</div>
+                    <div className="mt-1 font-mono text-[10px] text-slate-400">{matches.filter((m) => m.completed).length} / {matches.length} completed</div>
+                  </div>
+                  <div className="flex flex-1 flex-col justify-around gap-5">
+                    {matches.map((m) => (
+                      <Row key={m.id} m={m} idols={idols} nm={nm}
+                        onSim={() => { const c = clone(ms); sim(c, m.id); onChange(c); }}
+                        onSave={(a, b) => { const c = clone(ms); const error = save(c, m.id, a, b); if (!error) onChange(c); return error; }}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className="flex flex-1 flex-col justify-around gap-5">
-                  {matches.map((m) => (
-                    <Row key={m.id} m={m} nm={nm}
-                      onSim={() => { const c = clone(ms); sim(c, m.id); onChange(c); }}
-                      onSave={(a, b) => { const c = clone(ms); const e = save(c, m.id, a, b); if (!e) onChange(c); return e; }}
-                    />
-                  ))}
-                </div>
-              </div>
-              {index < rounds.length - 1 && <div className="flex w-4 flex-shrink-0 items-center justify-center"><div className="h-3/4 w-px border-l border-dashed border-indigo-500/50" /></div>}
-            </React.Fragment>
-          );
-        })}
+                {index < rounds.length - 1 && (
+                  <div className="flex w-5 shrink-0 items-center justify-center">
+                    <div className="h-3/4 w-px border-l-2 border-dashed border-indigo-500/50" />
+                  </div>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
       </div>
       {(() => {
         const finalMatch = ms.find((m) => m.completed && /grand final/i.test(m.roundName))
           || ms.find((m) => m.completed && /^final$/i.test(m.roundName))
           || (ms.length === 1 && ms[0].completed ? ms[0] : null);
         return finalMatch?.winnerId ? (
-          <div className="mt-3 border-t border-amber-500/20 pt-3 text-center text-xs font-black uppercase tracking-widest text-amber-300">
-            Champion: {nm(finalMatch.winnerId)}
+          <div className="mt-4 border-t border-amber-500/20 pt-4 text-center text-sm font-black uppercase tracking-widest text-amber-300">
+            Crowned Champion: {nm(finalMatch.winnerId)}
           </div>
         ) : null;
       })()}
@@ -149,7 +192,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
 
   const lc = v5.leagueCup, lcMatches = lc ? lc.rounds.flat() : [];
   return (
-    <div className="p-4 md:p-6 max-w-6xl mx-auto text-amber-100">
+    <div className="w-full min-w-0 max-w-none p-4 text-amber-100 sm:p-6 xl:p-8">
       <h1 className="text-3xl font-black text-amber-300 mb-1">Cups &amp; Divisions</h1>
       <p className="text-sm text-amber-100/60 mb-4">{names.division2}, promotion and relegation, {names.champsCup}, {names.leagueCup}, {names.miniCup} and the Super Cups. Everything runs after the league season.</p>
       {msg && <div role="status" className="mb-4 rounded-xl border-2 border-black bg-black/50 p-3 text-sm text-amber-200">{msg} <button className="underline ml-2" onClick={() => setMsg('')}>close</button></div>}
@@ -182,7 +225,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
           <Btn onClick={() => commit({ champsCup: null })} disabled={!v5.champsCup} className="bg-rose-400">Reset</Btn>
         </div>
         {d1Done && (!grandChamp || !theIdolsChampionId) && <p className="text-xs text-amber-200 mb-2">Unzure Cup or The Idols is not finished yet, so byes would use league points only. Finish them first for the full rule.</p>}
-        {v5.champsCup && <><p className="text-xs mb-1">Byes: {v5.champsCup.byeIds.map(nm).join(', ')}</p><Bracket nm={nm} sim={simOne} save={manual} ms={v5.champsCup.matches} onChange={(ms) => commit({ champsCup: { ...v5.champsCup!, matches: ms } })} /></>}
+        {v5.champsCup && <><p className="text-xs mb-1">Byes: {v5.champsCup.byeIds.map(nm).join(', ')}</p><Bracket idols={by} nm={nm} sim={simOne} save={manual} ms={v5.champsCup.matches} onChange={(ms) => commit({ champsCup: { ...v5.champsCup!, matches: ms } })} /></>}
       </Card> )}
 
       {(section === 'all' || section === 'open') && (<Card title={names.leagueCup} note="Every idol of every league. Division 2 starts in round 1. Stronger Division 1 idols (league position, then points) skip rounds. Best of 5, final Best of 7.">
@@ -200,7 +243,7 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
       </Card> )}
 
       {(section === 'all' || section === 'spotlight') && (<Card title={names.miniCup} note="Top 16 of each Division 1 final table, seeded 1 vs 16. Single elimination. Best of 5, final Best of 7.">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-5">
           {d1.map((l) => { const ms = v5.miniCups[l.id]; const champ = champOf(ms, `mc${l.id}_final`); return (
             <div key={l.id} className="rounded-xl border-2 border-black bg-black/30 p-3">
               <div className="flex flex-wrap items-center gap-2 mb-1"><span className="font-black text-sm">{l.name}</span>
