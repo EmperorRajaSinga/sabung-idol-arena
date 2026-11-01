@@ -703,6 +703,7 @@ export const CareerStatsPanel: React.FC<CareerStatsPanelProps> = ({
           }[activeSystem as 'crown_cup' | 'open_arena_cup' | 'spotlight_cup' | 'super_cup_a' | 'super_cup_b' | 'division_2']}
           matchDatabase={matchDatabase}
           idols={idols}
+          v5TitleArchives={v5TitleArchives}
         />
       )}
 
