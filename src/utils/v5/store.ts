@@ -30,19 +30,21 @@ export function hasStoredV5State(): boolean {
 export function loadV5State(): V5State {
   try {
     const primary = parseState(localStorage.getItem(KEY));
-    if (primary) return primary;
     const backup = parseState(localStorage.getItem(BACKUP_KEY));
-    if (backup) {
-      // Repair the primary key from the last known-good backup.
-      try { localStorage.setItem(KEY, JSON.stringify(backup)); } catch { /* backup remains available */ }
-      return backup;
+    const primaryRevision = Number((primary as any)?.updatedAt || 0);
+    const backupRevision = Number((backup as any)?.updatedAt || 0);
+    const selected = backup && (!primary || backupRevision > primaryRevision) ? backup : primary || backup;
+    if (!selected) return emptyV5();
+    if (selected !== primary) {
+      // Repair the primary key from the newest valid recovery copy.
+      try { localStorage.setItem(KEY, JSON.stringify(selected)); } catch { /* backup remains available */ }
     }
-    return emptyV5();
+    return selected;
   } catch { return emptyV5(); }
 }
 export function saveV5State(s: V5State): boolean {
   let serialized: string;
-  try { serialized = JSON.stringify(s); } catch { return false; }
+  try { serialized = JSON.stringify({ ...s, updatedAt: Date.now() }); } catch { return false; }
   let primarySaved = false;
   let backupSaved = false;
   try { localStorage.setItem(KEY, serialized); primarySaved = true; } catch { /* attempt recovery copy */ }
