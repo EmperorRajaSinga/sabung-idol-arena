@@ -153,8 +153,8 @@ export const AllTimeRecordsPanel: React.FC<AllTimeRecordsPanelProps> = ({
         if (!s) return false;
         if (!searchFilter) return true;
         return (
-          s.idolName.toLowerCase().includes(searchFilter.toLowerCase()) ||
-          s.girlGroup.toLowerCase().includes(searchFilter.toLowerCase())
+          String(s.idolName || '').toLowerCase().includes(searchFilter.toLowerCase()) ||
+          String(s.girlGroup || '').toLowerCase().includes(searchFilter.toLowerCase())
         );
       })
       .sort((a, b) => {
@@ -303,8 +303,8 @@ export const AllTimeRecordsPanel: React.FC<AllTimeRecordsPanelProps> = ({
         if (s.leagueMatches === 0 && s.leagueTitles === 0) return false;
         if (!searchFilter) return true;
         return (
-          s.idolName.toLowerCase().includes(searchFilter.toLowerCase()) ||
-          s.girlGroup.toLowerCase().includes(searchFilter.toLowerCase())
+          String(s.idolName || '').toLowerCase().includes(searchFilter.toLowerCase()) ||
+          String(s.girlGroup || '').toLowerCase().includes(searchFilter.toLowerCase())
         );
       })
       .sort((a, b) => {
@@ -523,8 +523,8 @@ export const AllTimeRecordsPanel: React.FC<AllTimeRecordsPanelProps> = ({
         if (s.theIdolsMatches === 0 && s.theIdolsTitles === 0) return false;
         if (!searchFilter) return true;
         return (
-          s.idolName.toLowerCase().includes(searchFilter.toLowerCase()) ||
-          s.girlGroup.toLowerCase().includes(searchFilter.toLowerCase())
+          String(s.idolName || '').toLowerCase().includes(searchFilter.toLowerCase()) ||
+          String(s.girlGroup || '').toLowerCase().includes(searchFilter.toLowerCase())
         );
       })
       .sort((a, b) => {
@@ -618,8 +618,8 @@ export const AllTimeRecordsPanel: React.FC<AllTimeRecordsPanelProps> = ({
         if (s.totalMatches === 0 && s.totalTitles === 0) return false;
         if (!searchFilter) return true;
         return (
-          s.idolName.toLowerCase().includes(searchFilter.toLowerCase()) ||
-          s.girlGroup.toLowerCase().includes(searchFilter.toLowerCase())
+          String(s.idolName || '').toLowerCase().includes(searchFilter.toLowerCase()) ||
+          String(s.girlGroup || '').toLowerCase().includes(searchFilter.toLowerCase())
         );
       })
       .sort((a, b) => {
