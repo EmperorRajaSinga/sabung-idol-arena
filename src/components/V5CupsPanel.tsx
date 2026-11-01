@@ -265,7 +265,9 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
   const manual = (ms: E.BNode[], id: string, a: number, b: number): string | null => {
     const m = ms.find((x) => x.id === id); if (!m || !m.idolAId || !m.idolBId) return 'Both idols must be known first.';
     const t = m.bestOf === 7 ? 4 : 3; if (Math.max(a, b) !== t || Math.min(a, b) >= t) return `Best of ${m.bestOf} ends when one idol reaches ${t} wins (for example ${t}-0, ${t}-1, ${t}-${t - 1}).`;
-    m.scoreA = a; m.scoreB = b; m.winnerId = a > b ? m.idolAId : m.idolBId; m.loserId = a > b ? m.idolBId : m.idolAId; m.completed = true; E.advanceBracket(ms); return null;
+    m.scoreA = a; m.scoreB = b; m.winnerId = a > b ? m.idolAId : m.idolBId; m.loserId = a > b ? m.idolBId : m.idolAId; m.completed = true;
+    E.invalidateDownstream(ms, id);
+    return null;
   };
   /* ---------- actions */
   const fillD2 = () => commit({ d2: E.autoFillDivisionTwo(d1, v5.d2, idols, girlGroups, v5.perLeague, names.division2) });
@@ -355,7 +357,20 @@ export const V5CupsPanel: React.FC<Props> = ({ idols, girlGroups, leagueState, s
           <Btn onClick={() => { if (lc && window.confirm("Reset this tournament bracket and remove all match results?")) commit({ leagueCup: null }); }} disabled={!lc} className="bg-rose-400">Reset Bracket</Btn>
         </div>
         {lc && <p className="text-xs mb-2 font-mono">{lc.order.length} idols · {lc.plan.rounds} rounds · entering per round: {lc.plan.entrants.join(' / ')}{lc.championId ? ` · Champion: ${nm(lc.championId)}` : ''}</p>}
-        {lc && <OpenArenaMatchList matches={lc.rounds.flat()} idols={by} nm={nm} onSave={(id, a, b) => { const next = clone(lc); const error = manual(next.rounds.flat(), id, a, b); if (error) return error; commit({ leagueCup: refreshLC(next) }); return null; }} />}
+        {lc && <OpenArenaMatchList matches={lc.rounds.flat()} idols={by} nm={nm} onSave={(id, a, b) => {
+          const next = clone(lc);
+          const roundIndex = next.rounds.findIndex((round) => round.some((match) => match.id === id));
+          if (roundIndex < 0) return 'Match not found in Open Arena Cup.';
+          const error = manual(next.rounds.flat(), id, a, b);
+          if (error) return error;
+          // Later Open Arena rounds are generated from the previous round's winners,
+          // so editing an earlier round must remove and regenerate the entire later path.
+          next.rounds = next.rounds.slice(0, roundIndex + 1);
+          next.championId = null;
+          if (next.rounds[roundIndex].every((match) => match.completed)) E.stepLeagueCup(next);
+          commit({ leagueCup: refreshLC(next) });
+          return null;
+        }} />}
         {lcMatches.length > 0 && <span className="sr-only">{lcMatches.length} matches</span>}
       </Card> )}
 
