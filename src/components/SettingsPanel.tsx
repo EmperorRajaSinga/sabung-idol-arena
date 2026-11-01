@@ -693,6 +693,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
   const handleMoveIdolToLeague = (idolId: string, fromLeagueId: number, toLeagueId: number) => {
     if (fromLeagueId === toLeagueId) return;
+    const sourceLeague = activeLeagueState.leagues.find((league) => league.id === fromLeagueId);
+    const targetLeague = activeLeagueState.leagues.find((league) => league.id === toLeagueId);
+    const movingIdol = appState.idols.find((idol) => idol.id === idolId);
+    if (!sourceLeague || !targetLeague || !movingIdol) return;
+    if (showRosterConflicts([movingIdol.name], { division: 'Division 1', leagueId: toLeagueId, leagueName: targetLeague.name }, { division: 'Division 1', leagueId: fromLeagueId, leagueName: sourceLeague.name })) return;
 
     const updatedLeagues = activeLeagueState.leagues.map((l) => {
       let newMembers = [...l.memberIds];
@@ -732,6 +737,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         appState.leagueArchives
       );
     }
+    logDataChange({ action: 'roster_updated', entity: 'division_1_roster', entityName: targetLeague.name, source: 'Settings / League Roster Transfer', details: `Moved ${movingIdol.name} from ${sourceLeague.name}.` });
   };
 
   const handleAddIdolToActiveLeague = (idolId: string) => {
@@ -777,6 +783,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         appState.leagueArchives
       );
     }
+    logDataChange({ action: 'roster_updated', entity: 'division_1_roster', entityName: activeL.name, source: 'Settings / League Roster Quick Add', details: `Added ${selectedIdol?.name || idolId}.` });
   };
 
   const handleRemoveIdolFromLeague = (leagueId: number, idolId: string) => {
@@ -813,6 +820,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         appState.leagueArchives
       );
     }
+    const removedName = appState.idols.find((idol) => idol.id === idolId)?.name || idolId;
+    const removedLeague = activeLeagueState.leagues.find((league) => league.id === leagueId);
+    logDataChange({ action: 'roster_updated', entity: 'division_1_roster', entityName: removedLeague?.name || `Division ${leagueId}`, source: 'Settings / League Roster Manager', details: `Removed ${removedName}.` });
   };
 
   const handleOpenEditRoster = (leagueId: number) => {
@@ -2392,7 +2402,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                       return;
                                     }
                                     const movingIdol = appState.idols.find((idol) => idol.id === idolId);
-                                    if (movingIdol && showRosterConflicts([movingIdol.name], { division: 'Division 2', leagueId: target.id, leagueName: target.name })) return;
+                                    if (movingIdol && showRosterConflicts([movingIdol.name], { division: 'Division 2', leagueId: target.id, leagueName: target.name }, { division: 'Division 2', leagueId: currentLeague.id, leagueName: currentLeague.name })) return;
                                     const nextD2 = v5State.d2.map((league) =>
                                       league.id === currentLeague.id
                                         ? { ...league, memberIds: league.memberIds.filter((id) => id !== idolId) }
@@ -2401,6 +2411,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                           : league
                                     );
                                     onUpdateV5State?.({ ...v5State, d2: nextD2.map((league) => V5Engine.rebuildLeague(league, appState.idols)) });
+                                    logDataChange({ action: 'roster_updated', entity: 'division_2_roster', entityName: target.name, source: 'Settings / Division 2 Roster Transfer', details: `Moved ${movingIdol?.name || idolId} from ${currentLeague.name}.` });
                                   }}
                                   className="rounded-lg border border-slate-700 bg-black px-2 py-0.5 text-[10px] font-bold text-amber-300"
                                 >
