@@ -503,7 +503,10 @@ export const TournamentBracketTree: React.FC<TournamentBracketTreeProps> = ({
                     {roundTitle}
                   </div>
 
-                  <div className="flex flex-col justify-around gap-8 flex-1 py-2">
+                  <div
+                    className="flex flex-col justify-around gap-8 flex-1 py-2"
+                    style={{ minHeight: `${Math.max(1, ...roundIndices.map((idx) => knockoutMatches.filter((match) => match.roundIndex === idx).length)) * 112}px` }}
+                  >
                     {matchesInRound.map((m) => renderMatchCard(m, 'w-56'))}
                   </div>
                 </div>
