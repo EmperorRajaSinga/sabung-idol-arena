@@ -2044,12 +2044,13 @@ export function App() {
     const currentSeasonId = Number(sourceAppState.config.seasonId || sourceAppState.config.seasonNumber || 1);
     // Idempotency guard: a completed season may only be archived once.
     // Prevents double-clicks, simulator retries and stale callbacks from creating a second archive.
+    let existingDurableArchive: Awaited<ReturnType<typeof loadDurableSeasonArchives>>[number] | undefined;
     try {
       const durableExisting = await loadDurableSeasonArchives();
-      if (durableExisting.some((record) => Number(record.seasonId) === currentSeasonId)) {
-        alert(`Season ${currentSeasonId} is already archived. Duplicate archive request ignored.`);
-        return;
-      }
+      existingDurableArchive = durableExisting.find((record) => Number(record.seasonId) === currentSeasonId);
+      // An existing durable archive means a previous attempt committed the archive
+      // but may have stopped before advancing the active season. Resume that advance
+      // instead of treating recovery as a duplicate and leaving the user stuck.
     } catch (error) {
       console.error('[Season Archive] Could not verify existing archive records:', error);
       alert('Archive dibatalkan karena sistem tidak dapat memeriksa arsip sebelumnya. Data aktif tetap aman. Refresh halaman lalu coba lagi.');
@@ -2126,34 +2127,42 @@ export function App() {
     let nextV5State = v5ArchiveSnapshot.resetState;
     // Commit an immutable season record to the dedicated IndexedDB archive store
     // BEFORE changing any active season state. Refreshes read these records back.
-    const durableLeagueArchive = sourceLeagueState?.leagues?.length
+    const durableLeagueArchive = existingDurableArchive?.leagueArchive || (sourceLeagueState?.leagues?.length
       ? archiveLeagueSeason(sourceLeagueState, sourceAppState.idols)
-      : null;
-    const durableTheIdolsArchive = sourceTheIdolsState?.memberIds?.length
+      : null);
+    const durableTheIdolsArchive = existingDurableArchive?.theIdolsArchive || (sourceTheIdolsState?.memberIds?.length
       ? archiveTheIdolsSeason(sourceTheIdolsState, sourceAppState.idols)
-      : null;
+      : null);
+    if (existingDurableArchive?.tournamentArchive) {
+      archiveRecord = existingDurableArchive.tournamentArchive;
+    }
     const seasonMatches = Array.from(new Map([
       ...(updatedMatchDb || []).filter((match) => Number(match.seasonId) === currentSeasonId),
       ...(v5ArchiveSnapshot.matches || []).filter((match) => Number(match.seasonId) === currentSeasonId),
     ].map((match) => [match.matchId, match])).values());
     try {
-      await saveDurableSeasonArchive({
-        seasonId: currentSeasonId,
-        seasonName: sourceAppState.config.seasonName || `Season ${currentSeasonId}`,
-        archivedAt: new Date().toISOString(),
-        tournamentArchive: archiveRecord,
-        leagueArchive: durableLeagueArchive,
-        theIdolsArchive: durableTheIdolsArchive,
-        matches: seasonMatches,
-        v5Titles: v5ArchiveSnapshot.titles || [],
-      });
+      if (!existingDurableArchive) {
+        await saveDurableSeasonArchive({
+          seasonId: currentSeasonId,
+          seasonName: sourceAppState.config.seasonName || `Season ${currentSeasonId}`,
+          archivedAt: new Date().toISOString(),
+          tournamentArchive: archiveRecord,
+          leagueArchive: durableLeagueArchive,
+          theIdolsArchive: durableTheIdolsArchive,
+          matches: seasonMatches,
+          v5Titles: v5ArchiveSnapshot.titles || [],
+        });
+      }
     } catch (error) {
       console.error('[Season Archive] Durable IndexedDB commit failed:', error);
       alert('Season belum di-archive. Penyimpanan arsip permanen gagal. Data aktif tidak di-reset. Coba ekspor backup dan periksa kapasitas penyimpanan browser.');
       return;
     }
-    // Keep the legacy compact recovery cache as a secondary source only.
-    saveV5CareerArchive(v5ArchiveSnapshot.matches, v5ArchiveSnapshot.titles);
+    // Merge the already-committed archive into the legacy recovery cache as well.
+    saveV5CareerArchive(
+      existingDurableArchive?.matches || v5ArchiveSnapshot.matches,
+      existingDurableArchive?.v5Titles || v5ArchiveSnapshot.titles
+    );
 
     const storedLeagueArchives = loadLeagueArchives();
     const effectiveLeagueArchives =
