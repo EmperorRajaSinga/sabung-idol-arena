@@ -96,7 +96,13 @@ export function saveV5CareerArchive(matches: ArchivedMatch[], titles: V5TitleArc
     const matchMap = new Map<string, ArchivedMatch>();
     [...current.matches, ...(matches || [])].forEach((match) => {
       if (!match?.matchId || !String(match.stage || '').toLowerCase().startsWith('cups & divisions:')) return;
-      matchMap.set(match.matchId, match);
+      // Base64 portraits are already retained in the full IndexedDB AppState.
+      // Keep the localStorage recovery copy compact to avoid quota failures.
+      matchMap.set(match.matchId, {
+        ...match,
+        idolAPhoto: undefined,
+        idolBPhoto: undefined,
+      });
     });
     const titleMap = new Map<string, V5TitleArchive>();
     [...current.titles, ...(titles || [])].forEach((title) => {
@@ -104,7 +110,11 @@ export function saveV5CareerArchive(matches: ArchivedMatch[], titles: V5TitleArc
     });
     const payload: V5CareerArchive = {
       matches: Array.from(matchMap.values()),
-      titles: Array.from(titleMap.values()),
+      titles: Array.from(titleMap.values()).map((title) => ({
+        ...title,
+        winnerPhoto: undefined,
+        runnerUpPhoto: undefined,
+      })),
       updatedAt: Date.now(),
     };
     localStorage.setItem(CAREER_ARCHIVE_KEY, JSON.stringify(payload));
