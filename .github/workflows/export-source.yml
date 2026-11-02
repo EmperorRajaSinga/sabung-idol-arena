@@ -1,0 +1,28 @@
+name: Export latest source ZIP
+on:
+  push:
+    branches:
+      - zip-update
+    paths:
+      - ".github/workflows/export-source.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: zip-update
+          fetch-depth: 1
+      - name: Package complete website source
+        run: |
+          git archive --format=zip --prefix=sabung-idol-arena/ HEAD -o sabung-idol-arena-latest.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sabung-idol-arena-latest-source
+          path: sabung-idol-arena-latest.zip
+          if-no-files-found: error
+          retention-days: 7
