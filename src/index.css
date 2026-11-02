@@ -2002,3 +2002,316 @@ main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) im
   #idol-profile-redesign .ip-scope-panel { padding:12px !important; }
   #idol-profile-redesign :where(table) { min-width:560px; }
 }
+
+
+/* Idol Profile layout redesign: league, season records, match log and rivalry */
+#idol-profile-redesign .ip-career-record-panel {
+  display:flex;
+  flex-direction:column;
+  gap:20px !important;
+  padding:22px !important;
+  border:1px solid #39352e !important;
+  border-radius:12px !important;
+  background:#191815 !important;
+}
+#idol-profile-redesign .ip-career-record-panel > div:first-child {
+  align-items:center;
+  gap:14px;
+  padding-bottom:16px !important;
+  border-bottom:1px solid #34312b !important;
+}
+#idol-profile-redesign .ip-career-record-panel > div:first-child > div:first-child {
+  min-width:0;
+}
+#idol-profile-redesign .ip-career-record-panel > div:first-child > div:first-child > div:first-child {
+  display:none !important;
+}
+#idol-profile-redesign .ip-career-record-panel h3 {
+  font-size:16px !important;
+  line-height:1.35 !important;
+  font-weight:700 !important;
+}
+#idol-profile-redesign .ip-career-record-panel h3 span:nth-child(2) {
+  display:inline-flex;
+  margin-left:8px;
+  padding:4px 8px !important;
+  border:1px solid #454038 !important;
+  border-radius:5px !important;
+  background:#282620 !important;
+  color:#c5bcae !important;
+  font-size:9px !important;
+  letter-spacing:.04em;
+}
+#idol-profile-redesign .ip-career-record-panel > .grid:first-of-type {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px !important;
+}
+#idol-profile-redesign .ip-career-record-panel > .grid:first-of-type > div {
+  display:flex;
+  min-height:112px;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:8px;
+  padding:14px !important;
+  border:1px solid #39352e !important;
+  border-radius:9px !important;
+  background:#211f1b !important;
+  text-align:left;
+}
+#idol-profile-redesign .ip-career-record-panel > .grid:first-of-type > div > span:first-of-type {
+  color:#aaa398 !important;
+  font-size:9px !important;
+  line-height:1.4;
+  letter-spacing:.07em;
+}
+#idol-profile-redesign .ip-career-record-panel > .grid:first-of-type > div > span:nth-of-type(2) {
+  color:#eee9e1 !important;
+  font-size:23px !important;
+  line-height:1.1;
+  font-variant-numeric:tabular-nums;
+}
+#idol-profile-redesign .ip-career-record-panel > .grid:first-of-type > div > span:last-child {
+  color:#aaa398 !important;
+  font-size:10px !important;
+}
+#idol-profile-redesign .ip-career-record-panel > .space-y-2,
+#idol-profile-redesign .ip-career-record-panel > div.space-y-2 {
+  padding:2px 0;
+}
+#idol-profile-redesign .ip-career-record-panel h4 {
+  margin-bottom:10px;
+  color:#d8d1c6 !important;
+  font-size:10px !important;
+  letter-spacing:.07em;
+}
+#idol-profile-redesign .ip-career-record-panel .overflow-x-auto {
+  border:1px solid #39352e;
+  border-radius:8px;
+  background:#1e1c18;
+}
+#idol-profile-redesign .ip-career-record-panel table {
+  width:100%;
+  min-width:620px;
+  border:0;
+  border-radius:0;
+}
+#idol-profile-redesign .ip-career-record-panel table th {
+  padding:11px 13px !important;
+  background:#2a2823 !important;
+  color:#bcb4a7 !important;
+}
+#idol-profile-redesign .ip-career-record-panel table td {
+  padding:11px 13px !important;
+  font-size:11px !important;
+}
+#idol-profile-redesign .ip-career-record-panel table tbody tr {
+  background:transparent !important;
+}
+#idol-profile-redesign .ip-career-record-panel table tbody tr:hover {
+  background:#26241f !important;
+}
+#idol-profile-redesign .ip-career-record-panel .max-h-48 {
+  max-height:360px !important;
+  padding-right:4px;
+}
+#idol-profile-redesign .ip-career-record-panel .max-h-48 > div {
+  display:grid;
+  grid-template-columns:74px minmax(0,1fr) auto;
+  align-items:center;
+  gap:12px;
+  min-height:48px;
+  padding:9px 12px !important;
+  border:1px solid #39352e !important;
+  border-radius:7px !important;
+  background:#211f1b !important;
+}
+#idol-profile-redesign .ip-career-record-panel .max-h-48 > div > div:first-child {
+  min-width:0;
+}
+#idol-profile-redesign .ip-career-record-panel .max-h-48 > div > div:last-child {
+  gap:14px;
+}
+#idol-profile-redesign .ip-career-record-panel .max-h-48 > div span {
+  color:#c9c2b7 !important;
+}
+#idol-profile-redesign .ip-career-record-panel .max-h-48 > div span:first-child {
+  min-width:48px;
+  text-align:center;
+  padding:4px 6px;
+  border-radius:4px;
+  background:#34312b !important;
+  color:#d8d1c6 !important;
+}
+#idol-profile-redesign .ip-match-history {
+  padding:20px !important;
+}
+#idol-profile-redesign .ip-match-history > div:first-child {
+  align-items:flex-start;
+  gap:14px;
+}
+#idol-profile-redesign .ip-match-history > div:first-child > div:first-child {
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:5px;
+}
+#idol-profile-redesign .ip-match-history > div:first-child h4 {
+  font-size:16px !important;
+  font-weight:700 !important;
+}
+#idol-profile-redesign .ip-match-history > div:first-child > div:last-child {
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:9px;
+}
+#idol-profile-redesign .ip-match-history .flex.items-center.gap-1.bg-black\/60 {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:5px;
+  padding:5px;
+}
+#idol-profile-redesign .ip-match-history .flex.items-center.gap-1.bg-black\/60 button {
+  min-width:0;
+  min-height:34px;
+  padding:7px 8px !important;
+  text-align:center;
+  white-space:normal;
+  line-height:1.25;
+  font-size:10px !important;
+}
+#idol-profile-redesign .ip-match-history .space-y-2 > div {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:12px;
+  min-height:52px;
+  padding:11px 13px !important;
+  border:1px solid #39352e !important;
+  border-left:3px solid #777064 !important;
+  border-radius:7px !important;
+  background:#211f1b !important;
+}
+#idol-profile-redesign .ip-match-history .space-y-2 > div > div:first-child {
+  min-width:0;
+}
+#idol-profile-redesign .ip-match-history .space-y-2 > div > div:first-child > span:first-child {
+  display:inline-block;
+  min-width:48px;
+  padding:4px 6px !important;
+  border-radius:4px !important;
+  background:#34312b !important;
+  color:#d6d0c5 !important;
+  text-align:center;
+  font-size:9px !important;
+}
+#idol-profile-redesign .ip-match-history .space-y-2 > div > div:first-child > span:last-child {
+  color:#e4ded4 !important;
+  font-size:12px !important;
+}
+#idol-profile-redesign .ip-match-history .space-y-2 > div > div:last-child {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+}
+#idol-profile-redesign .ip-match-history .space-y-2 > div > div:last-child > span:first-child {
+  color:#eee9e1 !important;
+  font-size:13px !important;
+}
+#idol-profile-redesign .ip-head-to-head {
+  padding:20px !important;
+}
+#idol-profile-redesign .ip-head-to-head > div:first-child h3 {
+  font-size:16px !important;
+  font-weight:700 !important;
+}
+#idol-profile-redesign .ip-head-to-head > div:nth-child(2) > div:first-child {
+  color:#aaa398 !important;
+  font-size:10px !important;
+  letter-spacing:.07em;
+}
+#idol-profile-redesign .ip-head-to-head > div:nth-child(2) .grid {
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:9px !important;
+}
+#idol-profile-redesign .ip-head-to-head > div:nth-child(2) .grid > button {
+  min-height:116px;
+  padding:11px !important;
+  border:1px solid #39352e !important;
+  background:#211f1b !important;
+}
+#idol-profile-redesign .ip-head-to-head > div:nth-child(2) .grid > button > div:first-child {
+  align-items:center;
+}
+#idol-profile-redesign .ip-head-to-head > div:nth-child(2) .grid > button img {
+  width:36px;
+  height:36px;
+  border-radius:6px !important;
+}
+#idol-profile-redesign .ip-head-to-head > div:nth-child(2) .grid > button .border-t {
+  border-color:#39352e !important;
+}
+#idol-profile-redesign .ip-head-to-head > div:nth-child(2) .grid > button[class*="border-amber"],
+#idol-profile-redesign .ip-head-to-head > div:nth-child(2) .grid > button:hover {
+  background:#2b2924 !important;
+  border-color:#75664d !important;
+  transform:none !important;
+  box-shadow:none !important;
+}
+#idol-profile-redesign .ip-head-to-head > div:nth-child(2) > div:last-child {
+  padding:16px !important;
+  border:1px solid #39352e !important;
+  border-radius:9px !important;
+  background:#211f1b !important;
+}
+#idol-profile-redesign .ip-head-to-head > div:nth-child(2) > div:last-child > div:first-child {
+  padding-bottom:12px;
+  border-color:#39352e !important;
+}
+#idol-profile-redesign .ip-head-to-head > div:nth-child(2) > div:last-child > div:nth-child(2) {
+  margin-top:12px;
+  padding:12px !important;
+  border:1px solid #39352e !important;
+  border-radius:8px !important;
+  background:#191815 !important;
+}
+#idol-profile-redesign .ip-head-to-head > div:nth-child(2) > div:last-child > div:nth-child(n+3) {
+  padding:10px 12px !important;
+  border:1px solid #39352e !important;
+  border-radius:7px !important;
+  background:#26241f !important;
+}
+@media(max-width:760px) {
+  #idol-profile-redesign .ip-career-record-panel { padding:13px !important; gap:14px !important; }
+  #idol-profile-redesign .ip-career-record-panel > .grid:first-of-type {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  #idol-profile-redesign .ip-career-record-panel > .grid:first-of-type > div { min-height:96px; }
+  #idol-profile-redesign .ip-career-record-panel .max-h-48 > div {
+    grid-template-columns:58px minmax(0,1fr);
+  }
+  #idol-profile-redesign .ip-career-record-panel .max-h-48 > div > div:last-child {
+    grid-column:2;
+    justify-content:space-between;
+  }
+  #idol-profile-redesign .ip-match-history .flex.items-center.gap-1.bg-black\/60 {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  #idol-profile-redesign .ip-match-history .space-y-2 > div {
+    grid-template-columns:1fr;
+    gap:8px;
+  }
+  #idol-profile-redesign .ip-match-history .space-y-2 > div > div:last-child {
+    justify-content:space-between;
+  }
+  #idol-profile-redesign .ip-head-to-head > div:nth-child(2) .grid {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  #idol-profile-redesign .ip-head-to-head > div:nth-child(2) .grid > button {
+    min-height:100px;
+  }
+}
