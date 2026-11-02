@@ -1189,3 +1189,151 @@ main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) im
     transition:none;
   }
 }
+
+
+/* =========================================================
+   ARENA DESIGN SYSTEM  |  shared visual language for ALL panels
+   ========================================================= */
+.arena-workspace {
+  --arena-bg:#120e0b;
+  --arena-surface:#1b1510;
+  --arena-surface-raised:#241b13;
+  --arena-surface-soft:#2b2017;
+  --arena-border:rgba(218,177,112,.2);
+  --arena-border-strong:rgba(218,177,112,.36);
+  --arena-text:#f4eadb;
+  --arena-muted:#ad9b84;
+  --arena-gold:#e2b96f;
+  --arena-red:#a92c24;
+  --arena-green:#4f9b72;
+  --arena-radius:14px;
+  min-width:0;
+  color:var(--arena-text);
+  font-family:'Plus Jakarta Sans','Fredoka',sans-serif;
+  font-size:13px;
+  line-height:1.55;
+}
+.arena-workspace > * { min-width:0; }
+.arena-workspace :where(h1,h2,h3,h4,h5,h6) {
+  color:var(--arena-text);
+  font-family:'Plus Jakarta Sans','Fredoka',sans-serif !important;
+  font-weight:800 !important;
+  letter-spacing:-.035em !important;
+  line-height:1.2;
+}
+.arena-workspace :where(h1) { font-size:clamp(23px,2.5vw,32px) !important; }
+.arena-workspace :where(h2) { font-size:clamp(19px,2vw,25px) !important; }
+.arena-workspace :where(h3) { font-size:16px !important; }
+.arena-workspace :where(h4,h5,h6) { font-size:13px !important; }
+.arena-workspace :where(p) { color:inherit; }
+.arena-workspace :where(.text-slate-400,.text-slate-500,.text-gray-400,.text-gray-500) {
+  color:var(--arena-muted) !important;
+}
+.arena-workspace :where(.bg-slate-950,.bg-slate-900,.bg-slate-900\/90,.bg-slate-900\/80,.bg-slate-900\/70,.bg-slate-900\/60,.bg-slate-900\/50,.bg-slate-900\/40,.bg-slate-900\/30,.bg-gray-950,.bg-gray-900,.bg-gray-800) {
+  background-color:var(--arena-surface) !important;
+}
+.arena-workspace :where(.border-slate-800,.border-slate-700,.border-slate-600,.border-gray-800,.border-gray-700,.border-gray-600) {
+  border-color:var(--arena-border) !important;
+}
+.arena-workspace :where(.rounded-xl,.rounded-2xl,.rounded-3xl) {
+  border-radius:var(--arena-radius);
+}
+.arena-workspace :where(.shadow,.shadow-md,.shadow-lg,.shadow-xl,.shadow-2xl) {
+  box-shadow:0 10px 28px rgba(0,0,0,.18);
+}
+.arena-workspace :where(.poster-shadow,.poster-shadow-lg,.poster-shadow-sm) {
+  box-shadow:0 10px 28px rgba(0,0,0,.18) !important;
+}
+.arena-workspace :where(button) {
+  min-height:32px;
+  border-radius:8px;
+  font-family:'Plus Jakarta Sans','Fredoka',sans-serif;
+  font-weight:700;
+  letter-spacing:.005em;
+  transition:background-color .16s ease,border-color .16s ease,color .16s ease,transform .16s ease,box-shadow .16s ease;
+}
+.arena-workspace :where(button:active) { transform:translateY(1px); }
+.arena-workspace :where(button:disabled) { cursor:not-allowed; opacity:.48; transform:none; }
+.arena-workspace :where(input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea) {
+  min-width:0;
+  min-height:38px;
+  border:1px solid var(--arena-border-strong) !important;
+  border-radius:8px !important;
+  background:#100c09 !important;
+  color:var(--arena-text) !important;
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.28) !important;
+  font:500 12px/1.4 'Plus Jakarta Sans','Fredoka',sans-serif !important;
+}
+.arena-workspace :where(input::placeholder,textarea::placeholder) { color:#82715e !important; }
+.arena-workspace :where(input:focus,select:focus,textarea:focus) {
+  border-color:var(--arena-gold) !important;
+  outline:2px solid rgba(226,185,111,.16) !important;
+  outline-offset:1px;
+}
+.arena-workspace :where(input[type=checkbox],input[type=radio]) { accent-color:var(--arena-gold); }
+.arena-workspace :where(table) {
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  font-variant-numeric:tabular-nums;
+}
+.arena-workspace :where(table thead th) {
+  position:sticky;
+  top:0;
+  z-index:2;
+  padding:11px 12px !important;
+  background:#2a2017 !important;
+  color:#e3c48f !important;
+  border-bottom:1px solid var(--arena-border-strong) !important;
+  font:800 9px/1.4 'Plus Jakarta Sans',sans-serif !important;
+  letter-spacing:.09em !important;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.arena-workspace :where(table tbody td) {
+  padding:10px 12px !important;
+  border-bottom:1px solid rgba(218,177,112,.1) !important;
+  color:#e8ddce;
+  font-size:11px;
+}
+.arena-workspace :where(table tbody tr:hover td) { background:rgba(218,177,112,.045); }
+.arena-workspace :where(.overflow-x-auto) {
+  max-width:100%;
+  border-radius:10px;
+  overscroll-behavior-x:contain;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(218,177,112,.38) #120e0b;
+}
+.arena-workspace :where(.overflow-x-auto::-webkit-scrollbar) { height:7px; }
+.arena-workspace :where(.overflow-x-auto::-webkit-scrollbar-thumb) {
+  border-radius:8px;
+  background:rgba(218,177,112,.38);
+}
+.arena-workspace :where(.grid) { min-width:0; }
+.arena-workspace :where(.grid > *, .flex > *) { min-width:0; }
+.arena-workspace :where(img) { max-width:100%; }
+.arena-workspace :where(button:focus-visible,a:focus-visible,[role=button]:focus-visible) {
+  outline:2px solid var(--arena-gold);
+  outline-offset:2px;
+}
+.arena-workspace :where(.divide-slate-800 > :not([hidden]) ~ :not([hidden])) {
+  border-color:var(--arena-border) !important;
+}
+.arena-workspace :where(.bg-black\/20,.bg-black\/30,.bg-black\/40) {
+  border-color:rgba(218,177,112,.1);
+}
+.arena-workspace :where(.text-amber-300,.text-amber-400,.text-yellow-300) { color:#e8bd72 !important; }
+.arena-workspace :where(.text-emerald-300,.text-emerald-400) { color:#83c59a !important; }
+.arena-workspace :where(.text-rose-300,.text-rose-400,.text-red-400) { color:#e28b7d !important; }
+.arena-workspace :where(.text-indigo-300,.text-indigo-400,.text-purple-400) { color:#b7a1df !important; }
+.arena-workspace :where(.text-cyan-300,.text-cyan-400) { color:#82c9d2 !important; }
+@media(max-width:760px) {
+  .arena-workspace { font-size:12px; }
+  .arena-workspace :where(.overflow-x-auto) { -webkit-overflow-scrolling:touch; }
+  .arena-workspace :where(table) { min-width:620px; }
+  .arena-workspace :where(.grid) { min-width:0; }
+  .arena-workspace :where(button) { min-height:36px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .arena-workspace :where(*,::before,::after) { scroll-behavior:auto !important; transition:none !important; animation-duration:.01ms !important; }
+}
