@@ -250,3 +250,118 @@ table tr:hover {
   background: #dc2626;
 }
 
+
+
+/* Idol Profile: editorial dossier layout */
+#idol-profile-redesign {
+  --ip-bg: #17130f;
+  --ip-panel: #211b16;
+  --ip-panel-soft: #1c1713;
+  --ip-line: rgba(224, 184, 116, .19);
+  --ip-muted: #b9a995;
+  --ip-text: #f5eee3;
+  --ip-accent: #e8b968;
+  color: var(--ip-text);
+}
+#idol-profile-redesign .ip-page-heading {
+  display:flex; align-items:flex-end; justify-content:space-between; gap:24px;
+  padding: 4px 2px 18px; border-bottom:1px solid var(--ip-line);
+}
+#idol-profile-redesign .ip-eyebrow, #idol-profile-redesign .ip-section-kicker {
+  display:flex; align-items:center; gap:9px; color:#d7a95f; font-size:10px;
+  font-weight:900; letter-spacing:.19em; text-transform:uppercase;
+}
+#idol-profile-redesign .ip-eyebrow-line { width:22px; height:2px; background:#d7a95f; display:inline-block; }
+#idol-profile-redesign .ip-page-heading h2 {
+  margin:7px 0 2px; color:#f8f0e4; font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:clamp(23px,3vw,32px); font-weight:800; letter-spacing:-.045em;
+}
+#idol-profile-redesign .ip-page-heading p { margin:0; color:var(--ip-muted); font-size:12px; }
+#idol-profile-redesign .ip-search-wrap { width:min(310px,100%); }
+#idol-profile-redesign .ip-search-wrap > label {
+  display:block; margin:0 0 7px 2px; color:#c9ae86; font-size:9px;
+  font-weight:900; letter-spacing:.16em;
+}
+#idol-profile-redesign .ip-hero {
+  position:relative; display:grid; grid-template-columns:minmax(190px,250px) minmax(0,1fr);
+  gap:clamp(20px,3vw,38px); overflow:hidden; padding:clamp(17px,2.5vw,30px);
+  border:1px solid rgba(220,177,108,.27); border-radius:19px;
+  background:linear-gradient(115deg,#272019 0%,#1d1814 54%,#171310 100%);
+  box-shadow:0 16px 38px rgba(0,0,0,.22);
+}
+#idol-profile-redesign .ip-hero-image-wrap { min-width:0; }
+#idol-profile-redesign .ip-hero-image {
+  position:relative; aspect-ratio:4/5; overflow:hidden; border-radius:13px;
+  border:1px solid rgba(230,190,125,.42); background:#100d0a;
+}
+#idol-profile-redesign .ip-hero-image img { width:100%; height:100%; display:block; object-fit:cover; object-position:center 28%; }
+#idol-profile-redesign .ip-photo-fallback {
+  width:100%; height:100%; display:grid; place-items:center; color:#e7bd79;
+  font-size:52px; font-weight:900; background:radial-gradient(circle at 50% 35%,#493725,#15100c 70%);
+}
+#idol-profile-redesign .ip-image-index { display:block; margin-top:9px; color:#a99a86; font-size:9px; letter-spacing:.17em; font-weight:800; }
+#idol-profile-redesign .ip-photo-edit {
+  display:flex; align-items:center; justify-content:center; gap:7px; width:100%; margin-top:10px;
+  padding:9px 12px; border:1px solid rgba(230,190,125,.35); border-radius:9px;
+  background:#30251b; color:#f0c77f; font-size:10px; font-weight:900; letter-spacing:.08em;
+}
+#idol-profile-redesign .ip-photo-edit:hover { background:#443321; color:#fff0d5; }
+#idol-profile-redesign .ip-hero-content { min-width:0; align-self:center; padding:5px 0; }
+#idol-profile-redesign .ip-hero-topline { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+#idol-profile-redesign .ip-profile-status { display:flex; align-items:center; gap:7px; color:#a8c9a9; font-size:9px; font-weight:900; letter-spacing:.12em; }
+#idol-profile-redesign .ip-profile-status span { width:6px; height:6px; border-radius:50%; background:#79bb82; box-shadow:0 0 0 4px rgba(121,187,130,.12); }
+#idol-profile-redesign .ip-hero-content h1 {
+  margin:13px 0 5px; color:#fff8ed; font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:clamp(32px,5vw,58px); line-height:1.02; font-weight:900; letter-spacing:-.06em;
+  overflow-wrap:anywhere;
+}
+#idol-profile-redesign .ip-identity-line { display:flex; flex-wrap:wrap; align-items:center; gap:9px; color:#c9b9a3; font-size:12px; font-weight:600; }
+#idol-profile-redesign .ip-identity-line i { width:3px; height:3px; border-radius:50%; background:#bd9558; }
+#idol-profile-redesign .ip-rating-row { display:flex; flex-wrap:wrap; align-items:center; gap:9px; margin-top:17px; }
+#idol-profile-redesign .ip-division-tag { padding:6px 9px; border:1px solid rgba(84,180,157,.3); border-radius:7px; color:#91d1c0; background:rgba(27,112,94,.12); font-size:10px; font-weight:800; }
+#idol-profile-redesign .ip-division-tag b { margin-left:5px; color:#d8f4e9; }
+#idol-profile-redesign .ip-hero-rule { height:1px; margin:22px 0 16px; background:linear-gradient(90deg,rgba(224,184,116,.38),transparent); }
+#idol-profile-redesign .ip-hero-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+#idol-profile-redesign .ip-hero-stats > div { min-width:0; padding-right:10px; border-right:1px solid var(--ip-line); }
+#idol-profile-redesign .ip-hero-stats > div:last-child { border-right:0; }
+#idol-profile-redesign .ip-hero-stats span { display:block; margin-bottom:7px; color:#a99a86; font-size:9px; font-weight:900; letter-spacing:.12em; }
+#idol-profile-redesign .ip-hero-stats strong { display:block; color:#f4d49c; font-family:'Plus Jakarta Sans',sans-serif; font-size:clamp(18px,2.3vw,27px); font-weight:850; line-height:1.1; white-space:nowrap; }
+#idol-profile-redesign .ip-hero-stats small { margin:0 3px; color:#b8a58d; font-size:10px; }
+#idol-profile-redesign .ip-hero-corner { position:absolute; right:17px; bottom:12px; color:rgba(231,190,124,.12); text-align:right; font-size:9px; font-weight:900; letter-spacing:.16em; line-height:1.5; pointer-events:none; }
+#idol-profile-redesign .ip-hero-corner b { font-size:13px; }
+#idol-profile-redesign .ip-hero + .space-y-4 { margin-top:4px; }
+#idol-profile-redesign .rounded-2xl.border-2.border-black,
+#idol-profile-redesign .rounded-xl.border-2.border-black {
+  border:1px solid rgba(224,184,116,.16) !important; box-shadow:none !important;
+}
+#idol-profile-redesign .bg-\[\#17100b\], #idol-profile-redesign .bg-\[\#160e0a\],
+#idol-profile-redesign .bg-\[\#1b120c\], #idol-profile-redesign .bg-\[\#1f150e\] {
+  background-color:#201a15 !important;
+}
+#idol-profile-redesign table th { background:#2a2119 !important; color:#e9c88f !important; border-color:rgba(224,184,116,.16) !important; }
+#idol-profile-redesign table td { border-color:rgba(224,184,116,.10) !important; }
+@media (max-width:760px) {
+  #idol-profile-redesign .ip-page-heading { align-items:stretch; flex-direction:column; gap:14px; }
+  #idol-profile-redesign .ip-search-wrap { width:100%; }
+  #idol-profile-redesign .ip-hero { grid-template-columns:112px minmax(0,1fr); gap:15px; padding:14px; border-radius:14px; }
+  #idol-profile-redesign .ip-hero-image { aspect-ratio:3/4; }
+  #idol-profile-redesign .ip-image-index { font-size:7px; letter-spacing:.08em; }
+  #idol-profile-redesign .ip-photo-edit { padding:7px 4px; font-size:8px; gap:4px; }
+  #idol-profile-redesign .ip-hero-topline { align-items:flex-start; flex-direction:column; gap:7px; }
+  #idol-profile-redesign .ip-section-kicker { font-size:8px; letter-spacing:.1em; }
+  #idol-profile-redesign .ip-profile-status { font-size:8px; }
+  #idol-profile-redesign .ip-hero-content h1 { margin:9px 0 5px; font-size:clamp(22px,7vw,34px); }
+  #idol-profile-redesign .ip-identity-line { gap:5px; font-size:10px; }
+  #idol-profile-redesign .ip-rating-row { margin-top:10px; gap:6px; }
+  #idol-profile-redesign .ip-hero-rule { margin:13px 0 11px; }
+  #idol-profile-redesign .ip-hero-stats { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 7px; }
+  #idol-profile-redesign .ip-hero-stats > div { border-right:0; padding-right:0; }
+  #idol-profile-redesign .ip-hero-stats span { margin-bottom:4px; font-size:7px; letter-spacing:.08em; }
+  #idol-profile-redesign .ip-hero-stats strong { font-size:17px; }
+  #idol-profile-redesign .ip-hero-corner { display:none; }
+}
+@media (max-width:390px) {
+  #idol-profile-redesign .ip-hero { grid-template-columns:92px minmax(0,1fr); gap:11px; padding:11px; }
+  #idol-profile-redesign .ip-hero-content h1 { font-size:22px; }
+  #idol-profile-redesign .ip-hero-stats strong { font-size:15px; }
+}
