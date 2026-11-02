@@ -2112,7 +2112,7 @@ export function App() {
       : null;
     const seasonMatches = Array.from(new Map([
       ...(updatedMatchDb || []).filter((match) => Number(match.seasonId) === currentSeasonId),
-      ...(v5ArchiveSnapshot.matches || []),
+      ...(v5ArchiveSnapshot.matches || []).filter((match) => Number(match.seasonId) === currentSeasonId),
     ].map((match) => [match.matchId, match])).values());
     try {
       await saveDurableSeasonArchive({
