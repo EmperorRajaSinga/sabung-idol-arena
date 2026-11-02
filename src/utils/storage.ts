@@ -139,6 +139,9 @@ function openIndexedDB(): Promise<IDBDatabase> {
         if (!db.objectStoreNames.contains(IDB_STORE)) {
           db.createObjectStore(IDB_STORE);
         }
+        if (!db.objectStoreNames.contains(IDB_ARCHIVE_STORE)) {
+          db.createObjectStore(IDB_ARCHIVE_STORE);
+        }
       };
 
       request.onsuccess = () => {
