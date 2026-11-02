@@ -1263,20 +1263,15 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
   if (!idol) return null;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
-      {/* Header & Picker */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-black/60 pb-4">
+    <div id="idol-profile-redesign" className="ip-shell space-y-6 animate-in fade-in duration-200">
+      <header className="ip-page-heading">
         <div>
-          <h2 className="text-2xl font-black text-amber-300 font-poster-title flex items-center gap-2">
-            <User className="h-6 w-6 text-amber-400" />
-            <span>Idol Profile &amp; Career History</span>
-          </h2>
-          <p className="text-xs text-amber-200/70 mt-1">
-            Comprehensive profile, career statistics, Head-to-Head rivalries, and full match records.
-          </p>
+          <div className="ip-eyebrow"><span className="ip-eyebrow-line" /> PLAYER ARCHIVE / PROFILE</div>
+          <h2>Idol Profile</h2>
+          <p>Career record, competition history, achievements and rivalries.</p>
         </div>
-
-        <div className="w-full md:w-72">
+        <div className="ip-search-wrap">
+          <label htmlFor="idol-profile-search">FIND AN IDOL</label>
           <SearchableIdolSelect
             idols={idols}
             selectedIdolId={idol.id}
@@ -1285,98 +1280,62 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
             accentColor="amber"
           />
         </div>
-      </div>
+      </header>
 
-      {/* Idol Overview Banner */}
-      <div className="rounded-2xl border-2 border-black bg-[#1b120c] p-6 flex flex-col md:flex-row items-center gap-6 poster-shadow">
-        <div className="relative group h-36 w-36 sm:h-44 sm:w-44 overflow-hidden rounded-2xl border-2 border-amber-500/60 shadow-2xl flex-shrink-0 bg-slate-900 flex items-center justify-center">
-          {idol.photoUrl ? (
-            <img
-              src={idol.photoUrl}
-              alt={idol.name}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="font-poster-title text-4xl text-amber-300">
-              {idol.name.slice(0, 2)}
-            </div>
-          )}
+      <section className="ip-hero">
+        <div className="ip-hero-image-wrap">
+          <div className="ip-hero-image">
+            {idol.photoUrl ? (
+              <img src={idol.photoUrl} alt={idol.name} />
+            ) : (
+              <div className="ip-photo-fallback">{idol.name.slice(0, 2)}</div>
+            )}
+          </div>
+          <span className="ip-image-index">PROFILE / 001</span>
           {onUpdateIdolPhoto && (
             <button
+              type="button"
               onClick={() => {
                 setCustomPhotoUrl(idol.photoUrl);
                 setPhotoModalOpen(true);
               }}
+              className="ip-photo-edit"
               title="Upload Photo for this Idol"
-              className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 text-white opacity-0 group-hover:opacity-100 transition-opacity gap-1 font-black text-xs"
             >
-              <Camera className="h-6 w-6 text-amber-400" />
-              <span>Change Photo</span>
+              <Camera className="h-4 w-4" /> EDIT PHOTO
             </button>
           )}
         </div>
 
-        <div className="space-y-2.5 text-center md:text-left flex-1">
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-            <span className="rounded-md bg-amber-500/15 px-3 py-1 text-xs font-black text-amber-300 border border-amber-500/40">
-              {idol.girlGroup}
-            </span>
-            <span className="rounded-md bg-[#2a1c12] px-3 py-1 text-xs font-black text-amber-200 border border-black">
-              {idol.seed}
-            </span>
-            <span className="rounded-md bg-[#2a1c12] px-3 py-1 text-xs font-black text-amber-200 border border-black flex items-center gap-1.5">
-              <span>{getCountryFlag(idol.nationality)}</span>
-              <span>{idol.nationality}</span>
-            </span>
-            <div className="flex items-center gap-1.5" title="Idol Rating (editable via Rating Manager)">
-              <RatingBadge idol={idol} size="md" showTier={true} showLabel={true} />
-            </div>
-            {onUpdateIdolPhoto && (
-              <button
-                onClick={() => {
-                  setCustomPhotoUrl(idol.photoUrl);
-                  setPhotoModalOpen(true);
-                }}
-                className="rounded-md bg-amber-500/20 hover:bg-amber-500/30 px-3 py-1 text-xs font-black text-amber-300 border border-amber-500/40 transition-colors flex items-center gap-1.5"
-              >
-                <Camera className="h-3.5 w-3.5" />
-                Upload Photo
-              </button>
+        <div className="ip-hero-content">
+          <div className="ip-hero-topline">
+            <span className="ip-section-kicker">COMPETITOR DOSSIER</span>
+            <span className="ip-profile-status"><span /> ACTIVE PROFILE</span>
+          </div>
+          <h1>{idol.name}</h1>
+          <div className="ip-identity-line">
+            <span>{idol.girlGroup || 'Solo'}</span>
+            <i />
+            <span>{getCountryFlag(idol.nationality)} {idol.nationality || 'Nationality not set'}</span>
+            <i />
+            <span>SEED {idol.seed ?? '—'}</span>
+          </div>
+          <div className="ip-rating-row">
+            <RatingBadge idol={idol} size="md" showTier={true} showLabel={true} />
+            {leagueData.currentDivision && (
+              <span className="ip-division-tag">{leagueData.currentDivision.divisionName} <b>#{leagueData.currentDivision.rank}</b></span>
             )}
           </div>
-
-          <h3 className="text-3xl sm:text-4xl font-black text-white font-poster-title drop-shadow-[2px_2px_0px_#000]">{idol.name}</h3>
-
-          <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs sm:text-sm text-amber-200 font-bold">
-            <span>
-              Combined Record:{' '}
-              <span className="text-white font-mono font-black">
-                {combinedWins}W-{combinedDraws}D-{combinedLosses}L
-              </span>
-            </span>
-            <span>&bull;</span>
-            <span>
-              Combined Win Rate:{' '}
-              <span className="text-amber-300 font-black">{combinedWinRate}%</span>
-            </span>
-            <span>&bull;</span>
-            <span>
-              Total Titles:{' '}
-              <span className="text-amber-400 font-black">
-                {combinedChampionships} ({stat?.championships || 0} Cup + {leagueData.divisionTitlesCount} League + {(theIdolsData.mastersTitlesCount || 0) + (theIdolsData.regularSeasonTitlesCount || 0)} Superleague)
-              </span>
-            </span>
-            {leagueData.currentDivision && (
-              <>
-                <span>&bull;</span>
-                <span className="text-teal-300">
-                  Current: <span className="font-black text-white">{leagueData.currentDivision.divisionName}</span> (Rank #{leagueData.currentDivision.rank})
-                </span>
-              </>
-            )}
+          <div className="ip-hero-rule" />
+          <div className="ip-hero-stats">
+            <div><span>CAREER RECORD</span><strong>{combinedWins}<small>W</small> / {combinedDraws}<small>D</small> / {combinedLosses}<small>L</small></strong></div>
+            <div><span>WIN RATE</span><strong>{combinedWinRate}<small>%</small></strong></div>
+            <div><span>CAREER TITLES</span><strong>{combinedChampionships}</strong></div>
+            <div><span>MATCHES PLAYED</span><strong>{combinedPerformance.matches}</strong></div>
           </div>
         </div>
-      </div>
+        <div className="ip-hero-corner">SIA<br /><b>PROFILE</b></div>
+      </section>
 
       {/* Career View Scope Switcher Tabs */}
       <div className="space-y-4">
