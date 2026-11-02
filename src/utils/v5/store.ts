@@ -61,3 +61,56 @@ export function saveV5State(s: V5State): boolean {
     return false;
   }
 }
+
+
+/**
+ * Independent permanent history for V5 career records.
+ * Active brackets live in sabung_v5_state_v1; completed match logs and title
+ * records must not depend on the size/quota behavior of the main app snapshot.
+ */
+import type { ArchivedMatch } from '../../types';
+export interface V5CareerArchive {
+  matches: ArchivedMatch[];
+  titles: V5TitleArchive[];
+  updatedAt: number;
+}
+const CAREER_ARCHIVE_KEY = 'sabung_v5_career_archive_v1';
+export function loadV5CareerArchive(): V5CareerArchive {
+  try {
+    const raw = localStorage.getItem(CAREER_ARCHIVE_KEY);
+    if (!raw) return { matches: [], titles: [], updatedAt: 0 };
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return { matches: [], titles: [], updatedAt: 0 };
+    return {
+      matches: Array.isArray(parsed.matches) ? parsed.matches : [],
+      titles: Array.isArray(parsed.titles) ? parsed.titles : [],
+      updatedAt: Number(parsed.updatedAt || 0),
+    };
+  } catch {
+    return { matches: [], titles: [], updatedAt: 0 };
+  }
+}
+export function saveV5CareerArchive(matches: ArchivedMatch[], titles: V5TitleArchive[]): boolean {
+  try {
+    const current = loadV5CareerArchive();
+    const matchMap = new Map<string, ArchivedMatch>();
+    [...current.matches, ...(matches || [])].forEach((match) => {
+      if (!match?.matchId || !String(match.stage || '').toLowerCase().startsWith('cups & divisions:')) return;
+      matchMap.set(match.matchId, match);
+    });
+    const titleMap = new Map<string, V5TitleArchive>();
+    [...current.titles, ...(titles || [])].forEach((title) => {
+      if (title?.id) titleMap.set(title.id, title);
+    });
+    const payload: V5CareerArchive = {
+      matches: Array.from(matchMap.values()),
+      titles: Array.from(titleMap.values()),
+      updatedAt: Date.now(),
+    };
+    localStorage.setItem(CAREER_ARCHIVE_KEY, JSON.stringify(payload));
+    return true;
+  } catch (error) {
+    console.error('[V5 Career Archive] Permanent history save failed:', error);
+    return false;
+  }
+}
