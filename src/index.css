@@ -1726,3 +1726,141 @@ main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) im
   #idol-profile-redesign .ip-scope-nav button { font-size:9px; }
   #idol-profile-redesign .ip-scope-panel { padding:11px; }
 }
+
+
+/* FULL-PANEL OVERRIDE: apply the restrained profile language to every section */
+#idol-profile-redesign .ip-career-record-panel {
+  padding:clamp(14px,2vw,22px);
+  border:1px solid rgba(220,207,188,.13) !important;
+  border-radius:13px !important;
+  background:#1b1916 !important;
+  box-shadow:none !important;
+  gap:17px;
+}
+#idol-profile-redesign .ip-career-record-panel > div:first-child {
+  padding-bottom:14px;
+  border-color:rgba(220,207,188,.12) !important;
+}
+#idol-profile-redesign .ip-career-record-panel h3,
+#idol-profile-redesign .ip-career-record-panel h4,
+#idol-profile-redesign .ip-career-record-panel h4 span {
+  color:#e9e4dc !important;
+}
+#idol-profile-redesign .ip-career-record-panel p,
+#idol-profile-redesign .ip-career-record-panel .text-amber-200\/70,
+#idol-profile-redesign .ip-career-record-panel .text-amber-100\/60,
+#idol-profile-redesign .ip-career-record-panel .text-slate-400,
+#idol-profile-redesign .ip-career-record-panel .text-gray-400 {
+  color:#aaa196 !important;
+}
+#idol-profile-redesign .ip-career-record-panel [class*="bg-amber-500/20"],
+#idol-profile-redesign .ip-career-record-panel [class*="bg-teal-500/20"],
+#idol-profile-redesign .ip-career-record-panel [class*="bg-indigo-500/20"],
+#idol-profile-redesign .ip-career-record-panel [class*="bg-purple-500/20"] {
+  background:#292722 !important;
+  border-color:rgba(220,207,188,.14) !important;
+  color:#c8bda9 !important;
+}
+#idol-profile-redesign .ip-career-record-panel [class*="border-black"] {
+  border-color:rgba(220,207,188,.13) !important;
+}
+#idol-profile-redesign .ip-career-record-panel [class*="bg-[#17100b]"],
+#idol-profile-redesign .ip-career-record-panel [class*="bg-[#1b120c]"],
+#idol-profile-redesign .ip-career-record-panel [class*="bg-[#1f150e]"],
+#idol-profile-redesign .ip-career-record-panel [class*="bg-[#160e0a]"],
+#idol-profile-redesign .ip-career-record-panel [class*="bg-black/"] {
+  background:#22201c !important;
+}
+#idol-profile-redesign .ip-career-record-panel :where(.text-amber-300,.text-amber-400,.text-amber-200,.text-teal-300,.text-teal-400,.text-indigo-300,.text-indigo-400,.text-purple-300,.text-purple-400,.text-rose-300,.text-rose-400) {
+  color:#c8b99f !important;
+}
+#idol-profile-redesign .ip-career-record-panel :where(svg) {
+  display:none;
+}
+#idol-profile-redesign .ip-career-record-panel table {
+  border:1px solid rgba(220,207,188,.12);
+  border-radius:8px;
+  overflow:hidden;
+}
+#idol-profile-redesign .ip-career-record-panel table thead th {
+  background:#292722 !important;
+  color:#c8bda9 !important;
+}
+#idol-profile-redesign .ip-career-record-panel table tbody tr:nth-child(even) {
+  background:rgba(255,255,255,.018);
+}
+#idol-profile-redesign .ip-career-record-panel table tbody tr:hover {
+  background:rgba(255,255,255,.035);
+}
+#idol-profile-redesign .ip-career-record-panel .rounded-xl,
+#idol-profile-redesign .ip-career-record-panel .rounded-2xl {
+  border-radius:8px !important;
+  box-shadow:none !important;
+}
+#idol-profile-redesign .ip-career-record-panel .space-y-2 > div {
+  border-color:rgba(220,207,188,.1) !important;
+}
+#idol-profile-redesign .ip-match-history .flex.items-center.gap-1.bg-black\/60 {
+  flex-wrap:wrap;
+  gap:4px;
+  background:#22201c !important;
+  border:1px solid rgba(220,207,188,.12) !important;
+  padding:4px;
+}
+#idol-profile-redesign .ip-match-history button {
+  border-color:transparent !important;
+  background:transparent !important;
+  color:#aaa196 !important;
+  border-radius:6px !important;
+  box-shadow:none !important;
+}
+#idol-profile-redesign .ip-match-history button[class*="bg-amber-"] {
+  background:#39342b !important;
+  color:#eee9e1 !important;
+}
+#idol-profile-redesign .ip-head-to-head > div:first-child svg,
+#idol-profile-redesign .ip-match-history > div:first-child svg {
+  display:none !important;
+}
+#idol-profile-redesign .ip-head-to-head [class*="bg-emerald-"],
+#idol-profile-redesign .ip-head-to-head [class*="bg-rose-"],
+#idol-profile-redesign .ip-head-to-head [class*="bg-red-"],
+#idol-profile-redesign .ip-head-to-head [class*="bg-teal-"] {
+  background:#292722 !important;
+  border-color:rgba(220,207,188,.14) !important;
+  color:#c8b99f !important;
+}
+#idol-profile-redesign .ip-head-to-head [class*="text-emerald-"],
+#idol-profile-redesign .ip-head-to-head [class*="text-rose-"],
+#idol-profile-redesign .ip-head-to-head [class*="text-red-"],
+#idol-profile-redesign .ip-head-to-head [class*="text-teal-"],
+#idol-profile-redesign .ip-head-to-head [class*="text-amber-"] {
+  color:#c8b99f !important;
+}
+#idol-profile-redesign .ip-head-to-head .grid > button {
+  min-height:100px;
+  padding:12px;
+  background:#22201c !important;
+  border:1px solid rgba(220,207,188,.13) !important;
+  border-radius:9px !important;
+}
+#idol-profile-redesign .ip-head-to-head .grid > button:hover,
+#idol-profile-redesign .ip-head-to-head .grid > button[class*="border-amber"] {
+  background:#2a2823 !important;
+  border-color:rgba(200,168,117,.38) !important;
+}
+#idol-profile-redesign .ip-head-to-head > div > div > div {
+  min-width:0;
+}
+@media(max-width:760px) {
+  #idol-profile-redesign .ip-career-record-panel {
+    padding:12px;
+    gap:13px;
+  }
+  #idol-profile-redesign .ip-career-record-panel table {
+    min-width:560px;
+  }
+  #idol-profile-redesign .ip-head-to-head .grid > button {
+    min-height:76px;
+  }
+}
