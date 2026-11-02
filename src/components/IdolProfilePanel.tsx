@@ -1405,8 +1405,8 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
       </section>
 
       {/* Career View Scope Switcher Tabs */}
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#17100b] p-2 rounded-2xl border-2 border-black poster-shadow-sm">
+      <div className="ip-career-workspace space-y-4">
+        <div className="ip-scope-nav flex flex-wrap items-center justify-between gap-3 bg-[#17100b] p-2 rounded-2xl border-2 border-black poster-shadow-sm">
           <div className="flex items-center gap-2">
             <span className="text-xs font-black uppercase tracking-wider text-amber-300 px-2 flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-amber-400" />
@@ -1479,7 +1479,7 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
 
         {/* COMBINED SCOPE METRICS & DETAILS */}
         {activeCareerScope === 'combined' && (
-          <div className="space-y-4 animate-in fade-in duration-150">
+          <div className="ip-scope-panel space-y-4 animate-in fade-in duration-150">
             {/* Main Key Metric Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {/* Overall Win Rate Card */}
@@ -1674,7 +1674,7 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
 
         {/* TOURNAMENT CUP SCOPE METRICS & DETAILS */}
         {activeCareerScope === 'tournament' && (
-          <div className="space-y-4 animate-in fade-in duration-150">
+          <div className="ip-scope-panel space-y-4 animate-in fade-in duration-150">
             {/* Main Key Metric Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {/* Overall Win Rate Card */}
@@ -1933,7 +1933,7 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
 
         {/* LEAGUE DIVISION SCOPE METRICS & DETAILS */}
         {activeCareerScope === 'league' && (
-          <div className="space-y-4 animate-in fade-in duration-150">
+          <div className="ip-scope-panel space-y-4 animate-in fade-in duration-150">
             {/* Main Key Metric Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {/* League Win Rate Card */}
@@ -2111,7 +2111,7 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
         )}
 
         {activeCareerScope === 'division_2' && (
-          <div className="space-y-4 animate-in fade-in duration-150">
+          <div className="ip-scope-panel space-y-4 animate-in fade-in duration-150">
             <section className="rounded-2xl border-2 border-black bg-[#1b120c] p-4 poster-shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/60 pb-3">
                 <div><h3 className="font-poster-title text-base font-black text-amber-300">Division Status &amp; Promotion / Relegation</h3><p className="mt-1 text-xs text-amber-100/60">Current tier, league placement and recorded movement between Division 1 and Division 2.</p></div>
@@ -2172,7 +2172,7 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
         })}
         {/* THE IDOLS (SUPERLEAGUE) SCOPE METRICS & DETAILS */}
         {activeCareerScope === 'the_idols' && (
-          <div className="space-y-4 animate-in fade-in duration-150">
+          <div className="ip-scope-panel space-y-4 animate-in fade-in duration-150">
             {/* The Idols Key Metric Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <div className="rounded-xl border-2 border-black bg-[#1f150e] p-4 text-center poster-shadow-sm">
@@ -2779,7 +2779,7 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
       </div>
 
       {/* Match History */}
-      <div className="rounded-2xl border-2 border-black bg-[#1b120c] p-5 space-y-4 poster-shadow">
+      <div className="ip-match-history rounded-2xl border-2 border-black bg-[#1b120c] p-5 space-y-4 poster-shadow">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/60 pb-3">
           <div className="flex items-center gap-2">
             <Swords className="h-4 w-4 text-amber-400" />
@@ -2959,7 +2959,7 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
       </div>
 
       {/* ⚔️ Head-to-Head Records & Rivalry Matrix Section (Down below everything) */}
-      <div className="rounded-2xl border-2 border-black bg-[#160e0a] p-5 space-y-4 poster-shadow">
+      <div className="ip-head-to-head rounded-2xl border-2 border-black bg-[#160e0a] p-5 space-y-4 poster-shadow">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/60 pb-3">
           <div className="flex items-center gap-2">
             <Swords className="h-5 w-5 text-amber-400" />
