@@ -2080,10 +2080,9 @@ export function App() {
       sourceAppState.config.seasonName || `Season ${currentSeasonId}`
     );
     let nextV5State = v5ArchiveSnapshot.resetState;
-    if (!saveV5CareerArchive(v5ArchiveSnapshot.matches, v5ArchiveSnapshot.titles)) {
-      alert('V5 career archive could not be saved. The season was not advanced. Check browser storage space and export a backup first.');
-      return;
-    }
+    // The complete archive is also committed into AppState and IndexedDB below.
+    // localStorage is only a compact recovery cache and must never block season advancement.
+    saveV5CareerArchive(v5ArchiveSnapshot.matches, v5ArchiveSnapshot.titles);
 
     const storedLeagueArchives = loadLeagueArchives();
     const effectiveLeagueArchives =
@@ -2193,9 +2192,15 @@ export function App() {
       return {
         ...prev,
         archives: [...pFiltered, archiveRecord],
-        matchDatabase: v5ArchiveSnapshot.matches,
+        matchDatabase: Array.from(new Map([
+          ...(updatedMatchDb || []),
+          ...(v5ArchiveSnapshot.matches || []),
+        ].map((match) => [match.matchId, match])).values()),
         v5State: nextV5State,
-        v5TitleArchives: v5ArchiveSnapshot.titles,
+        v5TitleArchives: Array.from(new Map([
+          ...(sourceAppState.v5TitleArchives || []),
+          ...(v5ArchiveSnapshot.titles || []),
+        ].map((title) => [title.id, title])).values()),
         groups: [],
         knockoutMatches: [],
         selectedParticipantIds: [],
