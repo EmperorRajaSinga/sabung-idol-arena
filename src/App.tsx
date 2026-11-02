@@ -699,6 +699,16 @@ export function App() {
               merged.matchDatabase = Array.from(matchMap.values());
             }
 
+            // Restore the independent V5 career archive after merging IndexedDB. This prevents
+            // a stale/compacted main snapshot from hiding completed V5 seasons on refresh.
+            const v5CareerArchive = loadV5CareerArchive();
+            const durableV5Matches = new Map((merged.matchDatabase || []).map((match) => [match.matchId, match]));
+            v5CareerArchive.matches.forEach((match) => durableV5Matches.set(match.matchId, match));
+            merged.matchDatabase = Array.from(durableV5Matches.values());
+            const durableV5Titles = new Map((merged.v5TitleArchives || []).map((title: V5TitleArchive) => [title.id, title]));
+            v5CareerArchive.titles.forEach((title) => durableV5Titles.set(title.id, title));
+            merged.v5TitleArchives = Array.from(durableV5Titles.values());
+
             // Archives: merge non-destructively by seasonId across BOTH stores
             const archMap = new Map<number, TournamentArchive>();
             (prev.archives || []).forEach((a) => {
