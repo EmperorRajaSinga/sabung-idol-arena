@@ -2350,7 +2350,7 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
       </div>
 
       {/* 👑 SPECIFIC SECTION: IDOL THE IDOLS SUPERLEAGUE & MASTERS PERFORMANCE */}
-      <div className="ip-career-record-panel rounded-2xl border-2 border-black bg-[#17100b] p-5 sm:p-6 space-y-5 poster-shadow">
+      <div className="ip-career-record-panel ip-career-record-panel rounded-2xl border-2 border-black bg-[#17100b] p-5 sm:p-6 space-y-5 poster-shadow">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/60 pb-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-400">
@@ -2557,7 +2557,7 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
       </div>
 
       {/* ⚽ SPECIFIC SECTION: IDOL LEAGUE CAREER & DIVISION PERFORMANCE */}
-      <div className="rounded-2xl border-2 border-black bg-[#17100b] p-5 sm:p-6 space-y-5 poster-shadow">
+      <div className="ip-career-record-panel rounded-2xl border-2 border-black bg-[#17100b] p-5 sm:p-6 space-y-5 poster-shadow">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/60 pb-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-400/40 flex items-center justify-center text-teal-400">
