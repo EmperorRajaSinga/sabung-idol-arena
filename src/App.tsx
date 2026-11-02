@@ -597,12 +597,34 @@ export function App() {
   // Hydrate from IndexedDB on initial mount
   useEffect(() => {
     let isMounted = true;
-    loadAppStateFromIndexedDB()
-      .then((idbState) => {
+    Promise.all([loadAppStateFromIndexedDB(), loadDurableSeasonArchives()])
+      .then(([idbState, durableArchives]) => {
         if (!isMounted) return;
         if (idbState) {
           setAppState((prev) => {
             const merged: AppState = { ...prev };
+            // Append-only season archive store is authoritative for archived history.
+            if (Array.isArray(durableArchives) && durableArchives.length) {
+              const tournamentMap = new Map((merged.archives || []).map((item) => [Number(item.seasonId), item]));
+              const matchMap = new Map((merged.matchDatabase || []).map((item) => [item.matchId, item]));
+              const titleMap = new Map((merged.v5TitleArchives || []).map((item) => [item.id, item]));
+              const leagueMap = new Map((merged.leagueArchives || []).map((item) => [Number(item.seasonNumber), item]));
+              const idolsArchiveMap = new Map((merged.theIdolsArchives || []).map((item) => [Number(item.seasonNumber), item]));
+              durableArchives.forEach((bundle) => {
+                if (bundle.tournamentArchive) tournamentMap.set(Number(bundle.seasonId), bundle.tournamentArchive);
+                if (bundle.leagueArchive) leagueMap.set(Number(bundle.seasonId), bundle.leagueArchive);
+                if (bundle.theIdolsArchive) idolsArchiveMap.set(Number(bundle.seasonId), bundle.theIdolsArchive);
+                (bundle.matches || []).forEach((match) => matchMap.set(match.matchId, match));
+                (bundle.v5Titles || []).forEach((title) => titleMap.set(title.id, title));
+              });
+              merged.archives = Array.from(tournamentMap.values()).sort((x, y) => Number(x.seasonId) - Number(y.seasonId));
+              merged.matchDatabase = Array.from(matchMap.values());
+              merged.v5TitleArchives = Array.from(titleMap.values());
+              merged.leagueArchives = Array.from(leagueMap.values()).sort((x, y) => Number(x.seasonNumber) - Number(y.seasonNumber));
+              merged.theIdolsArchives = Array.from(idolsArchiveMap.values()).sort((x, y) => Number(x.seasonNumber) - Number(y.seasonNumber));
+              setLeagueArchives(merged.leagueArchives || []);
+              setTheIdolsArchives(merged.theIdolsArchives || []);
+            }
             // Recover V5 competitions from IndexedDB when the dedicated synchronous key is unavailable.
             if (!hasStoredV5State() && idbState.v5State) {
               merged.v5State = idbState.v5State;
@@ -1993,7 +2015,7 @@ export function App() {
   };
 
   // --- HANDLERS: CROWN CHAMPION & ARCHIVE ---
-  const handleCrownChampionAndArchive = (archivePayload?: { appState: AppState; leagueState: LeagueSeasonState; theIdolsState: TheIdolsSeasonState; v5State?: V5State }) => {
+  const handleCrownChampionAndArchive = async (archivePayload?: { appState: AppState; leagueState: LeagueSeasonState; theIdolsState: TheIdolsSeasonState; v5State?: V5State }) => {
     const sourceAppState = archivePayload?.appState || appState;
     const sourceLeagueState = archivePayload?.leagueState || leagueState;
     const sourceTheIdolsState = archivePayload?.theIdolsState || theIdolsState;
@@ -2080,8 +2102,35 @@ export function App() {
       sourceAppState.config.seasonName || `Season ${currentSeasonId}`
     );
     let nextV5State = v5ArchiveSnapshot.resetState;
-    // The complete archive is also committed into AppState and IndexedDB below.
-    // localStorage is only a compact recovery cache and must never block season advancement.
+    // Commit an immutable season record to the dedicated IndexedDB archive store
+    // BEFORE changing any active season state. Refreshes read these records back.
+    const durableLeagueArchive = sourceLeagueState?.leagues?.length
+      ? archiveLeagueSeason(sourceLeagueState, sourceAppState.idols)
+      : null;
+    const durableTheIdolsArchive = sourceTheIdolsState?.memberIds?.length
+      ? archiveTheIdolsSeason(sourceTheIdolsState, sourceAppState.idols)
+      : null;
+    const seasonMatches = Array.from(new Map([
+      ...(updatedMatchDb || []).filter((match) => Number(match.seasonId) === currentSeasonId),
+      ...(v5ArchiveSnapshot.matches || []),
+    ].map((match) => [match.matchId, match])).values());
+    try {
+      await saveDurableSeasonArchive({
+        seasonId: currentSeasonId,
+        seasonName: sourceAppState.config.seasonName || `Season ${currentSeasonId}`,
+        archivedAt: new Date().toISOString(),
+        tournamentArchive: archiveRecord,
+        leagueArchive: durableLeagueArchive,
+        theIdolsArchive: durableTheIdolsArchive,
+        matches: seasonMatches,
+        v5Titles: v5ArchiveSnapshot.titles || [],
+      });
+    } catch (error) {
+      console.error('[Season Archive] Durable IndexedDB commit failed:', error);
+      alert('Season belum di-archive. Penyimpanan arsip permanen gagal. Data aktif tidak di-reset. Coba ekspor backup dan periksa kapasitas penyimpanan browser.');
+      return;
+    }
+    // Keep the legacy compact recovery cache as a secondary source only.
     saveV5CareerArchive(v5ArchiveSnapshot.matches, v5ArchiveSnapshot.titles);
 
     const storedLeagueArchives = loadLeagueArchives();
