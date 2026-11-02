@@ -2106,7 +2106,7 @@ export function App() {
       }
     }
 
-    const updatedMatchDb = syncAllMatchesToDatabase(
+    const syncedMatchDb = syncAllMatchesToDatabase(
       sourceAppState.matchDatabase,
       sourceAppState.archives,
       sourceAppState.config,
@@ -2114,12 +2114,19 @@ export function App() {
       sourceAppState.knockoutMatches,
       sourceAppState.idols
     );
+    const updatedMatchDb = Array.from(new Map([
+      ...(syncedMatchDb || []),
+      ...(existingDurableArchive?.matches || []),
+    ].map((match) => [match.matchId, match])).values());
 
     const currentV5State = sourceV5State;
     const v5ArchiveSnapshot = createV5ArchiveSnapshot(
       currentV5State,
       updatedMatchDb,
-      sourceAppState.v5TitleArchives || [],
+      Array.from(new Map([
+        ...(sourceAppState.v5TitleArchives || []),
+        ...(existingDurableArchive?.v5Titles || []),
+      ].map((title) => [title.id, title])).values()),
       sourceAppState.idols,
       currentSeasonId,
       sourceAppState.config.seasonName || `Season ${currentSeasonId}`
