@@ -296,6 +296,7 @@ function restoreV5RosterMembership(
 }
 
 export function App() {
+  const archiveInProgressRef = useRef(false);
   const [appState, setAppState] = useState<AppState>(() => {
     const loaded = loadAppState();
     const v5CareerArchive = loadV5CareerArchive();
@@ -2018,6 +2019,12 @@ export function App() {
 
   // --- HANDLERS: CROWN CHAMPION & ARCHIVE ---
   const handleCrownChampionAndArchive = async (archivePayload?: { appState: AppState; leagueState: LeagueSeasonState; theIdolsState: TheIdolsSeasonState; v5State?: V5State }) => {
+    if (archiveInProgressRef.current) {
+      console.warn('[Season Archive] Duplicate archive action ignored while the first request is running.');
+      return;
+    }
+    archiveInProgressRef.current = true;
+    try {
     const sourceAppState = archivePayload?.appState || appState;
     const sourceLeagueState = archivePayload?.leagueState || leagueState;
     const sourceTheIdolsState = archivePayload?.theIdolsState || theIdolsState;
@@ -2035,6 +2042,19 @@ export function App() {
       return;
     }
     const currentSeasonId = Number(sourceAppState.config.seasonId || sourceAppState.config.seasonNumber || 1);
+    // Idempotency guard: a completed season may only be archived once.
+    // Prevents double-clicks, simulator retries and stale callbacks from creating a second archive.
+    try {
+      const durableExisting = await loadDurableSeasonArchives();
+      if (durableExisting.some((record) => Number(record.seasonId) === currentSeasonId)) {
+        alert(`Season ${currentSeasonId} is already archived. Duplicate archive request ignored.`);
+        return;
+      }
+    } catch (error) {
+      console.error('[Season Archive] Could not verify existing archive records:', error);
+      alert('Archive dibatalkan karena sistem tidak dapat memeriksa arsip sebelumnya. Data aktif tetap aman. Refresh halaman lalu coba lagi.');
+      return;
+    }
     let archiveRecord = getCompletedTournamentArchiveRecord(
       sourceAppState.config,
       sourceAppState.groups,
@@ -2269,6 +2289,9 @@ export function App() {
     flushAppStateToIndexedDB();
     if (promotionModalRows.length > 0) setPromotionArchiveModal(promotionModalRows);
     setActiveTab('hall_of_champions');
+    } finally {
+      archiveInProgressRef.current = false;
+    }
   };
 
   // --- HANDLERS: START NEW TOURNAMENT (RESET WORKSPACE) ---
