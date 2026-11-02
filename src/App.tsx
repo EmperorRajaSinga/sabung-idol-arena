@@ -2636,7 +2636,7 @@ export function App() {
         
         <div className="flex-1 p-3 sm:p-5 md:p-8">
           <React.Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center text-sm font-bold text-amber-300">Loading section...</div>}>
-          <div className="max-w-7xl mx-auto space-y-6">
+          <div className="arena-workspace max-w-7xl mx-auto space-y-6">
           {activeTab === 'dashboard' && (
             <DashboardPanel
               idols={appState.idols}
