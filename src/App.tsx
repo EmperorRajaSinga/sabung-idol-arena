@@ -1,4 +1,4 @@
-import { loadV5State, saveV5State, hasStoredV5State, V5State, V5TitleArchive } from './utils/v5/store';
+import { loadV5State, saveV5State, hasStoredV5State, loadV5CareerArchive, saveV5CareerArchive, V5State, V5TitleArchive } from './utils/v5/store';
 import { loadRosterSnapshot, saveDivisionOneRosterSnapshot, saveDivisionTwoRosterSnapshot, restoreDivisionOneRoster, clearRosterSnapshot } from './utils/rosterPersistence';
 import { loadNames } from './utils/v5/names';
 import { createV5ArchiveSnapshot } from './utils/v5/archive';
@@ -296,6 +296,11 @@ function restoreV5RosterMembership(
 export function App() {
   const [appState, setAppState] = useState<AppState>(() => {
     const loaded = loadAppState();
+    const v5CareerArchive = loadV5CareerArchive();
+    const matchMap = new Map((loaded.matchDatabase || []).map((match) => [match.matchId, match]));
+    v5CareerArchive.matches.forEach((match) => matchMap.set(match.matchId, match));
+    const titleMap = new Map((loaded.v5TitleArchives || []).map((title) => [title.id, title]));
+    v5CareerArchive.titles.forEach((title) => titleMap.set(title.id, title));
     const rosterSnapshot = loadRosterSnapshot();
     const loadedV5 = loaded.v5State || loadV5State();
     const baseLeagueState = loaded.leagueState || (
@@ -305,6 +310,8 @@ export function App() {
     );
     return {
       ...loaded,
+      matchDatabase: Array.from(matchMap.values()),
+      v5TitleArchives: Array.from(titleMap.values()),
       leagueState: baseLeagueState
         ? { ...baseLeagueState, leagues: restoreDivisionOneRoster(baseLeagueState.leagues, rosterSnapshot) || baseLeagueState.leagues }
         : baseLeagueState,
@@ -404,7 +411,10 @@ export function App() {
       snapshot(prev.v5State || loadV5State());
       snapshot(next);
       const matchDatabase = Array.from(archived.values());
-      return { ...prev, matchDatabase, v5State: next, v5TitleArchives: Array.from(titleMap.values()) };
+      const v5TitleArchives = Array.from(titleMap.values());
+      const careerSaved = saveV5CareerArchive(matchDatabase, v5TitleArchives);
+      if (!careerSaved) console.error('[Persistence] V5 career history could not be saved to its independent archive.');
+      return { ...prev, matchDatabase, v5State: next, v5TitleArchives };
       });
     }, 0);
   };
@@ -2060,6 +2070,10 @@ export function App() {
       sourceAppState.config.seasonName || `Season ${currentSeasonId}`
     );
     let nextV5State = v5ArchiveSnapshot.resetState;
+    if (!saveV5CareerArchive(v5ArchiveSnapshot.matches, v5ArchiveSnapshot.titles)) {
+      alert('V5 career archive could not be saved. The season was not advanced. Check browser storage space and export a backup first.');
+      return;
+    }
 
     const storedLeagueArchives = loadLeagueArchives();
     const effectiveLeagueArchives =
