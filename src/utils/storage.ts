@@ -40,6 +40,7 @@ import {
 const STORAGE_KEY = 'idol_tournament_app_v2';
 const IDB_NAME = 'IdolTournamentDB';
 const IDB_STORE = 'app_state_store';
+const IDB_ARCHIVE_STORE = 'season_archive_store';
 const IDB_KEY = 'current_app_state';
 
 export interface AppState {
@@ -131,7 +132,7 @@ function openIndexedDB(): Promise<IDBDatabase> {
     }
 
     try {
-      const request = window.indexedDB.open(IDB_NAME, 1);
+      const request = window.indexedDB.open(IDB_NAME, 2);
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
@@ -322,6 +323,61 @@ export function flushAppStateToIndexedDB(): void {
     pendingStateToSave = null;
     executeIndexedDBSave(toSave);
   }
+}
+
+export interface DurableSeasonArchiveBundle {
+  seasonId: number;
+  seasonName: string;
+  archivedAt: string;
+  tournamentArchive: TournamentArchive | null;
+  leagueArchive: LeagueSeasonArchive | null;
+  theIdolsArchive: TheIdolsSeasonArchive | null;
+  matches: ArchivedMatch[];
+  v5Titles: V5TitleArchive[];
+}
+
+/** Append-only, per-season archive storage. A season key is written atomically and never replaces another season. */
+export async function saveDurableSeasonArchive(bundle: DurableSeasonArchiveBundle): Promise<void> {
+  if (!Number.isFinite(bundle.seasonId) || bundle.seasonId < 1) throw new Error('Invalid season archive ID.');
+  const db = await openIndexedDB();
+  await new Promise<void>((resolve, reject) => {
+    let tx: IDBTransaction;
+    try {
+      tx = db.transaction(IDB_ARCHIVE_STORE, 'readwrite');
+      const store = tx.objectStore(IDB_ARCHIVE_STORE);
+      const get = store.get(bundle.seasonId);
+      get.onsuccess = () => {
+        const existing = get.result as DurableSeasonArchiveBundle | undefined;
+        const merged: DurableSeasonArchiveBundle = existing ? {
+          ...existing,
+          ...bundle,
+          tournamentArchive: bundle.tournamentArchive || existing.tournamentArchive,
+          leagueArchive: bundle.leagueArchive || existing.leagueArchive,
+          theIdolsArchive: bundle.theIdolsArchive || existing.theIdolsArchive,
+          matches: Array.from(new Map([...(existing.matches || []), ...(bundle.matches || [])].map((m) => [m.matchId, m])).values()),
+          v5Titles: Array.from(new Map([...(existing.v5Titles || []), ...(bundle.v5Titles || [])].map((t) => [t.id, t])).values()),
+        } : bundle;
+        store.put(merged, bundle.seasonId);
+      };
+      get.onerror = () => reject(get.error || new Error('Unable to read existing season archive.'));
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error || new Error('Season archive transaction failed.'));
+      tx.onabort = () => reject(tx.error || new Error('Season archive transaction was aborted.'));
+    } catch (error) { reject(error); }
+  });
+}
+
+export async function loadDurableSeasonArchives(): Promise<DurableSeasonArchiveBundle[]> {
+  const db = await openIndexedDB();
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = db.transaction(IDB_ARCHIVE_STORE, 'readonly');
+      const request = tx.objectStore(IDB_ARCHIVE_STORE).getAll();
+      request.onsuccess = () => resolve((request.result || []) as DurableSeasonArchiveBundle[]);
+      request.onerror = () => reject(request.error || new Error('Unable to read season archives.'));
+      tx.onerror = () => reject(tx.error || new Error('Season archive read failed.'));
+    } catch (error) { reject(error); }
+  });
 }
 
 export async function loadAppStateFromIndexedDB(): Promise<AppState | null> {
