@@ -820,9 +820,9 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
       const isThird = Boolean(arch.thirdPlaceId && (arch.thirdPlaceId === idol.id || arch.thirdPlaceName?.toLowerCase() === idol.name.toLowerCase()));
 
       let stageReached = 'Group Stage';
-      if (isChamp) stageReached = 'Champion 🏆';
-      else if (isRunner) stageReached = 'Runner-Up 🥈';
-      else if (isThird) stageReached = '3rd Place 🥉';
+      if (isChamp) stageReached = 'Champion';
+      else if (isRunner) stageReached = 'Runner-Up';
+      else if (isThird) stageReached = '3rd Place';
       else {
         const koStages = seasonMatches.map((m) => (m.stage || '').toLowerCase());
         if (koStages.some((s) => s.includes('semi'))) stageReached = 'Semi-Finals';
@@ -2820,7 +2820,7 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
                     : 'text-amber-200/70 hover:text-white'
                 }`}
               >
-                👑 Superleague ({idolTheIdolsMatches.length})
+                Superleague ({idolTheIdolsMatches.length})
               </button>
               <button
                 type="button"
@@ -2834,7 +2834,7 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
                     : 'text-amber-200/70 hover:text-white'
                 }`}
               >
-                🛡️ League ({idolLeagueMatches.length})
+                League ({idolLeagueMatches.length})
               </button>
               {([
                 ['division_2', 'Division 2'], ['crown_cup', 'Crown Cup'], ['open_arena_cup', 'Open Arena Cup'],
@@ -2852,7 +2852,7 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
                     : 'text-amber-200/70 hover:text-white'
                 }`}
               >
-                🏆 Tournament ({idolTournamentMatches.length})
+                Tournament ({idolTournamentMatches.length})
               </button>
             </div>
 
@@ -2915,7 +2915,7 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
                             : 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/30'
                         }`}
                       >
-                        {isTheIdols ? '👑 Superleague' : isLeague ? '🛡️ Division 1' : v5CompetitionLabel || '🏆 Tournament'}
+                        {isTheIdols ? 'Superleague' : isLeague ? 'Division 1' : v5CompetitionLabel || 'Tournament'}
                       </span>
                       <span className="text-[10px] text-amber-400/70">
                         {m.seasonName || `Season ${m.seasonId}`} &bull; {m.stage}
