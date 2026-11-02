@@ -15,6 +15,8 @@ import {
   loadTournamentArchives,
   saveTournamentArchives,
   loadAppStateFromIndexedDB,
+  loadDurableSeasonArchives,
+  saveDurableSeasonArchive,
   flushAppStateToIndexedDB,
   createDefaultState,
   normalizeAppState,
