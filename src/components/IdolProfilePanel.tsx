@@ -1050,14 +1050,15 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
     });
 
     // Include completed active-season honours so a newly won title appears before archiving.
-    if (leagueState?.isCompleted || (leagueState as any)?.isSeasonCompleted) {
-      (leagueState?.leagueWinners || []).forEach((winner: any) => {
+    const activeLeague: any = leagueState;
+    if (activeLeague?.isCompleted || activeLeague?.isSeasonCompleted) {
+      (activeLeague?.leagueWinners || []).forEach((winner: any) => {
         if (isWinner(winner.championId, winner.championName)) add({
-          id: `active-league-${leagueState?.seasonNumber}-${winner.leagueId}-${idol.id}`,
+          id: `active-league-${activeLeague?.seasonNumber}-${winner.leagueId}-${idol.id}`,
           title: `${winner.leagueName || `Division ${winner.leagueId}`} Champion`,
           competition: winner.leagueName || `Division ${winner.leagueId}`,
-          season: leagueState?.seasonName || `Season ${leagueState?.seasonNumber || 'current'}`,
-          seasonNumber: leagueState?.seasonNumber,
+          season: activeLeague?.seasonName || `Season ${activeLeague?.seasonNumber || 'current'}`,
+          seasonNumber: activeLeague?.seasonNumber,
           category: 'League title',
         });
       });
@@ -1535,6 +1536,44 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
           </div>
           <div className="ip-hero-corner">PLAYER DATA<br /><b>PROFILE / {idol.id.slice(0, 6).toUpperCase()}</b></div>
         </div>
+      </section>
+
+      {/* Complete title history */}
+      <section className="ip-title-cabinet" aria-labelledby="ip-title-cabinet-heading">
+        <div className="ip-title-cabinet-header">
+          <div>
+            <p className="ip-title-cabinet-kicker">CAREER HONOURS</p>
+            <h3 id="ip-title-cabinet-heading">Title History</h3>
+            <p>Every championship won by {idol.name}, listed by competition and season.</p>
+          </div>
+          <div className="ip-title-total">
+            <strong>{idolTitleHistory.length}</strong>
+            <span>{idolTitleHistory.length === 1 ? 'TITLE' : 'TITLES'}</span>
+          </div>
+        </div>
+        {idolTitleHistory.length > 0 ? (
+          <div className="ip-title-list">
+            {idolTitleHistory.map((record, index) => (
+              <article className="ip-title-entry" key={record.id || `${record.seasonNumber}-${record.competition}-${index}`}>
+                <div className="ip-title-entry-index">{String(index + 1).padStart(2, '0')}</div>
+                <div className="ip-title-entry-main">
+                  <h4>{record.title}</h4>
+                  <p>{record.competition} <span>·</span> {record.category}</p>
+                </div>
+                <div className="ip-title-entry-when">
+                  <strong>{record.season}</strong>
+                  <span>{record.date && !Number.isNaN(Date.parse(record.date))
+                    ? new Date(record.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                    : 'Archive date unavailable'}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="ip-title-empty">
+            No championship titles have been recorded for this idol yet.
+          </div>
+        )}
       </section>
 
       {/* Career View Scope Switcher Tabs */}
