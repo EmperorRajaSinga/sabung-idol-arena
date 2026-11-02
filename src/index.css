@@ -1093,3 +1093,99 @@ table tr:hover {
   #idol-profile-redesign .ip-hero-corner { display:none; }
 }
 
+
+
+/* Shared panel system: consistent hierarchy across all application sections */
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) {
+  --arena-line: rgba(218,177,112,.18);
+  --arena-muted: #ad9b84;
+  --arena-panel: #1d1712;
+  min-width:0;
+  color:#f6ead7;
+}
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) > h1,
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) > h2,
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) > header h1,
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) > header h2 {
+  color:#f4e6d1;
+  letter-spacing:-.035em;
+  text-wrap:balance;
+}
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) > .rounded-xl,
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) > .rounded-2xl,
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) > .rounded-3xl {
+  border-color:var(--arena-line) !important;
+}
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) .overflow-x-auto {
+  max-width:100%;
+  overscroll-behavior-x:contain;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(207,160,91,.42) rgba(12,9,7,.5);
+}
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) table {
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+}
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) table thead th {
+  position:sticky;
+  top:0;
+  z-index:1;
+  color:#d7b783;
+  background:#292017;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.075em;
+  text-transform:uppercase;
+}
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) table tbody tr {
+  transition:background-color .16s ease;
+}
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) table tbody tr:hover {
+  background:rgba(211,166,98,.055);
+}
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) table td,
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) table th {
+  border-color:rgba(218,177,112,.12);
+}
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) input:not([type="checkbox"]):not([type="radio"]),
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) select,
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) textarea {
+  min-width:0;
+  color:#f4eadb;
+  color-scheme:dark;
+  border-color:rgba(218,177,112,.24);
+}
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) input:focus-visible,
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) select:focus-visible,
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) textarea:focus-visible,
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) button:focus-visible {
+  outline:2px solid #e3b96f;
+  outline-offset:2px;
+}
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) button {
+  transition:background-color .16s ease,border-color .16s ease,transform .16s ease,box-shadow .16s ease;
+}
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) button:active {
+  transform:translateY(1px);
+}
+main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) img {
+  max-width:100%;
+}
+@media (max-width:760px) {
+  main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) {
+    gap:16px;
+  }
+  main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) .overflow-x-auto {
+    -webkit-overflow-scrolling:touch;
+  }
+  main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) table {
+    min-width:620px;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) button,
+  main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) table tbody tr {
+    transition:none;
+  }
+}
