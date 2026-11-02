@@ -1554,3 +1554,175 @@ main .max-w-7xl.mx-auto.space-y-6 > div.space-y-6:not(#idol-profile-redesign) im
     transition:none !important;
   }
 }
+
+
+/* Idol Profile UX refinement: restrained palette, quieter controls, clearer reading */
+#idol-profile-redesign {
+  --ip-line:rgba(220,207,188,.12);
+  --ip-line-strong:rgba(220,207,188,.2);
+  --ip-gold:#c8a875;
+  --ip-muted:#aaa196;
+  gap:18px;
+  color:#e9e4dc;
+}
+#idol-profile-redesign .ip-page-heading {
+  border-color:var(--ip-line);
+}
+#idol-profile-redesign .ip-eyebrow,
+#idol-profile-redesign .ip-section-kicker,
+#idol-profile-redesign .ip-search-wrap > label {
+  color:#a99f92;
+}
+#idol-profile-redesign .ip-eyebrow-line { background:#a99f92; }
+#idol-profile-redesign .ip-page-heading h2,
+#idol-profile-redesign .ip-hero-content h1,
+#idol-profile-redesign .ip-scope-panel h3,
+#idol-profile-redesign .ip-scope-panel h4,
+#idol-profile-redesign .ip-match-history h4,
+#idol-profile-redesign .ip-head-to-head h3 {
+  color:#eee9e1 !important;
+}
+#idol-profile-redesign .ip-page-heading p,
+#idol-profile-redesign .ip-image-index,
+#idol-profile-redesign .ip-identity-line,
+#idol-profile-redesign .ip-hero-stats > div > span {
+  color:#aaa196;
+}
+#idol-profile-redesign .ip-hero {
+  border-color:var(--ip-line);
+  background:#1b1916 !important;
+  box-shadow:none;
+}
+#idol-profile-redesign .ip-hero-image {
+  border-color:var(--ip-line-strong);
+  box-shadow:none;
+}
+#idol-profile-redesign .ip-photo-fallback {
+  color:#c8bba7;
+  background:#24211d;
+}
+#idol-profile-redesign .ip-profile-status {
+  border-color:var(--ip-line);
+  background:#211f1b;
+  color:#b8b0a5;
+}
+#idol-profile-redesign .ip-profile-status > span {
+  background:#8d9b87;
+  box-shadow:none;
+}
+#idol-profile-redesign .ip-hero-stats strong { color:#e7dfd2; }
+#idol-profile-redesign .ip-hero-stats > div { border-color:var(--ip-line); }
+#idol-profile-redesign .ip-division-tag,
+#idol-profile-redesign .ip-division-tag b { color:#bdb3a5; }
+#idol-profile-redesign .ip-rating-row svg { opacity:.78; }
+#idol-profile-redesign .ip-photo-edit {
+  background:#24211d !important;
+  color:#d5cabb !important;
+  border-color:var(--ip-line-strong) !important;
+}
+#idol-profile-redesign .ip-scope-nav {
+  background:#1b1916 !important;
+  border-color:var(--ip-line) !important;
+  box-shadow:none !important;
+}
+#idol-profile-redesign .ip-scope-nav > div:first-child {
+  border-color:var(--ip-line);
+}
+#idol-profile-redesign .ip-scope-nav > div:first-child svg,
+#idol-profile-redesign .ip-scope-nav button svg {
+  display:none;
+}
+#idol-profile-redesign .ip-scope-nav > div:first-child span {
+  color:#aaa196 !important;
+  font-size:10px;
+  letter-spacing:.08em;
+}
+#idol-profile-redesign .ip-scope-nav button {
+  border-color:transparent !important;
+  border-radius:7px !important;
+  background:transparent !important;
+  color:#aaa196 !important;
+  box-shadow:none !important;
+  font-weight:600;
+}
+#idol-profile-redesign .ip-scope-nav button:hover {
+  background:#292621 !important;
+  color:#eee9e1 !important;
+}
+#idol-profile-redesign .ip-scope-nav button[class*="bg-amber-500"],
+#idol-profile-redesign .ip-scope-nav button[class*="bg-amber-600"],
+#idol-profile-redesign .ip-scope-nav button[class*="bg-indigo-600"],
+#idol-profile-redesign .ip-scope-nav button[class*="bg-teal-600"] {
+  background:#39342b !important;
+  color:#f0e4ce !important;
+  border-color:rgba(200,168,117,.25) !important;
+}
+#idol-profile-redesign .ip-scope-panel,
+#idol-profile-redesign .ip-match-history,
+#idol-profile-redesign .ip-head-to-head {
+  border-color:var(--ip-line) !important;
+  background:#1b1916 !important;
+  box-shadow:none !important;
+}
+#idol-profile-redesign .ip-scope-panel > .grid:first-child > div,
+#idol-profile-redesign .ip-scope-panel .grid > div.rounded-xl,
+#idol-profile-redesign .ip-scope-panel .grid > div.rounded-2xl {
+  border-color:var(--ip-line) !important;
+  background:#22201c !important;
+  box-shadow:none !important;
+}
+#idol-profile-redesign .ip-scope-panel :where(.text-amber-300,.text-amber-400,.text-yellow-300),
+#idol-profile-redesign .ip-match-history :where(.text-amber-300,.text-amber-400),
+#idol-profile-redesign .ip-head-to-head :where(.text-amber-300,.text-amber-400) {
+  color:#c8ad82 !important;
+}
+#idol-profile-redesign .ip-scope-panel :where(.text-teal-300,.text-teal-400,.text-indigo-300,.text-indigo-400,.text-purple-400,.text-cyan-300,.text-cyan-400) {
+  color:#b9b2a7 !important;
+}
+#idol-profile-redesign .ip-scope-panel :where(.bg-amber-500,.bg-amber-600,.bg-indigo-600,.bg-teal-600) {
+  background:#514633 !important;
+  color:#f2e8d8 !important;
+}
+#idol-profile-redesign .ip-scope-panel :where(.border-black,.border-amber-500\/30,.border-amber-600\/40) {
+  border-color:var(--ip-line) !important;
+}
+#idol-profile-redesign .ip-scope-panel :where(svg) {
+  color:#a99f92;
+  opacity:.72;
+}
+#idol-profile-redesign .ip-match-history > div:first-child svg,
+#idol-profile-redesign .ip-head-to-head > div:first-child svg {
+  display:none;
+}
+#idol-profile-redesign .ip-match-history button,
+#idol-profile-redesign .ip-head-to-head button {
+  box-shadow:none !important;
+}
+#idol-profile-redesign .ip-match-history button[class*="bg-amber-500"],
+#idol-profile-redesign .ip-match-history button[class*="bg-amber-600"] {
+  background:#39342b !important;
+  color:#eee4d5 !important;
+}
+#idol-profile-redesign table thead th {
+  background:#292722 !important;
+  color:#c9b99f !important;
+}
+#idol-profile-redesign table tbody td {
+  color:#d6d0c7;
+}
+#idol-profile-redesign table tbody tr:hover td {
+  background:rgba(255,255,255,.025);
+}
+#idol-profile-redesign :where(input,select,textarea) {
+  background:#151411 !important;
+  border-color:var(--ip-line-strong) !important;
+}
+#idol-profile-redesign :where(button:focus-visible,input:focus-visible,select:focus-visible) {
+  outline-color:#c8ad82;
+  outline-offset:2px;
+}
+@media(max-width:760px) {
+  #idol-profile-redesign .ip-scope-nav { padding:9px !important; }
+  #idol-profile-redesign .ip-scope-nav button { font-size:9px; }
+  #idol-profile-redesign .ip-scope-panel { padding:11px; }
+}
