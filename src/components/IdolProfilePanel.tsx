@@ -1364,20 +1364,6 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
             ) : (
               <div className="ip-photo-fallback">{idol.name.slice(0, 2).toUpperCase()}</div>
             )}
-            {onUpdateIdolPhoto && (
-              <button
-                type="button"
-                onClick={() => {
-                  setCustomPhotoUrl(idol.photoUrl);
-                  setPhotoModalOpen(true);
-                }}
-                title="Upload Photo for this Idol"
-                className="absolute inset-0 flex flex-col items-center justify-center bg-black/65 text-white opacity-0 hover:opacity-100 transition-opacity gap-2 font-black text-xs"
-              >
-                <Camera className="h-6 w-6 text-amber-300" />
-                <span>CHANGE PROFILE PHOTO</span>
-              </button>
-            )}
           </div>
           <span className="ip-image-index">OFFICIAL PROFILE IMAGE / {idol.id.slice(0, 8).toUpperCase()}</span>
           {onUpdateIdolPhoto && (
