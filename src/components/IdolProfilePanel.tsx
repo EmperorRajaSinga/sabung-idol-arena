@@ -951,6 +951,139 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
     });
     return result;
   }, [idolMatches, idol, v5TitleArchives]);
+
+  // Complete title cabinet: merge all supported archive sources and remove duplicate snapshots.
+  const idolTitleHistory = useMemo(() => {
+    if (!idol) return [] as Array<{ id: string; title: string; competition: string; season: string; seasonNumber: number; date: string; category: string }>;
+    const records: Array<{ id: string; title: string; competition: string; season: string; seasonNumber: number; date: string; category: string }> = [];
+    const add = (entry: any) => {
+      if (!entry?.title || !entry?.competition) return;
+      records.push({
+        id: String(entry.id || ''),
+        title: String(entry.title),
+        competition: String(entry.competition),
+        season: String(entry.season || 'Season unknown'),
+        seasonNumber: Number(entry.seasonNumber || 0),
+        date: String(entry.date || ''),
+        category: String(entry.category || 'Championship'),
+      });
+    };
+    const isWinner = (id: any, name: any) =>
+      String(id || '') === idol.id || String(name || '').trim().toLowerCase() === String(idol.name || '').trim().toLowerCase();
+
+    // V5 title archive includes Crown Cup, Open Arena Cup, Spotlight Cup, Super Cups and Division titles.
+    (v5TitleArchives || []).forEach((record: any) => {
+      if (isWinner(record.winnerId, record.winnerName)) {
+        const competition = String(record.competition || 'Competition');
+        add({
+          id: record.id,
+          title: record.isDivision ? `${competition} Champion` : `${competition} Champion`,
+          competition,
+          season: record.seasonName || (record.seasonNumber ? `Season ${record.seasonNumber}` : 'Season unknown'),
+          seasonNumber: record.seasonNumber,
+          date: record.completedAt || record.archivedAt || record.date,
+          category: record.isDivision ? 'League title' : 'Cup title',
+        });
+      }
+    });
+
+    // Original league archives: each league winner is a separate division championship.
+    (leagueArchives || []).forEach((archive: any) => {
+      (archive.leagueWinners || []).forEach((winner: any) => {
+        if (!isWinner(winner.championId, winner.championName)) return;
+        const competition = String(winner.leagueName || `Division ${winner.leagueId || ''}`).trim();
+        add({
+          id: `league-${archive.seasonNumber}-${winner.leagueId}-${idol.id}`,
+          title: `${competition} Champion`,
+          competition,
+          season: archive.seasonName || `Season ${archive.seasonNumber || 'unknown'}`,
+          seasonNumber: archive.seasonNumber,
+          date: archive.completedAt,
+          category: 'League title',
+        });
+      });
+    });
+
+    // Legacy Tournament Cup archive.
+    (archives || []).forEach((archive: any) => {
+      if (!isWinner(archive.championId, archive.championName)) return;
+      add({
+        id: `tournament-${archive.seasonId}-${idol.id}`,
+        title: 'Tournament Cup Champion',
+        competition: 'Tournament Cup',
+        season: archive.seasonName || `Season ${archive.seasonId || 'unknown'}`,
+        seasonNumber: archive.seasonId,
+        date: archive.completedAt,
+        category: 'Cup title',
+      });
+    });
+
+    // The Idols Masters champion and regular-season champion are distinct honours.
+    (theIdolsArchives || []).forEach((archive: any) => {
+      const season = archive.seasonName || `Season ${archive.seasonNumber || 'unknown'}`;
+      if (isWinner(archive.championId, archive.championName)) {
+        add({
+          id: `masters-${archive.seasonNumber}-${idol.id}`,
+          title: 'The Idols Masters Champion',
+          competition: 'The Idols Masters',
+          season,
+          seasonNumber: archive.seasonNumber,
+          date: archive.completedAt,
+          category: 'Playoff title',
+        });
+      }
+      const standings = [...(archive.standings || [])].sort((a: any, b: any) =>
+        Number(a.rank || 999) - Number(b.rank || 999) || Number(b.points || 0) - Number(a.points || 0)
+      );
+      const first = standings[0];
+      if (first && isWinner(first.idolId, first.idolName)) {
+        add({
+          id: `superleague-${archive.seasonNumber}-${idol.id}`,
+          title: 'The Idols Superleague Champion',
+          competition: 'The Idols Superleague',
+          season,
+          seasonNumber: archive.seasonNumber,
+          date: archive.completedAt,
+          category: 'Regular-season title',
+        });
+      }
+    });
+
+    // Include completed active-season honours so a newly won title appears before archiving.
+    if (leagueState?.isCompleted || (leagueState as any)?.isSeasonCompleted) {
+      (leagueState?.leagueWinners || []).forEach((winner: any) => {
+        if (isWinner(winner.championId, winner.championName)) add({
+          id: `active-league-${leagueState?.seasonNumber}-${winner.leagueId}-${idol.id}`,
+          title: `${winner.leagueName || `Division ${winner.leagueId}`} Champion`,
+          competition: winner.leagueName || `Division ${winner.leagueId}`,
+          season: leagueState?.seasonName || `Season ${leagueState?.seasonNumber || 'current'}`,
+          seasonNumber: leagueState?.seasonNumber,
+          category: 'League title',
+        });
+      });
+    }
+    if (theIdolsState?.isPlayoffCompleted && isWinner(theIdolsState.championId, theIdolsState.championName)) {
+      add({
+        id: `active-masters-${theIdolsState.seasonNumber}-${idol.id}`,
+        title: 'The Idols Masters Champion',
+        competition: 'The Idols Masters',
+        season: theIdolsState.seasonName || `Season ${theIdolsState.seasonNumber}`,
+        seasonNumber: theIdolsState.seasonNumber,
+        category: 'Playoff title',
+      });
+    }
+
+    const unique = new Map<string, typeof records[number]>();
+    records.forEach((record) => {
+      const key = `${record.seasonNumber}|${record.competition.toLowerCase()}|${record.title.toLowerCase()}`;
+      const previous = unique.get(key);
+      if (!previous || (!previous.date && record.date)) unique.set(key, record);
+    });
+    return Array.from(unique.values()).sort((a, b) =>
+      b.seasonNumber - a.seasonNumber || (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0) || a.competition.localeCompare(b.competition)
+    );
+  }, [idol, v5TitleArchives, leagueArchives, archives, theIdolsArchives, leagueState, theIdolsState]);
+
   const divisionStatus = useMemo(() => {
     if (!idol) return { tier: 'Unassigned', leagueName: 'Not assigned', rank: null, promotions: 0, relegations: 0, history: [], pending: null };
     const d1League = (leagueState?.leagues || []).find((league) => (league.memberIds || []).includes(idol.id));
