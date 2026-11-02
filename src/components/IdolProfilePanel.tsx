@@ -1335,20 +1335,16 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
   if (!idol) return null;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
-      {/* Header & Picker */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-black/60 pb-4">
+    <div id="idol-profile-redesign" className="space-y-6 animate-in fade-in duration-200">
+      {/* Editorial profile header */}
+      <div className="ip-page-heading">
         <div>
-          <h2 className="text-2xl font-black text-amber-300 font-poster-title flex items-center gap-2">
-            <User className="h-6 w-6 text-amber-400" />
-            <span>Idol Profile &amp; Career History</span>
-          </h2>
-          <p className="text-xs text-amber-200/70 mt-1">
-            Comprehensive profile, career statistics, Head-to-Head rivalries, and full match records.
-          </p>
+          <div className="ip-eyebrow"><span className="ip-eyebrow-line" /> PLAYER DOSSIER / CAREER ARCHIVE</div>
+          <h2>Idol Profile</h2>
+          <p>Identity, competitive record, achievements, and career history.</p>
         </div>
-
-        <div className="w-full md:w-72">
+        <div className="ip-search-wrap">
+          <label>FIND AN IDOL</label>
           <SearchableIdolSelect
             idols={idols}
             selectedIdolId={idol.id}
@@ -1359,89 +1355,68 @@ export const IdolProfilePanel: React.FC<IdolProfilePanelProps> = ({
         </div>
       </div>
 
-      {/* Idol Overview Banner */}
-      <div className="rounded-2xl border-2 border-black bg-[#1b120c] p-6 flex flex-col md:flex-row items-center gap-6 poster-shadow">
-        <div className="relative group h-36 w-36 sm:h-44 sm:w-44 overflow-hidden rounded-2xl border-2 border-amber-500/60 shadow-2xl flex-shrink-0 bg-slate-900 flex items-center justify-center">
-          {idol.photoUrl ? (
-            <img
-              src={idol.photoUrl}
-              alt={idol.name}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="font-poster-title text-4xl text-amber-300">
-              {idol.name.slice(0, 2)}
-            </div>
-          )}
-          {onUpdateIdolPhoto && (
-            <button
-              onClick={() => {
-                setCustomPhotoUrl(idol.photoUrl);
-                setPhotoModalOpen(true);
-              }}
-              title="Upload Photo for this Idol"
-              className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 text-white opacity-0 group-hover:opacity-100 transition-opacity gap-1 font-black text-xs"
-            >
-              <Camera className="h-6 w-6 text-amber-400" />
-              <span>Change Photo</span>
-            </button>
-          )}
-        </div>
-
-        <div className="space-y-2.5 text-center md:text-left flex-1">
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-            <span className="rounded-md bg-amber-500/15 px-3 py-1 text-xs font-black text-amber-300 border border-amber-500/40">
-              {idol.girlGroup}
-            </span>
-            <span className="rounded-md bg-[#2a1c12] px-3 py-1 text-xs font-black text-amber-200 border border-black">
-              {idol.seed}
-            </span>
-            <span className="rounded-md bg-[#2a1c12] px-3 py-1 text-xs font-black text-amber-200 border border-black flex items-center gap-1.5">
-              <span>{getCountryFlag(idol.nationality)}</span>
-              <span>{idol.nationality}</span>
-            </span>
-            <div className="flex items-center gap-1.5" title="Idol Rating (editable via Rating Manager)">
-              <RatingBadge idol={idol} size="md" showTier={true} showLabel={true} />
-            </div>
+      {/* Profile hero */}
+      <section className="ip-hero">
+        <div className="ip-hero-image-wrap">
+          <div className="ip-hero-image">
+            {idol.photoUrl ? (
+              <img src={idol.photoUrl} alt={idol.name} />
+            ) : (
+              <div className="ip-photo-fallback">{idol.name.slice(0, 2).toUpperCase()}</div>
+            )}
             {onUpdateIdolPhoto && (
               <button
+                type="button"
                 onClick={() => {
                   setCustomPhotoUrl(idol.photoUrl);
                   setPhotoModalOpen(true);
                 }}
-                className="rounded-md bg-amber-500/20 hover:bg-amber-500/30 px-3 py-1 text-xs font-black text-amber-300 border border-amber-500/40 transition-colors flex items-center gap-1.5"
+                title="Upload Photo for this Idol"
+                className="absolute inset-0 flex flex-col items-center justify-center bg-black/65 text-white opacity-0 hover:opacity-100 transition-opacity gap-2 font-black text-xs"
               >
-                <Camera className="h-3.5 w-3.5" />
-                Upload Photo
+                <Camera className="h-6 w-6 text-amber-300" />
+                <span>CHANGE PROFILE PHOTO</span>
               </button>
             )}
           </div>
-
-          <h3 className="text-3xl sm:text-4xl font-black text-white font-poster-title drop-shadow-[2px_2px_0px_#000]">{idol.name}</h3>
-
-          <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs sm:text-sm text-amber-200 font-bold">
-            <span>
-              Combined Record:{' '}
-              <span className="text-white font-mono font-black">
-                {combinedWins}W-{combinedDraws}D-{combinedLosses}L
-              </span>
-            </span>
-            <span>&bull;</span>
-            <span>
-              Combined Win Rate:{' '}
-              <span className="text-amber-300 font-black">{combinedWinRate}%</span>
-            </span>
-            <span>&bull;</span>
-            <span>
-              Total Titles:{' '}
-              <span className="text-amber-400 font-black">
-                {combinedChampionships} ({stat?.championships || 0} Tournament + {leagueData.divisionTitlesCount} Division 1 + {v5CareerTitles} New Competitions + {(theIdolsData.mastersTitlesCount || 0) + (theIdolsData.regularSeasonTitlesCount || 0)} Superleague)
-              </span>
-            </span>
-            {divisionStatus.tier !== 'Unassigned' && (<><span>&bull;</span><span className="text-teal-300">Current: <span className="font-black text-white">{divisionStatus.tier} · {divisionStatus.leagueName}</span>{divisionStatus.rank ? ` (Rank #${divisionStatus.rank})` : ''}</span></>)}
-          </div>
+          <span className="ip-image-index">OFFICIAL PROFILE IMAGE / {idol.id.slice(0, 8).toUpperCase()}</span>
+          {onUpdateIdolPhoto && (
+            <button type="button" className="ip-photo-edit" onClick={() => {
+              setCustomPhotoUrl(idol.photoUrl);
+              setPhotoModalOpen(true);
+            }}>
+              <Camera className="h-3.5 w-3.5" /> UPDATE PHOTO
+            </button>
+          )}
         </div>
-      </div>
+
+        <div className="ip-hero-content">
+          <div className="ip-hero-topline">
+            <div className="ip-section-kicker">SABUNG IDOL ARENA / ATHLETE PROFILE</div>
+            <div className="ip-profile-status"><span /> PROFILE RECORD</div>
+          </div>
+          <h1>{idol.name}</h1>
+          <div className="ip-identity-line">
+            <span>{idol.girlGroup || 'Independent'}</span><i />
+            <span>{getCountryFlag(idol.nationality)} {idol.nationality || 'Nationality unavailable'}</span><i />
+            <span>Seed {idol.seed ?? 'N/A'}</span>
+          </div>
+          <div className="ip-rating-row">
+            <RatingBadge idol={idol} size="md" showTier={true} showLabel={true} />
+            {divisionStatus.tier !== 'Unassigned' && (
+              <span className="ip-division-tag">CURRENT DIVISION <b>{divisionStatus.tier} · {divisionStatus.leagueName}{divisionStatus.rank ? ` / #${divisionStatus.rank}` : ''}</b></span>
+            )}
+          </div>
+          <div className="ip-hero-rule" />
+          <div className="ip-hero-stats">
+            <div><span>CAREER RECORD</span><strong>{combinedWins}<small>W</small> {combinedDraws}<small>D</small> {combinedLosses}<small>L</small></strong></div>
+            <div><span>WIN RATE</span><strong>{combinedWinRate}<small>%</small></strong></div>
+            <div><span>TOTAL TITLES</span><strong>{combinedChampionships + (stat?.championships || 0) + leagueData.divisionTitlesCount + v5CareerTitles + (theIdolsData.mastersTitlesCount || 0) + (theIdolsData.regularSeasonTitlesCount || 0)}</strong></div>
+            <div><span>MATCHES PLAYED</span><strong>{combinedWins + combinedDraws + combinedLosses}</strong></div>
+          </div>
+          <div className="ip-hero-corner">PLAYER DATA<br /><b>PROFILE / {idol.id.slice(0, 6).toUpperCase()}</b></div>
+        </div>
+      </section>
 
       {/* Career View Scope Switcher Tabs */}
       <div className="space-y-4">
